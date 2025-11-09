@@ -1,20 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-
-  <head>
-    <meta charset="UTF-8">
-    <title>HayloFriend</title>
-    
-
-  </head>
-    
-  <body>
-  <!DOCTYPE html>
-<html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Thank‑You Link — The Future of Gratitude</title>
+  <title>HayloFriend - Thank You Link</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -338,7 +327,7 @@
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div class="text-xs uppercase text-white/60">Your Personal Thank-You Hub</div>
-          <div class="text-2xl font-medium mt-1 truncate">thank.link/{{ slug }}</div>
+          <div class="text-2xl font-medium mt-1 truncate">haylofriend.com/thank/{{ slug }}</div>
           <p class="text-white/70 text-sm mt-1">Your personalized link to receive gratitude from anyone, anywhere</p>
         </div>
         <div class="flex gap-3" data-noprint>
@@ -511,11 +500,18 @@
   <script>
   const { createApp, ref, computed, onMounted } = Vue;
   
+  // Parse /thank/<slug> on page load
+  const match = window.location.pathname.match(/^\/thank\/([a-z0-9\-_.~%]+)$/i);
+  let initialSlug = 'your-name';
+  if (match) {
+    initialSlug = decodeURIComponent(match[1]);
+  }
+  
   createApp({
     setup() {
       // STATE
       const displayName = ref('You');
-      const slug = ref('your-name');
+      const slug = ref(initialSlug);
       const earnings = ref(0);
       const meterPct = ref(0);
       const kpi = ref({ tips: 0, referrals: 0, pending: 0, approved: 0, paid: 0 });
@@ -578,9 +574,36 @@
         button.appendChild(circle);
       }
 
+      // SAFE CLIPBOARD FUNCTION
+      async function copyToClipboard(text) {
+        try {
+          // Try modern clipboard API first
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+            return true;
+          } else {
+            // Fallback for older browsers or HTTP
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            return successful;
+          }
+        } catch (err) {
+          // Final fallback - show text to user
+          alert(`Copy this link: ${text}`);
+          return false;
+        }
+      }
+
       // ACTIONS
       function login() {
-        // Add ripple effect
         createRipple(event);
         setTimeout(() => {
           alert('Welcome to the future of gratitude. Your journey begins now.');
@@ -588,38 +611,54 @@
         }, 300);
       }
       
-      function createLink() {
+      async function createLink() {
         const s = 'user-' + Math.random().toString(36).slice(2,6);
         slug.value = s;
         displayName.value = 'User ' + s.slice(-2).toUpperCase();
-        const url = `https://thank.link/${s}`;
-        navigator.clipboard?.writeText(url);
+        const url = `https://haylofriend.com/thank/${s}`;
+        
+        // Use safe clipboard function
+        const copied = await copyToClipboard(url);
+        
         events.value.unshift({label: 'Your Thank-You Link Created', value: url, type: 'share'});
         
         // Show success message
-        const originalText = document.querySelector('#stickyCta button').textContent;
-        document.querySelector('#stickyCta button').textContent = 'Link Created!';
-        setTimeout(() => {
-          document.querySelector('#stickyCta button').textContent = originalText;
-        }, 2000);
+        const stickyButton = document.querySelector('#stickyCta button');
+        if (stickyButton) {
+          const originalText = stickyButton.textContent;
+          stickyButton.textContent = copied ? 'Link Created & Copied!' : 'Link Created!';
+          setTimeout(() => {
+            stickyButton.textContent = originalText;
+          }, 2000);
+        }
+        
+        if (!copied) {
+          // If clipboard failed, show the link in an alert
+          alert(`Your thank-you link has been created:\n\n${url}\n\n(Link has been saved to your recent activity)`);
+        }
       }
       
-      function copyLink() {
+      async function copyLink() {
         createRipple(event);
-        navigator.clipboard?.writeText(`https://thank.link/${slug.value}`);
+        const url = `https://haylofriend.com/thank/${slug.value}`;
+        const copied = await copyToClipboard(url);
         
         // Show feedback
         const button = event.currentTarget;
         const originalText = button.textContent;
-        button.textContent = 'Copied!';
+        button.textContent = copied ? 'Copied!' : 'Link Shown Below';
         setTimeout(() => {
           button.textContent = originalText;
         }, 1500);
+        
+        if (!copied) {
+          alert(`Your thank-you link:\n\n${url}`);
+        }
       }
       
       function downloadQR() {
         createRipple(event);
-        alert('Demo: Beautiful QR code would generate for https://thank.link/' + slug.value);
+        alert('Demo: Beautiful QR code would generate for https://haylofriend.com/thank/' + slug.value);
       }
       
       function openPayDemo() {
@@ -663,14 +702,20 @@
         }, 800);
       }
       
-      function shareQuick() {
-        const url = `https://thank.link/${slug.value}`;
+      async function shareQuick() {
+        const url = `https://haylofriend.com/thank/${slug.value}`;
         const msg = `I'm using Thank-You Link to create value with gratitude. Send me a thank-you here → ${url}`;
         
         if (navigator.share) {
           navigator.share({text: msg});
         } else {
-          alert('Share this message:\n\n' + msg);
+          // Use our safe clipboard function
+          const copied = await copyToClipboard(msg);
+          if (copied) {
+            alert('Message copied to clipboard! Paste it anywhere to share.');
+          } else {
+            alert(`Share this message:\n\n${msg}`);
+          }
         }
         
         kpi.value.referrals += 1;
@@ -747,8 +792,4 @@
   }).mount('#app');
   </script>
 </body>
-</html>
-    
-  </body>
-  
 </html>
