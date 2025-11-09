@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>HayloFriend</title>
+    
+
+  </head>
+    
+  <body>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Thank‑You Link — The Future of Gratitude</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#e7e7ea',
+            bg: '#0b0b0c',
+            card: '#121214',
+            hair: 'rgba(231,231,234,.12)',
+            acc: '#4da3ff',
+            good: '#15c39a',
+            warn: '#ffcc00',
+            bad: '#ff5a5a'
+          },
+          animation: {
+            'pulse-glow': 'pulse-glow 2s ease-in-out infinite alternate',
+            'float': 'float 6s ease-in-out infinite',
+            'ripple': 'ripple 1.5s linear infinite',
+          },
+          keyframes: {
+            'pulse-glow': {
+              '0%': { 'box-shadow': '0 0 5px rgba(77, 163, 255, 0.4)' },
+              '100%': { 'box-shadow': '0 0 20px rgba(77, 163, 255, 0.8), 0 0 30px rgba(77, 163, 255, 0.4)' }
+            },
+            'float': {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-10px)' }
+            },
+            'ripple': {
+              '0%': { transform: 'scale(0.8)', opacity: '1' },
+              '100%': { transform: 'scale(2.5)', opacity: '0' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --bg: #0b0b0c;
+      --card: #121214;
+      --ink: #e7e7ea;
+      --hair: rgba(231,231,234,.12);
+      --acc: #4da3ff;
+    }
+    html, body {
+      height: 100%;
+      background: var(--bg) !important;
+      scroll-behavior: smooth;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      overflow-x: hidden;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    .glass {
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border: 1px solid var(--hair);
+      box-shadow: 0 8px 24px rgba(0,0,0,.35);
+      backdrop-filter: blur(10px);
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--hair);
+      background: rgba(255,255,255,.05);
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, var(--acc), #8acbff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .ripple-container {
+      position: relative;
+      overflow: hidden;
+    }
+    .ripple-effect {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(77, 163, 255, 0.4);
+      transform: scale(0);
+      animation: ripple 1.5s linear;
+      pointer-events: none;
+    }
+    .fade-in {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .typing-effect {
+      overflow: hidden;
+      border-right: 2px solid var(--acc);
+      white-space: nowrap;
+      animation: typing 3.5s steps(40, end), blink-caret 0.75s step-end infinite;
+    }
+    @keyframes typing {
+      from { width: 0 }
+      to { width: 100% }
+    }
+    @keyframes blink-caret {
+      from, to { border-color: transparent }
+      50% { border-color: var(--acc) }
+    }
+    #stickyCta {
+      bottom: calc(1rem + env(safe-area-inset-bottom));
+    }
+    @media print {
+      [data-noprint] {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="max-w-[1120px] mx-auto px-6 py-8 pb-36">
+    <!-- NAV -->
+    <nav class="sticky top-0 z-50 backdrop-blur bg-black/30 border-b border-white/10" data-noprint>
+      <div class="max-w-[1120px] mx-auto px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded-md animate-pulse-glow" style="background:linear-gradient(135deg,var(--acc),#8acbff)"></div>
+          <div class="tracking-[.14em] uppercase text-xs text-white/90">Thank‑You Link</div>
+        </div>
+        <div class="hidden md:flex gap-5 text-sm text-white/80">
+          <a href="#wow" class="hover:text-[var(--acc)] transition-colors">Experience</a>
+          <a href="#make" class="hover:text-[var(--acc)] transition-colors">Create Value</a>
+          <a href="#connect" class="hover:text-[var(--acc)] transition-colors">Connect</a>
+          <a href="#cashout" class="hover:text-[var(--acc)] transition-colors">Your Impact</a>
+        </div>
+        <button @click="login" class="px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] hover:bg-[var(--acc)]/10 transition-all text-sm font-medium">Get Started</button>
+      </div>
+    </nav>
+
+    <!-- HERO / WOW -->
+    <section id="wow" class="grid md:grid-cols-2 gap-8 items-center mt-12">
+      <div class="fade-in" :class="{visible: fadeInHero}">
+        <div class="uppercase text-xs text-white/60 tracking-widest mb-2">The revolution of gratitude</div>
+        <h1 class="text-5xl md:text-6xl font-semibold leading-[1.05]">
+          <span class="typing-effect">Thank‑You</span><br>
+          <span class="text-[var(--acc)] mt-2 block">Creates Value</span>
+        </h1>
+        <p class="text-white/80 mt-4 max-w-xl text-lg">We're turning gratitude into the most powerful currency. Every thank-you creates tangible value for both sender and receiver. This isn't just payments—it's human connection amplified.</p>
+        <div class="flex flex-col sm:flex-row gap-3 mt-6" data-noprint>
+          <button @click="createLink" class="glass px-6 py-3 rounded-xl text-sm font-medium hover:animate-pulse-glow transition-all flex items-center justify-center gap-2">
+            <span>Create My Link</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </button>
+          <button @click="openPayDemo" class="px-6 py-3 rounded-xl border border-white/20 text-sm font-medium hover:border-[var(--acc)] transition-colors flex items-center justify-center gap-2">
+            <span>See The Magic</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+              <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+            </svg>
+          </button>
+        </div>
+        <div class="mt-6 text-sm text-white/70 flex items-center gap-2">
+          <div class="w-2 h-2 rounded-full bg-[var(--acc)] animate-pulse"></div>
+          <span>Live example: <b class="text-white">{{ wowCopy }}</b></span>
+        </div>
+      </div>
+      <div class="fade-in" :class="{visible: fadeInHero}" style="animation-delay: 0.2s">
+        <div class="glass rounded-2xl p-6 animate-float">
+          <div class="flex justify-between items-start">
+            <div>
+              <div class="text-xs uppercase text-white/60">Your Gratitude Value</div>
+              <div class="text-4xl font-semibold mt-1">$ {{ earningsDisplay }}</div>
+              <p class="text-sm text-white/70 mt-1">Growing with every connection</p>
+            </div>
+            <div class="relative">
+              <div class="w-12 h-12 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, var(--acc), #8acbff)">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div class="h-2 w-full bg-white/10 rounded mt-4 overflow-hidden">
+            <div :style="{width: meterPct + '%'}" class="h-2 bg-[var(--acc)] transition-all duration-1000"></div>
+          </div>
+          <div class="grid grid-cols-3 gap-3 mt-5 text-sm">
+            <div class="glass rounded-xl p-3 text-center">
+              <div class="text-white/60 text-xs">Tips</div>
+              <div class="text-lg font-medium">{{ kpi.tips }}</div>
+            </div>
+            <div class="glass rounded-xl p-3 text-center">
+              <div class="text-white/60 text-xs">Connections</div>
+              <div class="text-lg font-medium">{{ kpi.referrals }}</div>
+            </div>
+            <div class="glass rounded-xl p-3 text-center">
+              <div class="text-white/60 text-xs">Pending</div>
+              <div class="text-lg font-medium">${{ kpi.pending }}</div>
+            </div>
+          </div>
+          <div class="mt-4 text-center">
+            <button @click="openPayDemo" class="text-xs text-[var(--acc)] hover:underline">Send a thank-you now</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VALUE PROPOSITION -->
+    <section id="make" class="mt-20">
+      <div class="text-center mb-12 fade-in" :class="{visible: fadeInSections}">
+        <div class="uppercase text-xs text-white/60 tracking-widest">How it works</div>
+        <h2 class="text-3xl font-semibold mt-2">Create Value With Every Interaction</h2>
+        <p class="text-white/80 mt-3 max-w-2xl mx-auto">We've reimagined gratitude as a tangible force for good. Every thank-you creates measurable value for everyone involved.</p>
+      </div>
+      
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="glass p-6 rounded-2xl fade-in" :class="{visible: fadeInSections}" style="animation-delay: 0.1s">
+          <div class="w-12 h-12 rounded-full flex items-center justify-center mb-4" style="background: linear-gradient(135deg, var(--acc), #8acbff)">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" />
+              <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" />
+            </svg>
+          </div>
+          <div class="text-xs uppercase text-white/60 mb-2">01 — Share Your Link</div>
+          <div class="text-xl font-medium mb-3">Create your personal thank-you hub</div>
+          <p class="text-white/80 text-sm mb-4">Get a beautiful, personalized link in seconds. Share it anywhere—email, social media, messages.</p>
+          <button class="mt-2 text-sm px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] transition-colors w-full" @click="createLink">Create My Link</button>
+        </div>
+        
+        <div class="glass p-6 rounded-2xl fade-in" :class="{visible: fadeInSections}" style="animation-delay: 0.2s">
+          <div class="w-12 h-12 rounded-full flex items-center justify-center mb-4" style="background: linear-gradient(135deg, #15c39a, #4ade80)">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="text-xs uppercase text-white/60 mb-2">02 — Receive Gratitude</div>
+          <div class="text-xl font-medium mb-3">Get thanked with meaningful gestures</div>
+          <p class="text-white/80 text-sm mb-4">People send you tips, micro-payments, or simply words of appreciation. Every interaction builds your gratitude value.</p>
+          <button class="mt-2 text-sm px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] transition-colors w-full" @click="openPayDemo">Try It Now</button>
+        </div>
+        
+        <div class="glass p-6 rounded-2xl fade-in" :class="{visible: fadeInSections}" style="animation-delay: 0.3s">
+          <div class="w-12 h-12 rounded-full flex items-center justify-center mb-4" style="background: linear-gradient(135deg, #ffcc00, #fbbf24)">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="text-xs uppercase text-white/60 mb-2">03 — Grow & Withdraw</div>
+          <div class="text-xl font-medium mb-3">Watch your impact grow weekly</div>
+          <p class="text-white/80 text-sm mb-4">Your gratitude value compounds. Withdraw to your bank every Friday or let it grow to create even more impact.</p>
+          <button class="mt-2 text-sm px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] transition-colors w-full" @click="mockPayout">Simulate Growth</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONNECT (Plaid placeholder) -->
+    <section id="connect" class="mt-20 grid md:grid-cols-2 gap-8">
+      <div class="glass p-6 rounded-2xl fade-in" :class="{visible: fadeInSections}">
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0" style="background: linear-gradient(135deg, var(--acc), #8acbff)">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div>
+            <div class="text-xs uppercase text-white/60">Secure & Private</div>
+            <h3 class="text-2xl mt-1 font-medium">Bank-Level Security</h3>
+            <p class="text-white/80 text-sm mt-2">Connect your bank with industry-leading security through Plaid. Your data is encrypted and never stored on our servers.</p>
+            <button class="mt-4 px-5 py-2.5 rounded-xl glass text-sm font-medium hover:animate-pulse-glow transition-all" @click="plaidLink">
+              Connect Securely
+            </button>
+            <div class="text-xs text-white/60 mt-3 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-[var(--acc)]" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+              </svg>
+              <span>256-bit encryption • Read-only access • SOC 2 certified</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="glass p-6 rounded-2xl fade-in" :class="{visible: fadeInSections}" style="animation-delay: 0.1s">
+        <div class="text-xs uppercase text-white/60">Weekly Impact</div>
+        <h3 class="text-2xl mt-1 font-medium">Your Gratitude Compounding</h3>
+        <p class="text-white/80 text-sm mt-2">Watch your gratitude grow each week. Every Friday, your approved earnings transfer automatically to your bank.</p>
+        
+        <div class="grid grid-cols-3 gap-3 mt-5 text-sm">
+          <div class="glass rounded-xl p-4 text-center">
+            <div class="text-white/60 text-xs">Pending</div>
+            <div class="text-xl font-medium">${{ kpi.pending }}</div>
+          </div>
+          <div class="glass rounded-xl p-4 text-center">
+            <div class="text-white/60 text-xs">Approved</div>
+            <div class="text-xl font-medium">${{ kpi.approved }}</div>
+          </div>
+          <div class="glass rounded-xl p-4 text-center">
+            <div class="text-white/60 text-xs">Paid Out</div>
+            <div class="text-xl font-medium">${{ kpi.paid }}</div>
+          </div>
+        </div>
+        
+        <div class="mt-5 flex items-center justify-between text-sm">
+          <span class="text-white/70">Next payout: Friday</span>
+          <button class="text-[var(--acc)] hover:underline" @click="mockPayout">Simulate Payout</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CASH OUT / LEDGER -->
+    <section id="cashout" class="mt-20 glass p-6 rounded-2xl fade-in" :class="{visible: fadeInSections}">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div class="text-xs uppercase text-white/60">Your Personal Thank-You Hub</div>
+          <div class="text-2xl font-medium mt-1 truncate">thank.link/{{ slug }}</div>
+          <p class="text-white/70 text-sm mt-1">Your personalized link to receive gratitude from anyone, anywhere</p>
+        </div>
+        <div class="flex gap-3" data-noprint>
+          <button class="px-4 py-2.5 rounded-full border border-white/20 text-sm font-medium hover:border-[var(--acc)] transition-colors flex items-center gap-2" @click="copyLink">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+              <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+            </svg>
+            Copy Link
+          </button>
+          <button class="px-4 py-2.5 rounded-full border border-white/20 text-sm font-medium hover:border-[var(--acc)] transition-colors flex items-center gap-2" @click="downloadQR">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 010 2H6.414l2 2H14a1 1 0 110 2h-3a1 1 0 01-1-1 1 1 0 00-2 0 3 3 0 003 3h3a3 3 0 100-6H9.414l-2-2H4a1 1 0 01-1-1z" clip-rule="evenodd" />
+            </svg>
+            QR Code
+          </button>
+        </div>
+      </div>
+
+      <div class="mt-8 grid md:grid-cols-2 gap-6">
+        <div>
+          <div class="text-xs uppercase text-white/60 mb-3">Recent Activity</div>
+          <ul class="space-y-3 max-h-64 overflow-auto pr-2">
+            <li v-for="(e,i) in events" :key="i" class="flex items-center justify-between py-2 border-b border-white/10">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center" :class="getEventColor(e.type)">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
+                    <path v-if="e.type === 'tip'" fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
+                    <path v-else-if="e.type === 'share'" fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd" />
+                    <path v-else d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
+                    <path v-else fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <span class="text-sm">{{ e.label }}</span>
+              </div>
+              <span class="text-white/70 font-medium">{{ e.value }}</span>
+            </li>
+          </ul>
+        </div>
+        
+        <div>
+          <div class="text-xs uppercase text-white/60 mb-3">Payout History</div>
+          <ul class="space-y-3">
+            <li v-for="(p,i) in payouts" :key="i" class="flex items-center justify-between py-2 border-b border-white/10">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, #15c39a, #4ade80)">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <span class="text-sm">Payout {{ p.date }}</span>
+              </div>
+              <span class="text-white/70 font-medium">${{ p.amount.toFixed(2) }}</span>
+            </li>
+            <li v-if="payouts.length === 0" class="text-center py-4 text-white/60 text-sm">
+              No payouts yet. Your first one will arrive next Friday!
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- SOCIAL PROOF -->
+    <section class="mt-20 text-center fade-in" :class="{visible: fadeInSections}">
+      <div class="glass rounded-2xl p-8 max-w-3xl mx-auto">
+        <div class="text-xs uppercase text-white/60 tracking-widest mb-2">Join The Movement</div>
+        <h2 class="text-3xl font-semibold">Thousands Are Already Creating Value With Gratitude</h2>
+        <p class="text-white/80 mt-4 max-w-2xl mx-auto">"I made $247 last month just by sharing my thank-you link. It's changed how I think about my relationships and value creation."</p>
+        <div class="mt-6 flex justify-center items-center gap-4">
+          <div class="flex -space-x-2">
+            <div class="w-8 h-8 rounded-full bg-[var(--acc)]"></div>
+            <div class="w-8 h-8 rounded-full bg-[#15c39a]"></div>
+            <div class="w-8 h-8 rounded-full bg-[#ffcc00]"></div>
+            <div class="w-8 h-8 rounded-full bg-[#ff5a5a]"></div>
+          </div>
+          <span class="text-sm text-white/70">+2,438 creators this month</span>
+        </div>
+        <button @click="createLink" class="mt-6 glass px-6 py-3 rounded-xl text-sm font-medium hover:animate-pulse-glow transition-all">
+          Join Them Now
+        </button>
+      </div>
+    </section>
+
+    <footer class="mt-20 text-white/60 text-xs border-t border-white/10 pt-6 text-center">
+      <p>Built for visionaries who believe gratitude can reshape our world. © Thank-You Link</p>
+      <p class="mt-2">This is more than a product—it's a movement.</p>
+    </footer>
+
+    <!-- Sticky bottom CTA -->
+    <div v-show="!showPay && !showReflex" id="stickyCta" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60]" data-noprint>
+      <div class="glass rounded-full px-5 py-3 flex items-center gap-4 shadow-xl animate-pulse-glow">
+        <span class="text-sm text-white/90 font-medium">Ready to create value with gratitude?</span>
+        <button class="px-4 py-2 rounded-full bg-[var(--acc)] text-white text-sm font-medium hover:bg-[#3a94e0] transition-colors" @click="createLink">Get Started</button>
+      </div>
+    </div>
+
+    <!-- MODALS -->
+    <div v-if="showPay" class="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-[70]" data-noprint>
+      <div class="glass rounded-2xl p-6 w-full max-w-md">
+        <div class="text-xs uppercase text-white/60">Send Your Gratitude</div>
+        <h3 class="text-xl mt-1 font-medium">Thank {{ displayName }}</h3>
+        <p class="text-white/70 text-sm mt-2">Show your appreciation with a meaningful gesture</p>
+        
+        <div class="mt-5">
+          <div class="text-sm text-white/80 mb-2">Select an amount</div>
+          <div class="flex gap-2 flex-wrap">
+            <button v-for="amt in [2,5,10,25]" :key="amt" 
+                    class="pill flex-1 text-center justify-center" 
+                    :class="{'bg-[var(--acc)]/20 border-[var(--acc)]': amount === amt}"
+                    @click="setAmount(amt)">
+              ${{ amt }}
+            </button>
+          </div>
+          <div class="mt-3 flex items-center gap-2">
+            <span class="text-sm text-white/70">Custom:</span>
+            <input type="number" v-model.number="amount" class="flex-1 text-black rounded-lg px-3 py-2 text-sm" min="1" step="1" placeholder="Enter amount"/>
+          </div>
+        </div>
+        
+        <div class="mt-6 pt-4 border-t border-white/10">
+          <div class="text-sm text-white/70 mb-3">Choose payment method</div>
+          <div class="grid grid-cols-3 gap-2">
+            <button class="p-3 rounded-xl border border-white/20 hover:border-[var(--acc)] transition-colors text-center">
+              <div class="w-8 h-8 mx-auto mb-1 bg-black rounded-full"></div>
+              <span class="text-xs">Apple Pay</span>
+            </button>
+            <button class="p-3 rounded-xl border border-white/20 hover:border-[var(--acc)] transition-colors text-center">
+              <div class="w-8 h-8 mx-auto mb-1 bg-yellow-400 rounded-full"></div>
+              <span class="text-xs">Card</span>
+            </button>
+            <button class="p-3 rounded-xl border border-white/20 hover:border-[var(--acc)] transition-colors text-center">
+              <div class="w-8 h-8 mx-auto mb-1 bg-green-500 rounded-full"></div>
+              <span class="text-xs">Bank</span>
+            </button>
+          </div>
+        </div>
+        
+        <div class="mt-6 flex gap-3">
+          <button class="flex-1 glass px-4 py-3 rounded-xl text-sm font-medium hover:animate-pulse-glow transition-all" @click="confirmPay">
+            Send ${{ amount.toFixed(2) }}
+          </button>
+          <button class="px-4 py-3 rounded-xl border border-white/20 text-sm font-medium hover:border-white/40 transition-colors" @click="showPay=false">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showReflex" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[70]" data-noprint>
+      <div class="glass rounded-2xl p-6 w-full max-w-md text-center">
+        <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style="background: linear-gradient(135deg, var(--acc), #8acbff)">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+          </svg>
+        </div>
+        <h3 class="text-xl font-medium">Thank You Sent!</h3>
+        <p class="text-white/80 text-sm mt-2">You've just created value with gratitude. Now imagine receiving these thank-yous yourself.</p>
+        <button class="mt-4 glass px-5 py-3 rounded-xl text-sm font-medium w-full hover:animate-pulse-glow transition-all" @click="createLink">
+          Create My Thank-You Link
+        </button>
+        <button class="mt-2 px-5 py-3 rounded-xl border border-white/20 text-sm font-medium w-full hover:border-white/40 transition-colors" @click="showReflex=false">
+          Maybe Later
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vue (CDN) -->
+  <script src="https://unpkg.com/vue@3"></script>
+  <script>
+  const { createApp, ref, computed, onMounted } = Vue;
+  
+  createApp({
+    setup() {
+      // STATE
+      const displayName = ref('You');
+      const slug = ref('your-name');
+      const earnings = ref(0);
+      const meterPct = ref(0);
+      const kpi = ref({ tips: 0, referrals: 0, pending: 0, approved: 0, paid: 0 });
+      const events = ref([]);
+      const payouts = ref([]);
+      const showPay = ref(false);
+      const showReflex = ref(false);
+      const amount = ref(2);
+      const fadeInHero = ref(false);
+      const fadeInSections = ref(false);
+
+      // DERIVED
+      const earningsDisplay = computed(() => earnings.value.toFixed(2));
+      const wowCopy = ref('You could have earned $23.40 last week.');
+
+      // INTRO WOW ANIMATION
+      function introWow() {
+        const target = 23.40;
+        let t = 0;
+        const step = () => {
+          t += 0.02;
+          const v = target * (1 - Math.exp(-3 * t));
+          earnings.value = Math.min(target, +v.toFixed(2));
+          meterPct.value = Math.min(100, Math.round((earnings.value / 50) * 100));
+          if (earnings.value < target) requestAnimationFrame(step);
+        };
+        step();
+        
+        // Trigger fade-in animations
+        setTimeout(() => fadeInHero.value = true, 100);
+        setTimeout(() => fadeInSections.value = true, 600);
+      }
+
+      // Get event color based on type
+      function getEventColor(type) {
+        const colors = {
+          tip: 'bg-[var(--acc)]',
+          share: 'bg-[#15c39a]',
+          payout: 'bg-[#ffcc00]',
+          default: 'bg-white/20'
+        };
+        return colors[type] || colors.default;
+      }
+
+      // Ripple effect for buttons
+      function createRipple(event) {
+        const button = event.currentTarget;
+        const circle = document.createElement("span");
+        const diameter = Math.max(button.clientWidth, button.clientHeight);
+        const radius = diameter / 2;
+
+        circle.style.width = circle.style.height = `${diameter}px`;
+        circle.style.left = `${event.clientX - button.offsetLeft - radius}px`;
+        circle.style.top = `${event.clientY - button.offsetTop - radius}px`;
+        circle.classList.add("ripple-effect");
+
+        const ripple = button.getElementsByClassName("ripple-effect")[0];
+        if (ripple) ripple.remove();
+
+        button.appendChild(circle);
+      }
+
+      // ACTIONS
+      function login() {
+        // Add ripple effect
+        createRipple(event);
+        setTimeout(() => {
+          alert('Welcome to the future of gratitude. Your journey begins now.');
+          createLink();
+        }, 300);
+      }
+      
+      function createLink() {
+        const s = 'user-' + Math.random().toString(36).slice(2,6);
+        slug.value = s;
+        displayName.value = 'User ' + s.slice(-2).toUpperCase();
+        const url = `https://thank.link/${s}`;
+        navigator.clipboard?.writeText(url);
+        events.value.unshift({label: 'Your Thank-You Link Created', value: url, type: 'share'});
+        
+        // Show success message
+        const originalText = document.querySelector('#stickyCta button').textContent;
+        document.querySelector('#stickyCta button').textContent = 'Link Created!';
+        setTimeout(() => {
+          document.querySelector('#stickyCta button').textContent = originalText;
+        }, 2000);
+      }
+      
+      function copyLink() {
+        createRipple(event);
+        navigator.clipboard?.writeText(`https://thank.link/${slug.value}`);
+        
+        // Show feedback
+        const button = event.currentTarget;
+        const originalText = button.textContent;
+        button.textContent = 'Copied!';
+        setTimeout(() => {
+          button.textContent = originalText;
+        }, 1500);
+      }
+      
+      function downloadQR() {
+        createRipple(event);
+        alert('Demo: Beautiful QR code would generate for https://thank.link/' + slug.value);
+      }
+      
+      function openPayDemo() {
+        showPay.value = true;
+      }
+      
+      function setAmount(v) {
+        amount.value = v;
+      }
+      
+      function confirmPay() {
+        showPay.value = false;
+        const a = +amount.value;
+        if (!a || a <= 0) return;
+        
+        const start = earnings.value;
+        const end = start + a;
+        const startPct = meterPct.value;
+        const t0 = performance.now();
+        const D = 700;
+        
+        function anim(ts) {
+          const p = Math.min(1, (ts - t0) / D);
+          const ease = 1 - Math.pow(1 - p, 3);
+          earnings.value = +(start + (end - start) * ease).toFixed(2);
+          meterPct.value = Math.min(100, Math.round(startPct + ((end - start) * 2) * ease));
+          if (p < 1) requestAnimationFrame(anim);
+          else afterTip(a);
+        }
+        requestAnimationFrame(anim);
+      }
+      
+      function afterTip(a) {
+        kpi.value.tips += 1;
+        kpi.value.pending += a;
+        events.value.unshift({label: 'Thank-You Received', value: `$${a.toFixed(2)}`, type: 'tip'});
+        
+        // Show reflex modal after a short delay
+        setTimeout(() => {
+          showReflex.value = true;
+        }, 800);
+      }
+      
+      function shareQuick() {
+        const url = `https://thank.link/${slug.value}`;
+        const msg = `I'm using Thank-You Link to create value with gratitude. Send me a thank-you here → ${url}`;
+        
+        if (navigator.share) {
+          navigator.share({text: msg});
+        } else {
+          alert('Share this message:\n\n' + msg);
+        }
+        
+        kpi.value.referrals += 1;
+        events.value.unshift({label: 'Link Shared', value: url, type: 'share'});
+      }
+      
+      function mockPayout() {
+        const amt = Math.min(kpi.value.pending, Math.max(5, Math.round(earnings.value / 2)));
+        if (amt <= 0) {
+          alert('No pending funds to pay out yet. Keep sharing your link!');
+          return;
+        }
+        
+        kpi.value.pending -= amt;
+        kpi.value.paid += amt;
+        payouts.value.unshift({
+          date: new Date().toLocaleDateString(),
+          amount: amt
+        });
+        
+        events.value.unshift({
+          label: 'Payout Processed',
+          value: `$${amt.toFixed(2)}`,
+          type: 'payout'
+        });
+        
+        // Show success message
+        alert(`Payout of $${amt.toFixed(2)} simulated! In the real app, this would transfer to your bank.`);
+      }
+      
+      function plaidLink() {
+        createRipple(event);
+        alert('Secure bank connection would open here. Your financial data is protected with bank-level security.');
+      }
+
+      onMounted(() => {
+        introWow();
+        
+        // Add ripple effects to all buttons
+        document.addEventListener('click', function(e) {
+          if (e.target.tagName === 'BUTTON') {
+            createRipple(e);
+          }
+        });
+      });
+
+      return {
+        displayName,
+        slug,
+        earningsDisplay,
+        meterPct,
+        kpi,
+        events,
+        payouts,
+        wowCopy,
+        showPay,
+        showReflex,
+        amount,
+        fadeInHero,
+        fadeInSections,
+        login,
+        createLink,
+        copyLink,
+        downloadQR,
+        openPayDemo,
+        setAmount,
+        confirmPay,
+        shareQuick,
+        mockPayout,
+        plaidLink,
+        getEventColor
+      };
+    }
+  }).mount('#app');
+  </script>
+</body>
+</html>
+    
+  </body>
+  
+</html>
