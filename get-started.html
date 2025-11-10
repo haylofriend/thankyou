@@ -154,8 +154,8 @@
           // ===== ENV / CONSTANTS =====
           const SUPABASE_URL = window.SUPABASE_URL || ''
           const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || ''
-          // Unified redirect target (dashboard)
-          const DASHBOARD_URL = window.HF_DASHBOARD_URL || (location.origin + '/dashboard_auth_gated.html')
+          // Unified redirect target (Experience page)
+          const DASHBOARD_URL = window.HF_DASHBOARD_URL || (location.origin + '/your-impact')
           const GOOGLE_CLIENT_ID = window.GOOGLE_CLIENT_ID || '' // optional for One Tap
 
           if(!window.supabase) console.warn('[thankyou:get-started] Supabase SDK missing; auth disabled')
