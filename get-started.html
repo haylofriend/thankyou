@@ -6,6 +6,8 @@
   <title>HayloFriend — Get Started</title>
   <!-- Tailwind (CDN) -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Load public runtime config (Supabase URL, anon key, Stripe publishable, optional redirect) -->
+  <script src="/hf-config.js"></script>
   <script>try{tailwind.config={theme:{extend:{colors:{ink:'#e7e7ea',bg:'#0b0b0c',card:'#121214',hair:'rgba(231,231,234,.12)',acc:'#4da3ff',good:'#15c39a',warn:'#ffcc00',bad:'#ff5a5a'}}}}}catch(e){}</script>
   <style>
     :root{--bg:#0b0b0c;--card:#121214;--ink:#e7e7ea;--hair:rgba(231,231,234,.12);--acc:#4da3ff}
@@ -128,6 +130,19 @@
         // utils
         async function loadSession(){
           const { data: { user: u } } = await supa.auth.getUser()
+          const { data: { session } } = await supa.auth.getSession()
+          user.value = u
+          if(u){
+            const res = await fetch('/api/me', { headers: { Authorization: `Bearer ${session?.access_token||''}` } })
+            if(res.ok){
+              const me = await res.json()
+              phone_verified_at.value = me.phone_verified_at || null
+              stripe_connected.value = !!me.stripe_connected
+              plaid_connected.value = !!me.plaid_connected
+              step.value = (!phone_verified_at.value) ? 1 : 2
+            }
+          }
+        } } = await supa.auth.getUser()
           user.value = u
           // fetch profile flags from your API (reads from Supabase) — optional
           if(u){
@@ -169,7 +184,8 @@
           if(!phone.value) return alert('Enter phone number')
           busy.value = true
           try{
-            const res = await fetch('/api/phone/send-otp', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ phone: phone.value }) })
+            const { data: { session } } = await supa.auth.getSession()
+            const res = await fetch('/api/phone/send-otp', { method:'POST', headers:{'Content-Type':'application/json', Authorization: `Bearer ${session?.access_token||''}`}, body: JSON.stringify({ phone: phone.value }) }) })
             if(!res.ok) throw new Error('Failed to send code')
             otpSent.value = true
           } catch(e){ console.error(e); alert(e.message) } finally{ busy.value = false }
@@ -178,12 +194,14 @@
           if(!otp.value) return
           busy.value = true
           try{
-            const res = await fetch('/api/phone/verify-otp', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ phone: phone.value, code: otp.value }) })
+            const { data: { session } } = await supa.auth.getSession()
+            const res = await fetch('/api/phone/verify-otp', { method:'POST', headers:{'Content-Type':'application/json', Authorization: `Bearer ${session?.access_token||''}`}, body: JSON.stringify({ phone: phone.value, code: otp.value }) }) })
             if(!res.ok) throw new Error('Invalid code')
             phone_verified_at.value = new Date().toISOString()
             step.value = 2
             // create Stripe customer on first verification (idempotent)
-            await fetch('/api/stripe/ensure-customer', { method:'POST' })
+            const { data: { session } } = await supa.auth.getSession()
+            await fetch('/api/stripe/ensure-customer', { method:'POST', headers:{ Authorization: `Bearer ${session?.access_token||''}` } })
           } catch(e){ console.error(e); alert(e.message) } finally{ busy.value = false }
         }
 
@@ -192,7 +210,8 @@
           busy.value = true
           try{
             // ensure Express account exists, then get onboarding link
-            const res = await fetch('/api/stripe/create-connect-link', { method:'POST' })
+            const { data: { session } } = await supa.auth.getSession()
+            const res = await fetch('/api/stripe/create-connect-link', { method:'POST', headers:{ Authorization: `Bearer ${session?.access_token||''}` } })
             const json = await res.json()
             if(!res.ok) throw new Error(json.error || 'Stripe link failed')
             window.location.href = json.url
@@ -203,13 +222,15 @@
         async function startPlaid(){
           busy.value = true
           try{
-            const res = await fetch('/api/plaid/create-link-token', { method:'POST' })
+            const { data: { session } } = await supa.auth.getSession()
+            const res = await fetch('/api/plaid/create-link-token', { method:'POST', headers:{ Authorization: `Bearer ${session?.access_token||''}` } })
             const { link_token } = await res.json()
             if(!link_token) throw new Error('Missing link_token')
             const handler = window.Plaid.create({
               token: link_token,
               onSuccess: async (public_token, metadata)=>{
-                const ex = await fetch('/api/plaid/exchange', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ public_token, metadata }) })
+                const { data: { session } } = await supa.auth.getSession()
+                const ex = await fetch('/api/plaid/exchange', { method:'POST', headers:{'Content-Type':'application/json', Authorization: `Bearer ${session?.access_token||''}`}, body: JSON.stringify({ public_token, metadata }) }) })
                 if(ex.ok){ plaid_connected.value = true }
               },
               onExit: (err)=>{ if(err) console.warn('Plaid exit',err) },
