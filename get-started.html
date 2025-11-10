@@ -1,275 +1,228 @@
+<!-- get-started.html (UI from Get-started-UI.html + preserved logic) -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full" style="color-scheme: dark light">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HayloFriend — Get Started</title>
+  <meta name="theme-color" content="#0b0b0c" />
+  <title>Thank‑You Link — One‑Click Auth</title>
+
+  <!-- Performance Hints -->
+  <link rel="preconnect" href="https://accounts.google.com" crossorigin>
+  <link rel="preconnect" href="https://appleid.cdn-apple.com" crossorigin>
+  <link rel="preconnect" href="https://gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+
   <!-- Tailwind (CDN) -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Load public runtime config (Supabase URL, anon key, Stripe publishable, optional redirect) -->
-  <script src="/hf-config.js"></script>
-  <script>try{tailwind.config={theme:{extend:{colors:{ink:'#e7e7ea',bg:'#0b0b0c',card:'#121214',hair:'rgba(231,231,234,.12)',acc:'#4da3ff',good:'#15c39a',warn:'#ffcc00',bad:'#ff5a5a'}}}}}catch(e){}</script>
+  <script>
+    try {
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              ink: '#e7e7ea', bg: '#0b0b0c', card: '#121214', hair: 'rgba(231,231,234,.12)',
+              acc: '#4da3ff', good: '#15c39a', warn: '#ffcc00', bad: '#ff5a5a'
+            },
+            boxShadow: {
+              soft: '0 8px 24px rgba(0,0,0,.35)',
+              ring: '0 0 0 3px rgba(77,163,255,.35)'
+            }
+          }
+        }
+      }
+    } catch (e) { console.error(e) }
+  </script>
   <style>
     :root{--bg:#0b0b0c;--card:#121214;--ink:#e7e7ea;--hair:rgba(231,231,234,.12);--acc:#4da3ff}
     html,body{height:100%;background:var(--bg)!important}
     body{margin:0;min-height:100vh;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
-    *,*::before,*::after{box-sizing:border-box}
-    .glass{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));border:1px solid var(--hair);box-shadow:0 8px 24px rgba(0,0,0,.35);backdrop-filter:blur(10px)}
-    .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid var(--hair);background:rgba(255,255,255,.05)}
-    .step-active{border-color:var(--acc);box-shadow:0 0 0 4px rgba(77,163,255,.12)}
+    .glass{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));border:1px solid var(--hair);box-shadow:var(--shadow,0 8px 24px rgba(0,0,0,.35));backdrop-filter:blur(10px)}
+    .pill{display:inline-flex;align-items:center;gap:.6rem;padding:.7rem 1rem;border-radius:999px;border:1px solid var(--hair);background:rgba(255,255,255,.05);transition:.25s ease;will-change:transform,background,border-color}
+    .pill:hover{transform:translateY(-1px);border-color:rgba(231,231,234,.25);background:rgba(255,255,255,.08)}
+    .pill:active{transform:translateY(0)}
+    .primary{background:linear-gradient(180deg,rgba(77,163,255,.25),rgba(77,163,255,.12));border-color:rgba(77,163,255,.35)}
+    .primary:hover{background:linear-gradient(180deg,rgba(77,163,255,.35),rgba(77,163,255,.18))}
     .spinner{border:2px solid rgba(255,255,255,.2);border-top-color:var(--acc);border-radius:50%;width:18px;height:18px;animation:spin 1s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
+    @media (prefers-reduced-motion: reduce){.pill,.spinner{transition:none;animation:none}}
+    .focus-ring:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(77,163,255,.5)}
   </style>
-  <!-- Vendor SDKs (load as needed) -->
-  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://js.stripe.com/v3/"></script>
-  <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
-</head>
-<body>
-  <div id="app" class="max-w-[840px] mx-auto px-6 py-10">
-    <!-- NAV -->
-    <nav class="flex items-center justify-between mb-8">
-      <div class="flex items-center gap-2">
-        <div class="w-6 h-6 rounded-md" style="background:linear-gradient(135deg,var(--acc),#8acbff)"></div>
-        <div class="tracking-[.14em] uppercase text-xs text-white/90">Thank‑You Link</div>
-      </div>
-      <a href="/" class="text-sm text-white/70 hover:text-white/90">Back to Home</a>
-    </nav>
 
-    <!-- HEADER -->
-    <header class="text-center">
-      <h1 class="text-4xl font-semibold">Let’s get you earning in 1–2 steps</h1>
-      <p class="text-white/70 mt-2">One secure flow. We provision your profile, payouts, and (optional) bank insights.</p>
+  <!-- Third‑party SDKs (async to avoid blocking) -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body class="h-full">
+  <main id="app" class="max-w-[980px] mx-auto px-6 py-12">
+    <!-- Hero -->
+    <header class="text-center mb-10">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[color:var(--hair)] text-xs text-white/70 mb-3">
+        <span class="w-2 h-2 rounded-full bg-[color:var(--acc)] animate-pulse"></span>
+        Smart Auth Engine
+      </div>
+      <h1 class="text-4xl md:text-5xl font-semibold tracking-tight">In. One Click.</h1>
+      <p class="text-white/70 mt-2 max-w-[640px] mx-auto">If you’ve approved before on this device, you’re in instantly via Google One Tap. Otherwise, the cleanest two‑click path with Google, Apple, or a Magic Link.</p>
     </header>
 
-    <!-- STEP CARDS -->
-    <section class="mt-8 grid md:grid-cols-2 gap-5">
-      <!-- Step 1: Account & Phone (required) -->
-      <div :class="['glass rounded-2xl p-5', step===1 ? 'step-active':'' ]">
-        <div class="text-xs uppercase text-white/60 mb-1">Step 1</div>
-        <h2 class="text-xl font-medium">Create your profile & verify your phone</h2>
-        <p class="text-white/70 text-sm mt-1">Use Apple / Google / Email + SMS. We create your Supabase user and a Stripe customer behind the scenes.</p>
-        <div class="mt-3 flex flex-wrap gap-2">
-          <button @click="auth('apple')" class="pill"> Sign in with Apple</button>
-          <button @click="auth('google')" class="pill">G Sign in with Google</button>
-          <button @click="auth('magic')" class="pill">✉️ Magic Link</button>
+    <!-- Card -->
+    <section class="glass rounded-3xl p-6 md:p-8">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div class="text-xs uppercase text-white/60 mb-1">Smart Auth</div>
+          <h2 class="text-xl md:text-2xl font-medium">One‑Click ➜ Session; Two‑Click ➜ Provider</h2>
+          <p class="text-white/70 text-sm mt-1">Google One Tap (auto when eligible) • Sign in with Apple (privacy‑first). Supabase stores the session.</p>
         </div>
-        <div class="mt-4" v-if="user">
-          <label class="text-sm text-white/70">Phone number</label>
-          <div class="flex gap-2 mt-1">
-            <input v-model="phone" type="tel" placeholder="+1 555 555 5555" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-2 focus:outline-none focus:border-[var(--acc)]" />
-            <button @click="sendOtp" :disabled="busy" class="px-3 py-2 rounded-xl border border-white/20 hover:border-[var(--acc)] text-sm flex items-center gap-2">
-              <span v-if="!busy">Send code</span>
-              <span v-else class="spinner"></span>
-            </button>
-          </div>
-          <div class="flex gap-2 mt-2" v-if="otpSent">
-            <input v-model="otp" type="text" placeholder="6‑digit code" class="w-40 bg-transparent border border-white/20 rounded-xl px-3 py-2 focus:outline-none focus:border-[var(--acc)]" />
-            <button @click="verifyOtp" :disabled="busy" class="px-3 py-2 rounded-xl border border-white/20 hover:border-[var(--acc)] text-sm">Verify</button>
-          </div>
-          <p class="text-xs text-white/60 mt-2" v-if="phone_verified_at">✔ Phone verified</p>
-        </div>
+        <button @click="smartOneClick" :disabled="busy" class="pill primary min-w-[180px] justify-center focus-ring" aria-label="Smart One‑Click sign in">
+          <span v-if="!busy">⚡ Smart One‑Click</span>
+          <span v-else class="spinner" title="Working…" aria-live="polite"></span>
+        </button>
       </div>
 
-      <!-- Step 2: Payouts (required) & Bank Insights (optional) -->
-      <div :class="['glass rounded-2xl p-5', step===2 ? 'step-active':'' ]">
-        <div class="text-xs uppercase text-white/60 mb-1">Step 2</div>
-        <h2 class="text-xl font-medium">Connect payouts (Stripe) <span class="text-white/60">& optional bank insights (Plaid)</span></h2>
-        <p class="text-white/70 text-sm mt-1">We’ll open a secure Stripe Connect onboarding session. Then you can optionally link a bank for insights/cashback discovery via Plaid.</p>
-        <div class="mt-3 flex flex-wrap gap-2">
-          <button @click="startStripe" :disabled="busy || !user" class="pill">🔗 Connect payouts</button>
-          <button @click="startPlaid" :disabled="busy || !user" class="pill">🏦 Link bank (optional)</button>
+      <!-- Buttons -->
+      <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-2" role="group" aria-label="Auth providers">
+        <button @click="withGoogleRedirect" class="pill focus-ring justify-center" aria-label="Continue with Google">
+          <span class="inline-flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303C33.914 31.255 29.407 34 24 34c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.869 4.065 29.761 2 24 2 12.955 2 4 10.955 4 22s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.651-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.817C14.297 16.733 18.789 14 24 14c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.869 4.065 29.761 2 24 2 16.318 2 9.656 6.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 42c5.356 0 10.207-2.053 13.79-5.385l-6.363-5.375C29.407 34 24.9 31.255 24 31.255c-5.211 0-9.703-2.733-11.123-6.817l-6.571 4.817C9.656 37.663 16.318 42 24 42z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303C34.914 31.255 29.407 34 24 34c-5.211 0-9.703-2.733-11.123-6.817l-6.571 4.817C9.656 37.663 16.318 42 24 42c8.837 0 16-7.163 16-16 0-1.341-.138-2.651-.389-3.917z"/></svg>
+            Continue with Google
+          </span>
+        </button>
+        <button @click="withAppleRedirect" class="pill focus-ring justify-center" aria-label="Continue with Apple">
+          <span class="inline-flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 14 17" aria-hidden="true"><path fill="currentColor" d="M13.31 13.03c-.31.73-.68 1.4-1.11 2.02-.58.83-1.05 1.4-1.41 1.69-.56.52-1.15.79-1.78.8-.45 0-1-.13-1.66-.39-.66-.26-1.27-.39-1.82-.39-.57 0-1.19.13-1.86.39-.67.26-1.22.39-1.66.39-.61-.01-1.21-.26-1.8-.76-.38-.33-.86-.93-1.46-1.78C.87 14.48.41 13.54.11 12.6c-.35-1.03-.53-2.02-.53-2.97 0-1.1.24-2.05.72-2.85.38-.64.89-1.14 1.54-1.52C2.47 4.83 3.18 4.62 4 4.61c.47 0 1.09.15 1.87.45.77.3 1.27.45 1.5.45.16 0 .69-.17 1.6-.51.86-.31 1.58-.44 2.16-.39 1.6.13 2.81.83 3.62 2.09-1.43.87-2.15 2.09-2.16 3.67 0 1.22.45 2.24 1.32 3.05zM9.79.34c0 .82-.3 1.59-.88 2.29-.71.83-1.56 1.31-2.49 1.24a2.6 2.6 0 0 1-.02-.31c0-.79.34-1.64.94-2.36A3.4 3.4 0 0 1 9.8 0c.01.11.01.22-.01.34z"/></svg>
+            Continue with Apple
+          </span>
+        </button>
+        <button @click="withMagicLink" class="pill focus-ring justify-center" aria-label="Magic Link sign in via email">
+          ✉️ Magic Link
+        </button>
+      </div>
+
+      <!-- One Tap container (GIS draws UI when eligible) -->
+      <div id="oneTap" class="mt-2"></div>
+
+      <p class="text-xs text-white/50 mt-4">Note: browsers cannot silently read your Google/Apple account. One Tap auto‑surfaces for returning users on this domain; Apple always requires a click.</p>
+    </section>
+
+    <!-- Signed-in section -->
+    <section class="mt-10 glass rounded-3xl p-6 md:p-8" v-if="user">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center">👤</div>
+        <div>
+          <div class="text-sm">Signed in</div>
+          <div class="text-white/70 text-xs truncate max-w-[420px]">{{ user.email || user.phone || user.id }}</div>
         </div>
-        <div class="text-xs text-white/60 mt-2">
-          Status: <span :class="{'text-good': stripe_connected}">{{ stripe_connected? 'Stripe connected' : 'Not connected' }}</span> ·
-          <span :class="{'text-good': plaid_connected}">{{ plaid_connected? 'Plaid linked' : 'No bank linked' }}</span>
-        </div>
+      </div>
+      <div class="mt-4 flex gap-2">
+        <button @click="goDashboard" class="pill primary focus-ring">Open Dashboard</button>
+        <button @click="logout" class="pill focus-ring">Sign out</button>
       </div>
     </section>
 
-    <!-- ONE-CLICK CTA (smart) -->
-    <section class="mt-6">
-      <button @click="smartOneClick" :disabled="busy" class="w-full md:w-auto px-5 py-3 rounded-2xl glass hover:border-[var(--acc)] border border-white/20 text-sm font-medium flex items-center gap-2">
-        <span v-if="!busy">⚡ Smart One‑Click</span>
-        <span v-else class="spinner"></span>
-      </button>
-      <p class="text-xs text-white/60 mt-2">Smart checks: if logged in + payouts connected, we skip ahead to your dashboard. Otherwise we launch the next required secure step.</p>
-    </section>
+    <!-- Toast / status area -->
+    <div class="sr-only" aria-live="polite" aria-atomic="true">{{ liveStatus }}</div>
+    <div v-if="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 glass rounded-full px-4 py-2 text-sm shadow-ring">{{ toast }}</div>
+  </main>
 
-    <!-- FOOTER / SUPPORT -->
-    <footer class="mt-10 text-white/60 text-xs">
-      Need help? <a href="mailto:support@haylofriend.com" class="underline">support@haylofriend.com</a>
-    </footer>
-  </div>
+  <!-- Core SDKs (deferred to end of body to avoid blocking) -->
+  <script defer src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
-    const { createApp, ref, computed, onMounted } = Vue
+    const { createApp, ref, onMounted } = Vue
 
     createApp({
       setup(){
-        // --- CONFIG (replace placeholders via env injection) ---
-        const SUPABASE_URL = window.SUPABASE_URL || 'https://YOUR_SUPABASE_ID.supabase.co'
-        const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'public-anon-key'
-        const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-        const stripe = Stripe(window.STRIPE_PUBLISHABLE_KEY || 'pk_test_123')
-        // Centralize redirect so it's consistent for OAuth + Magic Link
-        const REDIRECT_URL = window.HF_REDIRECT_URL || `${window.location.origin}/get-started.html`
+        // ===== ENV / CONSTANTS =====
+        const SUPABASE_URL = window.SUPABASE_URL || ''
+        const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || ''
+        // Unified redirect target (dashboard)
+        const DASHBOARD_URL = window.HF_DASHBOARD_URL || (location.origin + '/dashboard_auth_gated.html')
+        const GOOGLE_CLIENT_ID = window.GOOGLE_CLIENT_ID || '' // optional for One Tap
 
-        // state
+        if(!window.supabase) console.error('Supabase SDK missing')
+        const supa = (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null
+
+        // ===== STATE =====
         const user = ref(null)
-        const phone = ref('')
-        const otp = ref('')
-        const otpSent = ref(false)
-        const phone_verified_at = ref(null)
-        const stripe_connected = ref(false)
-        const plaid_connected = ref(false)
         const busy = ref(false)
-        const step = ref(1)
+        const toast = ref('')
+        const liveStatus = ref('')
 
-        // utils
-        async function loadSession(){
-          const { data: { user: u } } = await supa.auth.getUser()
-          const { data: { session } } = await supa.auth.getSession()
-          user.value = u
-          if(u){
-            const res = await fetch('/api/me', { headers: { Authorization: `Bearer ${session?.access_token||''}` } })
-            if(res.ok){
-              const me = await res.json()
-              phone_verified_at.value = me.phone_verified_at || null
-              stripe_connected.value = !!me.stripe_connected
-              plaid_connected.value = !!me.plaid_connected
-              step.value = (!phone_verified_at.value) ? 1 : 2
+        // ===== HELPERS =====
+        const say = (msg)=>{ toast.value = msg; liveStatus.value = msg; setTimeout(()=> toast.value='', 2200) }
+        const goDashboard = ()=> location.href = DASHBOARD_URL
+        async function refreshUser(){ const { data: { user: u } } = await supa.auth.getUser(); user.value = u }
+        async function getSession(){ const { data: { session } } = await supa.auth.getSession(); return session }
+        async function logout(){ await supa.auth.signOut(); user.value = null; say('Signed out') }
+
+        // ===== GOOGLE ONE TAP (optional enhancement) =====
+        function initOneTap(){
+          if(!window.google || !GOOGLE_CLIENT_ID || !supa) return
+          window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            auto_select: true,
+            cancel_on_tap_outside: false,
+            itp_support: true,
+            callback: async (resp)=>{
+              try {
+                busy.value = true; liveStatus.value = 'Signing in with Google'
+                const { error } = await supa.auth.signInWithIdToken({ provider: 'google', token: resp.credential })
+                if(error) throw error
+                await refreshUser(); goDashboard()
+              } catch (e) {
+                console.error(e); say('Google sign‑in failed'); busy.value = false
+              }
             }
-          }
-        } } = await supa.auth.getUser()
-          user.value = u
-          // fetch profile flags from your API (reads from Supabase) — optional
-          if(u){
-            const res = await fetch('/api/me')
-            if(res.ok){
-              const me = await res.json()
-              phone_verified_at.value = me.phone_verified_at || null
-              stripe_connected.value = !!me.stripe_connected
-              plaid_connected.value = !!me.plaid_connected
-              step.value = (!phone_verified_at.value) ? 1 : 2
-            }
-          }
+          })
+          window.google.accounts.id.prompt(()=>{})
         }
 
-        // AUTH ENTRYPOINTS
-        async function auth(provider){
-          busy.value = true
-          try{
-            if(provider==='google' || provider==='apple'){
-              const { error } = await supa.auth.signInWithOAuth({ provider, options:{ redirectTo: REDIRECT_URL } })
-              if(error) throw error
-            } else {
-              const email = prompt('Enter your email for a magic link:')
-              if(!email) return
-              const { error } = await supa.auth.signInWithOtp({ email, options:{ emailRedirectTo: REDIRECT_URL } })
-              if(error) throw error
-              alert('Check your email for a secure sign‑in link.')
-            }
-          } catch(e){
-            console.error(e); alert(e.message || 'Auth failed')
-          } finally{
-            busy.value = false
-            setTimeout(loadSession, 1000)
-          }
+        // ===== PROVIDER FLOWS (Supabase‑native) =====
+        async function withGoogleRedirect(){
+          try{ busy.value = true; liveStatus.value = 'Redirecting to Google…'
+            const { error } = await supa.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: DASHBOARD_URL } })
+            if(error) throw error
+          }catch(e){ console.error(e); say('Could not start Google sign‑in'); busy.value=false }
+        }
+        async function withAppleRedirect(){
+          try{ busy.value = true; liveStatus.value = 'Redirecting to Apple…'
+            const { error } = await supa.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo: DASHBOARD_URL } })
+            if(error) throw error
+          }catch(e){ console.error(e); say('Could not start Apple sign‑in'); busy.value=false }
+        }
+        async function withMagicLink(){
+          const email = prompt('Email for a magic link:')
+          if(!email) return
+          try{ busy.value = true; liveStatus.value = 'Sending magic link…'
+            const { error } = await supa.auth.signInWithOtp({ email, options: { emailRedirectTo: DASHBOARD_URL } })
+            if(error) throw error
+            say('Check your email for a secure sign‑in link.')
+          }catch(e){ console.error(e); say('Could not send magic link') }
+          finally{ busy.value = false }
         }
 
-        // PHONE OTP
-        async function sendOtp(){
-          if(!phone.value) return alert('Enter phone number')
-          busy.value = true
-          try{
-            const { data: { session } } = await supa.auth.getSession()
-            const res = await fetch('/api/phone/send-otp', { method:'POST', headers:{'Content-Type':'application/json', Authorization: `Bearer ${session?.access_token||''}`}, body: JSON.stringify({ phone: phone.value }) }) })
-            if(!res.ok) throw new Error('Failed to send code')
-            otpSent.value = true
-          } catch(e){ console.error(e); alert(e.message) } finally{ busy.value = false }
-        }
-        async function verifyOtp(){
-          if(!otp.value) return
-          busy.value = true
-          try{
-            const { data: { session } } = await supa.auth.getSession()
-            const res = await fetch('/api/phone/verify-otp', { method:'POST', headers:{'Content-Type':'application/json', Authorization: `Bearer ${session?.access_token||''}`}, body: JSON.stringify({ phone: phone.value, code: otp.value }) }) })
-            if(!res.ok) throw new Error('Invalid code')
-            phone_verified_at.value = new Date().toISOString()
-            step.value = 2
-            // create Stripe customer on first verification (idempotent)
-            const { data: { session } } = await supa.auth.getSession()
-            await fetch('/api/stripe/ensure-customer', { method:'POST', headers:{ Authorization: `Bearer ${session?.access_token||''}` } })
-          } catch(e){ console.error(e); alert(e.message) } finally{ busy.value = false }
-        }
-
-        // STRIPE CONNECT
-        async function startStripe(){
-          busy.value = true
-          try{
-            // ensure Express account exists, then get onboarding link
-            const { data: { session } } = await supa.auth.getSession()
-            const res = await fetch('/api/stripe/create-connect-link', { method:'POST', headers:{ Authorization: `Bearer ${session?.access_token||''}` } })
-            const json = await res.json()
-            if(!res.ok) throw new Error(json.error || 'Stripe link failed')
-            window.location.href = json.url
-          } catch(e){ console.error(e); alert(e.message) } finally{ busy.value = false }
-        }
-
-        // PLAID LINK (optional)
-        async function startPlaid(){
-          busy.value = true
-          try{
-            const { data: { session } } = await supa.auth.getSession()
-            const res = await fetch('/api/plaid/create-link-token', { method:'POST', headers:{ Authorization: `Bearer ${session?.access_token||''}` } })
-            const { link_token } = await res.json()
-            if(!link_token) throw new Error('Missing link_token')
-            const handler = window.Plaid.create({
-              token: link_token,
-              onSuccess: async (public_token, metadata)=>{
-                const { data: { session } } = await supa.auth.getSession()
-                const ex = await fetch('/api/plaid/exchange', { method:'POST', headers:{'Content-Type':'application/json', Authorization: `Bearer ${session?.access_token||''}`}, body: JSON.stringify({ public_token, metadata }) }) })
-                if(ex.ok){ plaid_connected.value = true }
-              },
-              onExit: (err)=>{ if(err) console.warn('Plaid exit',err) },
-            })
-            handler.open()
-          } catch(e){ console.error(e); alert(e.message) } finally{ busy.value = false }
-        }
-
-        // SMART ONE‑CLICK
+        // ===== SMART ONE‑CLICK =====
         async function smartOneClick(){
-          busy.value = true
-          try{
-            await loadSession()
-            if(!user.value){
-              return auth('google') // default quick path; Apple/Magic still available above
-            }
-            if(!phone_verified_at.value){
-              step.value = 1
-              alert('Verify your phone to continue. Sending code…')
-              await sendOtp();
-              return
-            }
-            if(!stripe_connected.value){
-              return startStripe()
-            }
-            // optional bank link
-            if(!plaid_connected.value){
-              const doPlaid = confirm('Want bank insights & auto‑cashback? (Optional)')
-              if(doPlaid) return startPlaid()
-            }
-            // all set — go to dashboard
-            window.location.href = '/dashboard'
-          } finally{ busy.value = false }
+          try{ busy.value = true
+            const session = await getSession()
+            if(session){ await refreshUser(); return goDashboard() }
+            busy.value = false; initOneTap() // trigger GIS if eligible
+          }catch(e){ console.error(e); busy.value=false; say('Could not complete one‑click') }
         }
 
-        onMounted(loadSession)
+        onMounted(async ()=>{
+          if(!supa) return
+          await refreshUser()
+          const { data: { session } } = await supa.auth.getSession()
+          if(session) return goDashboard()
 
-        return { user, phone, otp, otpSent, phone_verified_at, stripe_connected, plaid_connected, busy, step,
-                 auth, sendOtp, verifyOtp, startStripe, startPlaid, smartOneClick }
+          // optional: auto‑start one‑click when navigating from index with ?autostart=1
+          const qs = new URLSearchParams(location.search)
+          if(qs.get('autostart') === '1') smartOneClick()
+        })
+
+        return { user, busy, toast, liveStatus, smartOneClick, withGoogleRedirect, withAppleRedirect, withMagicLink, goDashboard, logout }
       }
     }).mount('#app')
   </script>
