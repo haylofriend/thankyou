@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HayloFriend — Get Started</title>
+  <!-- Tailwind (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>try{tailwind.config={theme:{extend:{colors:{ink:'#e7e7ea',bg:'#0b0b0c',card:'#121214',hair:'rgba(231,231,234,.12)',acc:'#4da3ff',good:'#15c39a',warn:'#ffcc00',bad:'#ff5a5a'}}}}}catch(e){}</script>
+  <style>
+    :root{--bg:#0b0b0c;--card:#121214;--ink:#e7e7ea;--hair:rgba(231,231,234,.12);--acc:#4da3ff}
+    html,body{height:100%;background:var(--bg)!important}
+    body{margin:0;min-height:100vh;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+    *,*::before,*::after{box-sizing:border-box}
+    .glass{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));border:1px solid var(--hair);box-shadow:0 8px 24px rgba(0,0,0,.35);backdrop-filter:blur(10px)}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid var(--hair);background:rgba(255,255,255,.05)}
+    .step-active{border-color:var(--acc);box-shadow:0 0 0 4px rgba(77,163,255,.12)}
+    .spinner{border:2px solid rgba(255,255,255,.2);border-top-color:var(--acc);border-radius:50%;width:18px;height:18px;animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+  <!-- Vendor SDKs (load as needed) -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://js.stripe.com/v3/"></script>
+  <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+</head>
+<body>
+  <div id="app" class="max-w-[840px] mx-auto px-6 py-10">
+    <!-- NAV -->
+    <nav class="flex items-center justify-between mb-8">
+      <div class="flex items-center gap-2">
+        <div class="w-6 h-6 rounded-md" style="background:linear-gradient(135deg,var(--acc),#8acbff)"></div>
+        <div class="tracking-[.14em] uppercase text-xs text-white/90">Thank‑You Link</div>
+      </div>
+      <a href="/" class="text-sm text-white/70 hover:text-white/90">Back to Home</a>
+    </nav>
+
+    <!-- HEADER -->
+    <header class="text-center">
+      <h1 class="text-4xl font-semibold">Let’s get you earning in 1–2 steps</h1>
+      <p class="text-white/70 mt-2">One secure flow. We provision your profile, payouts, and (optional) bank insights.</p>
+    </header>
+
+    <!-- STEP CARDS -->
+    <section class="mt-8 grid md:grid-cols-2 gap-5">
+      <!-- Step 1: Account & Phone (required) -->
+      <div :class="['glass rounded-2xl p-5', step===1 ? 'step-active':'' ]">
+        <div class="text-xs uppercase text-white/60 mb-1">Step 1</div>
+        <h2 class="text-xl font-medium">Create your profile & verify your phone</h2>
+        <p class="text-white/70 text-sm mt-1">Use Apple / Google / Email + SMS. We create your Supabase user and a Stripe customer behind the scenes.</p>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button @click="auth('apple')" class="pill"> Sign in with Apple</button>
+          <button @click="auth('google')" class="pill">G Sign in with Google</button>
+          <button @click="auth('magic')" class="pill">✉️ Magic Link</button>
+        </div>
+        <div class="mt-4" v-if="user">
+          <label class="text-sm text-white/70">Phone number</label>
+          <div class="flex gap-2 mt-1">
+            <input v-model="phone" type="tel" placeholder="+1 555 555 5555" class="w-full bg-transparent border border-white/20 rounded-xl px-3 py-2 focus:outline-none focus:border-[var(--acc)]" />
+            <button @click="sendOtp" :disabled="busy" class="px-3 py-2 rounded-xl border border-white/20 hover:border-[var(--acc)] text-sm flex items-center gap-2">
+              <span v-if="!busy">Send code</span>
+              <span v-else class="spinner"></span>
+            </button>
+          </div>
+          <div class="flex gap-2 mt-2" v-if="otpSent">
+            <input v-model="otp" type="text" placeholder="6‑digit code" class="w-40 bg-transparent border border-white/20 rounded-xl px-3 py-2 focus:outline-none focus:border-[var(--acc)]" />
+            <button @click="verifyOtp" :disabled="busy" class="px-3 py-2 rounded-xl border border-white/20 hover:border-[var(--acc)] text-sm">Verify</button>
+          </div>
+          <p class="text-xs text-white/60 mt-2" v-if="phone_verified_at">✔ Phone verified</p>
+        </div>
+      </div>
+
+      <!-- Step 2: Payouts (required) & Bank Insights (optional) -->
+      <div :class="['glass rounded-2xl p-5', step===2 ? 'step-active':'' ]">
+        <div class="text-xs uppercase text-white/60 mb-1">Step 2</div>
+        <h2 class="text-xl font-medium">Connect payouts (Stripe) <span class="text-white/60">& optional bank insights (Plaid)</span></h2>
+        <p class="text-white/70 text-sm mt-1">We’ll open a secure Stripe Connect onboarding session. Then you can optionally link a bank for insights/cashback discovery via Plaid.</p>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button @click="startStripe" :disabled="busy || !user" class="pill">🔗 Connect payouts</button>
+          <button @click="startPlaid" :disabled="busy || !user" class="pill">🏦 Link bank (optional)</button>
+        </div>
+        <div class="text-xs text-white/60 mt-2">
+          Status: <span :class="{'text-good': stripe_connected}">{{ stripe_connected? 'Stripe connected' : 'Not connected' }}</span> ·
+          <span :class="{'text-good': plaid_connected}">{{ plaid_connected? 'Plaid linked' : 'No bank linked' }}</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ONE-CLICK CTA (smart) -->
+    <section class="mt-6">
+      <button @click="smartOneClick" :disabled="busy" class="w-full md:w-auto px-5 py-3 rounded-2xl glass hover:border-[var(--acc)] border border-white/20 text-sm font-medium flex items-center gap-2">
+        <span v-if="!busy">⚡ Smart One‑Click</span>
+        <span v-else class="spinner"></span>
+      </button>
+      <p class="text-xs text-white/60 mt-2">Smart checks: if logged in + payouts connected, we skip ahead to your dashboard. Otherwise we launch the next required secure step.</p>
+    </section>
+
+    <!-- FOOTER / SUPPORT -->
+    <footer class="mt-10 text-white/60 text-xs">
+      Need help? <a href="mailto:support@haylofriend.com" class="underline">support@haylofriend.com</a>
+    </footer>
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted } = Vue
+
+    createApp({
+      setup(){
+        // --- CONFIG (replace placeholders via env injection) ---
+        const SUPABASE_URL = window.SUPABASE_URL || 'https://YOUR_SUPABASE_ID.supabase.co'
+        const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'public-anon-key'
+        const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+        const stripe = Stripe(window.STRIPE_PUBLISHABLE_KEY || 'pk_test_123')
+        // Centralize redirect so it's consistent for OAuth + Magic Link
+        const REDIRECT_URL = window.HF_REDIRECT_URL || `${window.location.origin}/get-started.html`
+
+        // state
+        const user = ref(null)
+        const phone = ref('')
+        const otp = ref('')
+        const otpSent = ref(false)
+        const phone_verified_at = ref(null)
+        const stripe_connected = ref(false)
+        const plaid_connected = ref(false)
+        const busy = ref(false)
+        const step = ref(1)
+
+        // utils
+        async function loadSession(){
+          const { data: { user: u } } = await supa.auth.getUser()
+          user.value = u
+          // fetch profile flags from your API (reads from Supabase) — optional
+          if(u){
+            const res = await fetch('/api/me')
+            if(res.ok){
+              const me = await res.json()
+              phone_verified_at.value = me.phone_verified_at || null
+              stripe_connected.value = !!me.stripe_connected
+              plaid_connected.value = !!me.plaid_connected
+              step.value = (!phone_verified_at.value) ? 1 : 2
+            }
+          }
+        }
+
+        // AUTH ENTRYPOINTS
+        async function auth(provider){
+          busy.value = true
+          try{
+            if(provider==='google' || provider==='apple'){
+              const { error } = await supa.auth.signInWithOAuth({ provider, options:{ redirectTo: REDIRECT_URL } })
+              if(error) throw error
+            } else {
+              const email = prompt('Enter your email for a magic link:')
+              if(!email) return
+              const { error } = await supa.auth.signInWithOtp({ email, options:{ emailRedirectTo: REDIRECT_URL } })
+              if(error) throw error
+              alert('Check your email for a secure sign‑in link.')
+            }
+          } catch(e){
+            console.error(e); alert(e.message || 'Auth failed')
+          } finally{
+            busy.value = false
+            setTimeout(loadSession, 1000)
+          }
+        }
+
+        // PHONE OTP
+        async function sendOtp(){
+          if(!phone.value) return alert('Enter phone number')
+          busy.value = true
+          try{
+            const res = await fetch('/api/phone/send-otp', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ phone: phone.value }) })
+            if(!res.ok) throw new Error('Failed to send code')
+            otpSent.value = true
+          } catch(e){ console.error(e); alert(e.message) } finally{ busy.value = false }
+        }
+        async function verifyOtp(){
+          if(!otp.value) return
+          busy.value = true
+          try{
+            const res = await fetch('/api/phone/verify-otp', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ phone: phone.value, code: otp.value }) })
+            if(!res.ok) throw new Error('Invalid code')
+            phone_verified_at.value = new Date().toISOString()
+            step.value = 2
+            // create Stripe customer on first verification (idempotent)
+            await fetch('/api/stripe/ensure-customer', { method:'POST' })
+          } catch(e){ console.error(e); alert(e.message) } finally{ busy.value = false }
+        }
+
+        // STRIPE CONNECT
+        async function startStripe(){
+          busy.value = true
+          try{
+            // ensure Express account exists, then get onboarding link
+            const res = await fetch('/api/stripe/create-connect-link', { method:'POST' })
+            const json = await res.json()
+            if(!res.ok) throw new Error(json.error || 'Stripe link failed')
+            window.location.href = json.url
+          } catch(e){ console.error(e); alert(e.message) } finally{ busy.value = false }
+        }
+
+        // PLAID LINK (optional)
+        async function startPlaid(){
+          busy.value = true
+          try{
+            const res = await fetch('/api/plaid/create-link-token', { method:'POST' })
+            const { link_token } = await res.json()
+            if(!link_token) throw new Error('Missing link_token')
+            const handler = window.Plaid.create({
+              token: link_token,
+              onSuccess: async (public_token, metadata)=>{
+                const ex = await fetch('/api/plaid/exchange', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ public_token, metadata }) })
+                if(ex.ok){ plaid_connected.value = true }
+              },
+              onExit: (err)=>{ if(err) console.warn('Plaid exit',err) },
+            })
+            handler.open()
+          } catch(e){ console.error(e); alert(e.message) } finally{ busy.value = false }
+        }
+
+        // SMART ONE‑CLICK
+        async function smartOneClick(){
+          busy.value = true
+          try{
+            await loadSession()
+            if(!user.value){
+              return auth('google') // default quick path; Apple/Magic still available above
+            }
+            if(!phone_verified_at.value){
+              step.value = 1
+              alert('Verify your phone to continue. Sending code…')
+              await sendOtp();
+              return
+            }
+            if(!stripe_connected.value){
+              return startStripe()
+            }
+            // optional bank link
+            if(!plaid_connected.value){
+              const doPlaid = confirm('Want bank insights & auto‑cashback? (Optional)')
+              if(doPlaid) return startPlaid()
+            }
+            // all set — go to dashboard
+            window.location.href = '/dashboard'
+          } finally{ busy.value = false }
+        }
+
+        onMounted(loadSession)
+
+        return { user, phone, otp, otpSent, phone_verified_at, stripe_connected, plaid_connected, busy, step,
+                 auth, sendOtp, verifyOtp, startStripe, startPlaid, smartOneClick }
+      }
+    }).mount('#app')
+  </script>
+</body>
+</html>
