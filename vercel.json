@@ -1,6 +1,7 @@
 {
   "rewrites": [
     { "source": "/get-started", "destination": "/get-started.html" },
+    { "source": "/dashboard", "destination": "/dashboard_auth_gated.html" },
     { "source": "/thank/:slug", "destination": "/index.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
