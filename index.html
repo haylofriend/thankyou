@@ -148,7 +148,7 @@
           <a href="#connect" class="hover:text-[var(--acc)] transition-colors">Connect</a>
           <a href="#cashout" class="hover:text-[var(--acc)] transition-colors">Your Impact</a>
         </div>
-        <button @click="login" class="px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] hover:bg-[var(--acc)]/10 transition-all text-sm font-medium">Get Started</button>
+        <a href="/get-started" class="px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] hover:bg-[var(--acc)]/10 transition-all text-sm font-medium">Get Started</a>
       </div>
     </nav>
 
@@ -405,9 +405,9 @@
           </div>
           <span class="text-sm text-white/70">+2,438 creators this month</span>
         </div>
-        <button @click="createLink" class="mt-6 glass px-6 py-3 rounded-xl text-sm font-medium hover:animate-pulse-glow transition-all">
+        <a href="/get-started" class="mt-6 glass px-6 py-3 rounded-xl text-sm font-medium hover:animate-pulse-glow transition-all inline-block">
           Join Them Now
-        </button>
+        </a>
       </div>
     </section>
 
@@ -420,7 +420,7 @@
     <div v-show="!showPay && !showReflex" id="stickyCta" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60]" data-noprint>
       <div class="glass rounded-full px-5 py-3 flex items-center gap-4 shadow-xl animate-pulse-glow">
         <span class="text-sm text-white/90 font-medium">Ready to create value with gratitude?</span>
-        <button class="px-4 py-2 rounded-full bg-[var(--acc)] text-white text-sm font-medium hover:bg-[#3a94e0] transition-colors" @click="createLink">Get Started</button>
+        <a href="/get-started" class="px-4 py-2 rounded-full bg-[var(--acc)] text-white text-sm font-medium hover:bg-[#3a94e0] transition-colors">Get Started</a>
       </div>
     </div>
 
@@ -485,9 +485,9 @@
         </div>
         <h3 class="text-xl font-medium">Thank You Sent!</h3>
         <p class="text-white/80 text-sm mt-2">You've just created value with gratitude. Now imagine receiving these thank-yous yourself.</p>
-        <button class="mt-4 glass px-5 py-3 rounded-xl text-sm font-medium w-full hover:animate-pulse-glow transition-all" @click="createLink">
+        <a href="/get-started" class="mt-4 glass px-5 py-3 rounded-xl text-sm font-medium w-full hover:animate-pulse-glow transition-all inline-block">
           Create My Thank-You Link
-        </button>
+        </a>
         <button class="mt-2 px-5 py-3 rounded-xl border border-white/20 text-sm font-medium w-full hover:border-white/40 transition-colors" @click="showReflex=false">
           Maybe Later
         </button>
@@ -577,12 +577,10 @@
       // SAFE CLIPBOARD FUNCTION
       async function copyToClipboard(text) {
         try {
-          // Try modern clipboard API first
           if (navigator.clipboard && window.isSecureContext) {
             await navigator.clipboard.writeText(text);
             return true;
           } else {
-            // Fallback for older browsers or HTTP
             const textArea = document.createElement('textarea');
             textArea.value = text;
             textArea.style.position = 'fixed';
@@ -596,7 +594,6 @@
             return successful;
           }
         } catch (err) {
-          // Final fallback - show text to user
           alert(`Copy this link: ${text}`);
           return false;
         }
@@ -617,12 +614,10 @@
         displayName.value = 'User ' + s.slice(-2).toUpperCase();
         const url = `https://haylofriend.com/thank/${s}`;
         
-        // Use safe clipboard function
         const copied = await copyToClipboard(url);
         
         events.value.unshift({label: 'Your Thank-You Link Created', value: url, type: 'share'});
         
-        // Show success message
         const stickyButton = document.querySelector('#stickyCta button');
         if (stickyButton) {
           const originalText = stickyButton.textContent;
@@ -633,7 +628,6 @@
         }
         
         if (!copied) {
-          // If clipboard failed, show the link in an alert
           alert(`Your thank-you link has been created:\n\n${url}\n\n(Link has been saved to your recent activity)`);
         }
       }
@@ -643,7 +637,6 @@
         const url = `https://haylofriend.com/thank/${slug.value}`;
         const copied = await copyToClipboard(url);
         
-        // Show feedback
         const button = event.currentTarget;
         const originalText = button.textContent;
         button.textContent = copied ? 'Copied!' : 'Link Shown Below';
@@ -696,7 +689,6 @@
         kpi.value.pending += a;
         events.value.unshift({label: 'Thank-You Received', value: `$${a.toFixed(2)}`, type: 'tip'});
         
-        // Show reflex modal after a short delay
         setTimeout(() => {
           showReflex.value = true;
         }, 800);
@@ -709,7 +701,6 @@
         if (navigator.share) {
           navigator.share({text: msg});
         } else {
-          // Use our safe clipboard function
           const copied = await copyToClipboard(msg);
           if (copied) {
             alert('Message copied to clipboard! Paste it anywhere to share.');
@@ -742,7 +733,6 @@
           type: 'payout'
         });
         
-        // Show success message
         alert(`Payout of $${amt.toFixed(2)} simulated! In the real app, this would transfer to your bank.`);
       }
       
@@ -754,7 +744,6 @@
       onMounted(() => {
         introWow();
         
-        // Add ripple effects to all buttons
         document.addEventListener('click', function(e) {
           if (e.target.tagName === 'BUTTON') {
             createRipple(e);
