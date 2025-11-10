@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mission Control — HayloFriend</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink:'#e7e7ea', bg:'#0b0b0c', card:'#121214',
+            hair:'rgba(231,231,234,.12)', acc:'#4da3ff',
+            good:'#15c39a', warn:'#ffd166', bad:'#ff5a5a'
+          },
+          boxShadow: {
+            halo: '0 0 0 1px rgba(77,163,255,.25), 0 0 80px rgba(77,163,255,.35) inset'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root{--bg:#0b0b0c;--card:#121214;--ink:#e7e7ea;--hair:rgba(231,231,234,.12);--acc:#4da3ff}
+    html,body{height:100%}
+    body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif}
+    .glass{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));border:1px solid var(--hair);box-shadow:0 8px 24px rgba(0,0,0,.35);backdrop-filter:blur(10px)}
+    .halo{position:relative}
+    .halo::before{content:"";position:absolute;inset:-10px;border-radius:24px;background:radial-gradient(60% 60% at 50% 50%, rgba(77,163,255,.25), transparent 70%);filter:blur(12px);z-index:-1}
+    .ringed{box-shadow:0 0 0 1px rgba(231,231,234,.12) inset, 0 10px 30px rgba(0,0,0,.45)}
+    .pill{display:inline-flex;align-items:center;gap:.5rem;padding:.4rem .75rem;border-radius:999px;border:1px solid var(--hair);background:rgba(255,255,255,.05)}
+    canvas{display:block}
+  </style>
+</head>
+<body>
+  <div id="app" class="max-w-[1200px] mx-auto px-6 py-6">
+    <!-- Top bar -->
+    <header class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-[var(--acc)]/20 ring-1 ring-[var(--acc)]/40"></div>
+        <div>
+          <div class="uppercase text-xs tracking-widest text-white/60">HayloFriend • Admin</div>
+          <h1 class="text-2xl font-semibold leading-tight">Mission Control</h1>
+        </div>
+      </div>
+      <nav class="flex items-center gap-2">
+        <a href="/" class="pill text-sm">← Back to App</a>
+        <button class="pill text-sm" @click="toggleLive">
+          <span :class="live ? 'bg-good' : 'bg-bad'" class="inline-block w-2.5 h-2.5 rounded-full"></span>
+          {{ live ? 'Live feed on' : 'Live feed off' }}
+        </button>
+      </nav>
+    </header>
+
+    <!-- KPIs -->
+    <section class="grid md:grid-cols-4 gap-4 mt-6">
+      <div class="glass rounded-2xl p-4">
+        <div class="text-xs uppercase text-white/60">Active Users</div>
+        <div class="text-3xl font-semibold mt-1">{{ kpi.activeUsers }}</div>
+        <div class="text-xs text-white/50 mt-1">Last 24h</div>
+      </div>
+      <div class="glass rounded-2xl p-4">
+        <div class="text-xs uppercase text-white/60">Volume (USD)</div>
+        <div class="text-3xl font-semibold mt-1">$ {{ (kpi.volume/100).toLocaleString() }}</div>
+        <div class="text-xs text-white/50 mt-1">Today</div>
+      </div>
+      <div class="glass rounded-2xl p-4">
+        <div class="text-xs uppercase text-white/60">Payout Success</div>
+        <div class="text-3xl font-semibold mt-1">{{ kpi.payoutSuccess }}%</div>
+        <div class="text-xs text-white/50 mt-1">First-attempt</div>
+      </div>
+      <div class="glass rounded-2xl p-4">
+        <div class="text-xs uppercase text-white/60">Webhook Health</div>
+        <div class="text-3xl font-semibold mt-1" :class="kpi.webhooksOk ? 'text-good' : 'text-bad'">
+          {{ kpi.webhooksOk ? 'OK' : 'Issues' }}
+        </div>
+        <div class="text-xs text-white/50 mt-1">Stripe → Edge → DB</div>
+      </div>
+    </section>
+
+    <!-- Pulse Map + Events -->
+    <section class="grid lg:grid-cols-3 gap-6 mt-6">
+      <!-- Pulse Map -->
+      <div class="lg:col-span-2 glass rounded-2xl p-4 halo">
+        <div class="flex items-center justify-between">
+          <div class="text-xs uppercase text-white/60">Heartbeat Map</div>
+          <div class="text-xs text-white/60">pulses: {{ pulses.length }}</div>
+        </div>
+        <div class="mt-3 relative rounded-xl ringed overflow-hidden">
+          <canvas id="pulseCanvas" height="420"></canvas>
+          <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent to-black/20"></div>
+        </div>
+        <div class="flex items-center gap-3 mt-3">
+          <span class="pill text-xs"><span class="w-2.5 h-2.5 rounded-full bg-[var(--acc)] inline-block mr-1"></span>Tip</span>
+          <span class="pill text-xs"><span class="w-2.5 h-2.5 rounded-full bg-good inline-block mr-1"></span>Payout</span>
+          <span class="pill text-xs"><span class="w-2.5 h-2.5 rounded-full bg-warn inline-block mr-1"></span>Verification</span>
+        </div>
+      </div>
+
+      <!-- Live Events -->
+      <div class="glass rounded-2xl p-4">
+        <div class="text-xs uppercase text-white/60">Live Feed</div>
+        <div class="mt-3 space-y-2 max-h-[460px] overflow-auto pr-1">
+          <div v-for="e in events" :key="e.id" class="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+            <div :class="eventDot(e.type)" class="w-2.5 h-2.5 rounded-full mt-1.5"></div>
+            <div class="text-sm">
+              <div class="text-white/90">
+                <strong>{{ e.user }}</strong>
+                <template v-if="e.type==='tip'"> received ${{ (e.amount/100).toFixed(2) }}</template>
+                <template v-else-if="e.type==='payout'"> payout ${{ (e.amount/100).toFixed(2) }}</template>
+                <template v-else> {{ e.label }}</template>
+              </div>
+              <div class="text-xs text-white/50">{{ timeAgo(e.ts) }} • {{ e.city }}, {{ e.country }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Users Table -->
+    <section class="glass rounded-2xl p-4 mt-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs uppercase text-white/60">Users</div>
+          <h2 class="text-lg font-semibold leading-tight">Directory & Controls</h2>
+        </div>
+        <div class="flex gap-2">
+          <input v-model="search" placeholder="Search @slug or email…" class="bg-transparent border border-white/15 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-[var(--acc)]/60" />
+          <button class="pill text-sm" @click="refresh">Refresh</button>
+        </div>
+      </div>
+
+      <div class="mt-3 overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="text-left text-white/60">
+            <tr class="border-b border-white/10">
+              <th class="py-2 pr-6">User</th>
+              <th class="py-2 pr-6">Email</th>
+              <th class="py-2 pr-6">Tips</th>
+              <th class="py-2 pr-6">Volume</th>
+              <th class="py-2 pr-6">Bank</th>
+              <th class="py-2">Controls</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="u in filteredUsers" :key="u.id" class="border-b border-white/5">
+              <td class="py-3 pr-6"><span class="text-white/90 font-medium">@{{ u.slug }}</span></td>
+              <td class="py-3 pr-6 text-white/70">{{ u.email }}</td>
+              <td class="py-3 pr-6">{{ u.count }}</td>
+              <td class="py-3 pr-6">$ {{ (u.volume/100).toLocaleString() }}</td>
+              <td class="py-3 pr-6">
+                <span :class="u.bank?'text-good':'text-warn'">{{ u.bank ? 'Connected' : 'Pending' }}</span>
+              </td>
+              <td class="py-3">
+                <div class="flex gap-2">
+                  <button class="pill text-xs" @click="verify(u)">Verify</button>
+                  <button class="pill text-xs" @click="pause(u)">{{ u.paused ? 'Resume' : 'Pause' }}</button>
+                  <button class="pill text-xs" @click="override(u)">Override</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- System Health -->
+    <section class="grid md:grid-cols-3 gap-4 mt-6">
+      <div class="glass rounded-2xl p-4">
+        <div class="text-xs uppercase text-white/60">Stripe</div>
+        <div class="mt-1 text-white/90">Webhooks: <span :class="kpi.webhooksOk ? 'text-good' : 'text-bad'">{{ kpi.webhooksOk ? 'OK' : 'Check' }}</span></div>
+        <div class="text-xs text-white/50 mt-1">Latency: {{ status.stripeLatency }} ms</div>
+      </div>
+      <div class="glass rounded-2xl p-4">
+        <div class="text-xs uppercase text-white/60">Supabase</div>
+        <div class="mt-1 text-white/90">Realtime: <span :class="status.realtime ? 'text-good':'text-bad'">{{ status.realtime ? 'Connected' : 'Disconnected' }}</span></div>
+        <div class="text-xs text-white/50 mt-1">DB ping: {{ status.dbPing }} ms</div>
+      </div>
+      <div class="glass rounded-2xl p-4">
+        <div class="text-xs uppercase text-white/60">Edge Functions</div>
+        <div class="mt-1 text-white/90">Events: {{ status.edgeEvents }}/min</div>
+        <div class="text-xs text-white/50 mt-1">Last error: <span :class="status.lastError? 'text-warn':'text-white/50'">{{ status.lastError || '—' }}</span></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Vue -->
+  <script src="https://unpkg.com/vue@3"></script>
+  <!-- Optional: Supabase (uncomment + plug in keys to go live)
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  -->
+
+  <script>
+  const { createApp, ref, reactive, computed, onMounted } = Vue;
+
+  createApp({
+    setup(){
+      // ---- Live state ----
+      const live = ref(true);
+
+      const kpi = reactive({
+        activeUsers: 0,
+        volume: 0,          // cents
+        payoutSuccess: 98,
+        webhooksOk: true
+      });
+
+      const status = reactive({
+        stripeLatency: 180,
+        realtime: true,
+        dbPing: 24,
+        edgeEvents: 42,
+        lastError: ''
+      });
+
+      const users = ref([
+        { id:'u1', slug:'topgolf', email:'team@topgolf.com', count:158, volume:234500, bank:true, paused:false },
+        { id:'u2', slug:'unclepaulies', email:'ops@unclepaulies.com', count:61, volume:46500, bank:false, paused:false },
+        { id:'u3', slug:'don-tortaco', email:'info@dontortaco.com', count:210, volume:512300, bank:true, paused:false },
+      ]);
+
+      const events = ref([]);
+      const pulses = ref([]);
+      const search = ref('');
+
+      // ---- Canvas Pulse Map ----
+      let ctx, W, H, raf;
+      function resizeCanvas(){
+        const canvas = document.getElementById('pulseCanvas');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const width = canvas.clientWidth || canvas.parentElement.clientWidth;
+        const height = canvas.getAttribute('height') || 420;
+        canvas.width = width * dpr; canvas.height = height * dpr;
+        canvas.style.width = width+'px'; canvas.style.height = height+'px';
+        ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
+        W = width; H = height;
+        drawBg();
+      }
+      function drawBg(){
+        if(!ctx) return;
+        const grd = ctx.createLinearGradient(0,0,0,H);
+        grd.addColorStop(0,'#0c0d11'); grd.addColorStop(1,'#0a0a0b');
+        ctx.fillStyle = grd; ctx.fillRect(0,0,W,H);
+        ctx.strokeStyle = 'rgba(255,255,255,.06)';
+        ctx.lineWidth = 1;
+        for(let i=0;i<Math.floor(H/48);i++){
+          ctx.beginPath(); ctx.moveTo(0, i*48+24); ctx.lineTo(W, i*48+24); ctx.stroke();
+        }
+      }
+      function tick(){
+        if(!ctx){ raf = requestAnimationFrame(tick); return; }
+        drawBg();
+        const now = performance.now();
+        // Fade + draw pulses
+        for(let i=pulses.value.length-1;i>=0;i--){
+          const p = pulses.value[i];
+          const age = (now - p.ts)/p.life;
+          if(age>1){ pulses.value.splice(i,1); continue; }
+          const r = p.r + age * p.maxR;
+          const alpha = (1-age) * 0.9;
+          ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI*2);
+          ctx.strokeStyle = p.color.replace('ALPHA', alpha.toFixed(3));
+          ctx.lineWidth = 2; ctx.stroke();
+          // core dot
+          ctx.beginPath(); ctx.arc(p.x, p.y, 2.2, 0, Math.PI*2);
+          ctx.fillStyle = p.dot; ctx.fill();
+        }
+        raf = requestAnimationFrame(tick);
+      }
+      function addPulse(type, label){
+        // random-ish coordinates
+        const x = 40 + Math.random()*(W-80);
+        const y = 40 + Math.random()*(H-80);
+        const colors = {
+          tip:   { ring:'rgba(77,163,255,ALPHA)', dot:'#4da3ff' },
+          payout:{ ring:'rgba(21,195,154,ALPHA)', dot:'#15c39a' },
+          verify:{ ring:'rgba(255,209,102,ALPHA)', dot:'#ffd166' }
+        };
+        const c = colors[type] || colors.tip;
+        pulses.value.push({ x, y, ts: performance.now(), r: 4, maxR: 80+Math.random()*70, color:c.ring, dot:c.dot, life: 1600 });
+        // Event record
+        const ev = {
+          id: crypto.randomUUID(), type,
+          label: label || (type==='tip'?'Tip received':'Event'),
+          user: pick(users.value).slug, amount: (500+Math.floor(Math.random()*2500)),
+          city: pick(['Las Vegas','LA','Phoenix','Austin','Miami','NYC']),
+          country:'US', ts: Date.now()
+        };
+        if(type!=='tip') ev.amount = 0;
+        events.value.unshift(ev);
+        // KPIs
+        if(type==='tip'){
+          kpi.volume += ev.amount;
+        }
+        kpi.activeUsers = Math.max(kpi.activeUsers, users.value.length);
+      }
+      const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+
+      // ---- Admin actions (mock) ----
+      function verify(u){ addPulse('verify','Verification'); toast(`Verification email sent to ${u.email}`); }
+      function pause(u){ u.paused = !u.paused; toast(`${u.paused?'Paused':'Resumed'} @${u.slug}`); }
+      function override(u){ toast(`Override opened for @${u.slug}`); /* open modal / drawer in real build */ }
+      function refresh(){ toast('Refreshed'); /* fetch latest in real build */ }
+
+      function toast(msg){
+        console.log('[MC]', msg);
+      }
+
+      // ---- Search filter ----
+      const filteredUsers = computed(()=>{
+        const q = search.value.trim().toLowerCase();
+        if(!q) return users.value;
+        return users.value.filter(u =>
+          u.slug.toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q)
+        );
+      });
+
+      function eventDot(type){
+        return type==='tip' ? 'bg-[var(--acc)]' : (type==='payout' ? 'bg-good' : 'bg-warn');
+      }
+      function timeAgo(ts){
+        const s = Math.floor((Date.now()-ts)/1000);
+        if(s<60) return s+'s ago';
+        const m = Math.floor(s/60); if(m<60) return m+'m ago';
+        const h = Math.floor(m/60); return h+'h ago';
+      }
+
+      // ---- Live simulation (replace with Supabase Realtime / Webhooks) ----
+      let sim;
+      function startSim(){
+        sim = setInterval(()=>{
+          if(!live.value) return;
+          const t = Math.random();
+          if(t < .76) addPulse('tip');
+          else if(t < .9) addPulse('payout');
+          else addPulse('verify');
+        }, 1300);
+      }
+      function stopSim(){ clearInterval(sim); }
+      function toggleLive(){ live.value = !live.value; if(live.value) startSim(); }
+
+      onMounted(()=>{
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        tick(); startSim();
+        // initial KPIs
+        kpi.activeUsers = users.value.length;
+      });
+
+      // ---- OPTIONAL: Wire Supabase realtime + Edge events (pseudo) ----
+      /*
+      const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+      // Listen to transactions table for new tips
+      supa
+        .channel('realtime:transactions')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, payload => {
+          const row = payload.new;
+          addPulse('tip');
+          events.value.unshift({
+            id: row.id, type: 'tip', user: row.slug, amount: row.amount_cents,
+            city: row.city || '—', country: row.country || '—', ts: Date.now()
+          });
+          kpi.volume += row.amount_cents;
+        }).subscribe();
+
+      // Webhook/edge health pings
+      setInterval(async ()=>{
+        const r = await fetch('/api/health').then(r=>r.json()).catch(()=>({webhooks:false}));
+        kpi.webhooksOk = !!r.webhooks;
+        status.stripeLatency = r.stripe_ms || 180;
+        status.realtime = r.realtime ?? true;
+        status.dbPing = r.db_ms || 24;
+        status.edgeEvents = r.edge_per_min || 42;
+        status.lastError = r.last_error || '';
+      }, 5000);
+      */
+
+      return {
+        live, toggleLive, kpi, status,
+        users, events, pulses, search, filteredUsers,
+        verify, pause, override, refresh,
+        eventDot, timeAgo
+      };
+    }
+  }).mount('#app');
+  </script>
+</body>
+</html>
