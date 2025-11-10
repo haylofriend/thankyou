@@ -132,6 +132,16 @@
       }
     }
   </style>
+  <!-- App env: used by get-started + dashboard -->
+  <script>
+    window.SUPABASE_URL = "https://YOUR-PROJECT.supabase.co";
+    window.SUPABASE_ANON_KEY = "YOUR-ANON-KEY";
+    window.HF_DASHBOARD_URL = "/dashboard_auth_gated.html";
+    /* Optional (enables Google One Tap when user lands on get-started)
+       window.GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"; */
+    /* Optional (dashboard builds public links with this host)
+       window.THANK_HOST = "https://grateful.haylofriend.com"; */
+  </script>
 </head>
 <body>
   <div id="app" class="max-w-[1120px] mx-auto px-6 py-8 pb-36">
