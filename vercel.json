@@ -1,7 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/get-started", "destination": "/index.html" },
-    { "source": "/thank/:slug", "destination": "/index.html" },
-    { "source": "/", "destination": "/index.html" }
-  ]
-}
