@@ -15,10 +15,12 @@ export default function handler(req, res) {
     THANK_HOST:
       process.env.NEXT_PUBLIC_THANK_HOST || 'https://grateful.haylofriend.com'
   };
+  const serialized = JSON.stringify(cfg);
   res.status(200).send(
     `(() => { try {
-      window.__ENV__ = ${JSON.stringify(cfg)};
-      for (const k in window.__ENV__) { if (!window[k]) window[k] = window.__ENV__[k]; }
+      const env = ${serialized};
+      window.__ENV__ = env;
+      for (const k in env) { if (!window[k]) window[k] = env[k]; }
     } catch(e){ console.error('env.js', e); } })();`
   );
 }
