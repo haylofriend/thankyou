@@ -38,12 +38,18 @@
       }
     }
   </script>
-  <!-- Runtime env injection (provides SUPABASE_URL/ANON/GOOGLE_CLIENT_ID) -->
-  <script src="/env.js"></script>
+  <!-- Runtime env (centralized) -->
+  <script src="/env.js" onerror="window.__ENV404__=true"></script>
+  <!-- Fallback env (only if /env.js 404s). REPLACE ALL-CAPS once; remove later. -->
   <script>
-    if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
-      console.warn('Supabase environment variables were not injected. Check env.js configuration.');
-    }
+    (function(){
+      if(!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY){
+        window.SUPABASE_URL      = "https://YOUR_PROJECT_REF.supabase.co";   // ← REPLACE
+        window.SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";                  // ← REPLACE
+      }
+      window.HF_DASHBOARD_URL  = window.HF_DASHBOARD_URL || "/your-impact";
+      window.GOOGLE_CLIENT_ID  = window.GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"; // ← REPLACE
+    })();
   </script>
   <style>
     :root{--bg:#0b0b0c;--card:#121214;--ink:#e7e7ea;--hair:rgba(231,231,234,.12);--acc:#4da3ff}
