@@ -57,13 +57,8 @@
     [v-cloak]{display:none}
   </style>
 
-  <!-- Env fallbacks (replace in prod or inject via host) -->
-  <script>
-    window.SUPABASE_URL   = window.SUPABASE_URL   ?? ''
-    window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY ?? ''
-    window.HF_DASHBOARD_URL  = window.HF_DASHBOARD_URL || '/your-impact'
-    window.GOOGLE_CLIENT_ID  = window.GOOGLE_CLIENT_ID || ''
-  </script>
+  <!-- Load runtime env (from Vercel function) -->
+  <script src="/env.js"></script>
 
   <!-- Third‑party SDKs (async to avoid blocking) -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
