@@ -13,7 +13,7 @@ export default function handler(req, res) {
 
       // Canonical routes (CTA, fallback login, dashboard)
       HF_GET_STARTED_URL:  process.env.NEXT_PUBLIC_HF_GET_STARTED_URL || '/create?autostart=1',
-      LOGIN_PATH:          process.env.NEXT_PUBLIC_LOGIN_PATH         || '/login.html',
+      LOGIN_PATH:          process.env.NEXT_PUBLIC_LOGIN_PATH         || '/get-started',
       HF_DASHBOARD_URL:    process.env.NEXT_PUBLIC_HF_DASHBOARD_URL   || '/your-impact',
 
       // Public host for share links
@@ -26,7 +26,7 @@ export default function handler(req, res) {
 
       // 🔐 Force the three nav constants every time
       window.HF_GET_STARTED_URL = window.__ENV__.HF_GET_STARTED_URL; // CTA → /create?autostart=1
-      window.LOGIN_PATH         = window.__ENV__.LOGIN_PATH;         // Dashboard overlay → /login.html
+      window.LOGIN_PATH         = window.__ENV__.LOGIN_PATH;         // Dashboard overlay → /get-started
       window.HF_DASHBOARD_URL   = window.__ENV__.HF_DASHBOARD_URL;   // Post-login → /your-impact
 
       // Supply creds if missing
