@@ -8,13 +8,11 @@
   ],
   "rewrites": [
     { "source": "/env.js", "destination": "/api/env.js" },
-    { "source": "/login", "destination": "/login.html" },
+    { "source": "/login", "destination": "/get-started" },
     { "source": "/", "destination": "/index.html" },
     { "source": "/get-started", "destination": "/get-started.html" },
-    { "source": "/login", "destination": "/login.html" },
     { "source": "/your-impact", "destination": "/dashboard_auth_gated.html" },
     { "source": "/dashboard", "destination": "/dashboard_auth_gated.html" },
-    { "source": "/mission-control", "destination": "https://grateful.haylofriend.com" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
