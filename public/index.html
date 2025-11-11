@@ -4,8 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HayloFriend - Thank You Link</title>
-  <script src="/env.js"></script>
+  <!-- Runtime env (load from working API path) -->
+  <script src="/api/env.js"></script>
+
   <script>
+    // Only-if-unset fallbacks (do not overwrite values that env.js sets)
     window.SUPABASE_URL      = window.SUPABASE_URL      || "";
     window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "";
   </script>
