@@ -310,7 +310,7 @@ const { createApp, ref, computed, onMounted } = Vue;
 const SUPABASE_URL = window.SUPABASE_URL || '';
 const SUPABASE_KEY = window.SUPABASE_ANON_KEY || '';
 const THANK_HOST   = window.THANK_HOST || 'https://grateful.haylofriend.com';
-const LOGIN_PATH   = window.LOGIN_PATH || '/login.html'; // your dedicated login page (optional)
+const LOGIN_PATH   = window.LOGIN_PATH || '/get-started'; // your dedicated login page (optional)
 
 const supabase = (SUPABASE_URL && SUPABASE_KEY && window.supabase)
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
