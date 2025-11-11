@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 export default function handler(req, res) {
   res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');
