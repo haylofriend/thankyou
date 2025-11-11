@@ -466,51 +466,57 @@ createApp({
     }
 
     onMounted(async () => {
-      if (supabase) {
-        auth.value.loading = true;
-
-        // 1) Initial session read
-        let { data: { session } } = await supabase.auth.getSession();
-
-        // 2) If the initial read is empty (fresh OAuth return, magic link, etc.),
-        //    force a refresh to capture the session Supabase just created.
-        if (!session) {
-          try {
-            const { data } = await supabase.auth.refreshSession();
-            session = data?.session || null;
-          } catch (err) {
-            console.warn('refreshSession failed', err);
-          }
-        }
-
-        auth.value.session = session;
-        auth.value.loading = false;
-
-        // 3) Live updates when the auth state changes (magic link completion, token refresh, etc.)
-        supabase.auth.onAuthStateChange(async (_event, newSession) => {
-          auth.value.session = newSession;
-          if (newSession) {
-            await hydrateFromDb();
-          }
-        });
-
-        // 4) Gate logic: if we *still* do not have a session, skip the overlay and
-        //    send the user to the full login page.
-        if (!auth.value.session) {
-          const to = new URL(LOGIN_PATH || '/login.html', location.origin);
-          to.searchParams.set('redirect', window.HF_DASHBOARD_URL || '/your-impact');
-          location.replace(to.toString());
-          return;
-        }
-
-        // 5) Authenticated: hydrate the dashboard data.
-        await hydrateFromDb();
-      } else {
-        // No Supabase configured: remain in demo mode.
+      if (!supabase) {
+        // No Supabase configured: keep the demo/overlay behavior.
         introWow && introWow();
+        // Minute tick (visual compounding)
+        setInterval(() => { earningsWeek.value += perMinute.value; }, 60000);
+        return;
       }
 
-      // Minute tick (visual compounding)
+      auth.value.loading = true;
+
+      // 1) Initial read
+      let { data: { session } } = await supabase.auth.getSession();
+
+      // 2) Force a refresh (handles fresh returns from OAuth)
+      if (!session) {
+        try {
+          const { data } = await supabase.auth.refreshSession();
+          session = data?.session || null;
+        } catch (_) {}
+      }
+
+      // 3) Short poll (max ~2.5s) to allow session to settle after redirect
+      if (!session) {
+        const deadline = Date.now() + 2500;
+        while (!session && Date.now() < deadline) {
+          await new Promise(r => setTimeout(r, 250));
+          const res = await supabase.auth.getSession();
+          session = res?.data?.session || null;
+        }
+      }
+
+      auth.value.session = session;
+      auth.value.loading = false;
+
+      // 4) Subscribe so future refreshes/magic links hydrate automatically
+      supabase.auth.onAuthStateChange(async (_event, s) => {
+        auth.value.session = s;
+        if (s) await hydrateFromDb();
+      });
+
+      // 5) Final decision
+      if (auth.value.session) {
+        // Auth OK → render dashboard
+        await hydrateFromDb();
+      } else {
+        // Still no session → DO NOT auto-redirect (prevents loops).
+        // The built-in gate will show, and "Open full login" already routes to /get-started.
+        // If you want a button-less auto-forward, we can add a delayed redirect later.
+      }
+
+      // existing visuals/timers
       setInterval(() => { earningsWeek.value += perMinute.value; }, 60000);
     });
 
