@@ -176,8 +176,8 @@
             // ===== GOOGLE ONE TAP (optional enhancement) =====
             function initOneTap(){
               if(!supa){ say('Supabase not configured'); return; }
-              if(!window.google){ say('Launching Google redirect…'); withGoogleRedirect(); return; }
-              if(!GOOGLE_CLIENT_ID){ say('Missing GOOGLE_CLIENT_ID; using Google redirect'); withGoogleRedirect(); return; }
+              if(!window.google){ say('Launching Google redirect…'); return withGoogleRedirect(); }
+              if(!GOOGLE_CLIENT_ID){ say('Missing GOOGLE_CLIENT_ID; using Google redirect'); return withGoogleRedirect(); }
               window.google.accounts.id.initialize({
                 client_id: GOOGLE_CLIENT_ID,
                 auto_select: true,
@@ -190,7 +190,7 @@
                     if(error) throw error;
                     await refreshUser(); goDashboard();
                   } catch (e) {
-                    console.error(e); say('Google sign-in failed; using redirect'); busy.value = false; withGoogleRedirect();
+                    console.error(e); say('Google sign-in failed; using redirect'); busy.value = false; return withGoogleRedirect();
                   }
                 }
               });
