@@ -1,0 +1,29 @@
+name: QA – Auth (Google, Magic Link, One-Click)
+on:
+  workflow_dispatch:
+    inputs:
+      preview_url:
+        description: "Base URL to test (e.g., https://<your-vercel-preview>.vercel.app)"
+        required: true
+        type: string
+jobs:
+  auth-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PREVIEW_URL: ${{ inputs.preview_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Playwright
+        working-directory: .qa
+        run: |
+          npm ci || npm i
+          npx playwright install --with-deps
+      - name: Run tests
+        working-directory: .qa
+        run: npx playwright test
