@@ -1,0 +1,12 @@
+{
+  "name": "haylofriend-auth-qa",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@playwright/test": "^1.48.2"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "install:pw": "playwright install --with-deps"
+  }
+}
