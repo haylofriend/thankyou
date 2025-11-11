@@ -3,11 +3,9 @@ export default function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   const cfg = {
     SUPABASE_URL:
-      process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      process.env.SUPABASE_URL || '',
+      process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '',
     SUPABASE_ANON_KEY:
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      process.env.SUPABASE_ANON_KEY || '',
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '',
     GOOGLE_CLIENT_ID:
       process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '',
     HF_DASHBOARD_URL:
@@ -15,12 +13,10 @@ export default function handler(req, res) {
     THANK_HOST:
       process.env.NEXT_PUBLIC_THANK_HOST || 'https://grateful.haylofriend.com'
   };
-  const serialized = JSON.stringify(cfg);
   res.status(200).send(
     `(() => { try {
-      const env = ${serialized};
-      window.__ENV__ = env;
-      for (const k in env) { if (!window[k]) window[k] = env[k]; }
+      window.__ENV__ = ${JSON.stringify(cfg)};
+      for (const k in window.__ENV__) { if (!window[k]) window[k] = window.__ENV__[k]; }
     } catch(e){ console.error('env.js', e); } })();`
   );
 }
