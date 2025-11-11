@@ -18,9 +18,12 @@
     }
   ],
   "rewrites": [
-    {
-      "source": "/env.js",
-      "destination": "/api/env.js"
-    }
+    { "source": "/env.js",      "destination": "/api/env.js" },
+    { "source": "/",            "destination": "/index.html" },
+    { "source": "/index.html",  "destination": "/index.html" },
+    { "source": "/get-started", "destination": "/get-started.html" },
+    { "source": "/your-impact", "destination": "/dashboard_auth_gated.html" },
+    { "source": "/dashboard",   "destination": "/dashboard_auth_gated.html" },
+    { "source": "/(.*)",        "destination": "/index.html" }
   ]
 }

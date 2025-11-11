@@ -1,8 +1,6 @@
 export const runtime = 'edge';
 
-export default function handler(req, res) {
-  res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-store');
+export default function handler() {
   const cfg = {
     SUPABASE_URL:
       process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '',
@@ -15,12 +13,25 @@ export default function handler(req, res) {
     THANK_HOST:
       process.env.NEXT_PUBLIC_THANK_HOST || 'https://grateful.haylofriend.com'
   };
-  res.status(200).send(
-    `(() => { try {
-      window.__ENV__ = ${JSON.stringify(cfg)};
-      for (const k in window.__ENV__) {
-        if (!window[k]) window[k] = window.__ENV__[k];
+
+  const body = `(() => {
+    try {
+      const env = ${JSON.stringify(cfg)};
+      window.__ENV__ = env;
+      for (const key in env) {
+        if (!window[key]) {
+          window[key] = env[key];
+        }
       }
-    } catch(e){ console.error('env.js', e); } })();`
-  );
+    } catch (e) {
+      console.error('env.js', e);
+    }
+  })();`;
+
+  return new Response(body, {
+    headers: {
+      'content-type': 'application/javascript; charset=utf-8',
+      'cache-control': 'no-store'
+    }
+  });
 }
