@@ -43,7 +43,7 @@
       "destination": "/public/dashboard_auth_gated.html"
     },
     {
-      "source": "/(.*)",
+      "source": "/:path*",
       "destination": "/public/index.html"
     }
   ]
