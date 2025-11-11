@@ -11,7 +11,8 @@ export default function handler(req, res) {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '',
       GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '',
       HF_DASHBOARD_URL: process.env.NEXT_PUBLIC_HF_DASHBOARD_URL || '/your-impact',
-      THANK_HOST: process.env.NEXT_PUBLIC_THANK_HOST || 'https://grateful.haylofriend.com'
+      THANK_HOST: process.env.NEXT_PUBLIC_THANK_HOST || 'https://grateful.haylofriend.com',
+      LOGIN_PATH: process.env.NEXT_PUBLIC_LOGIN_PATH || '/get-started'
     };
 
     const js = `(() => { try {
