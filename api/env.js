@@ -20,7 +20,7 @@ export default function handler(req, res) {
       THANK_HOST: process.env.NEXT_PUBLIC_THANK_HOST || 'https://grateful.haylofriend.com',
 
       // Keep dashboard↔auth handshake explicit
-      LOGIN_PATH: process.env.NEXT_PUBLIC_LOGIN_PATH || '/get-started'
+      LOGIN_PATH: process.env.NEXT_PUBLIC_LOGIN_PATH || '/get-started',
     };
 
     const js = `(() => { try {
