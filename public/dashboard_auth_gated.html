@@ -40,6 +40,11 @@
   </script>
   <!-- Runtime env injection (provides SUPABASE_URL / ANON to this page) -->
   <script src="/env.js"></script>
+  <script>
+    if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
+      console.warn('Supabase environment variables were not injected. Check env.js configuration.');
+    }
+  </script>
   <style>
     :root{--bg:#0b0b0c;--card:#121214;--ink:#e7e7ea;--hair:rgba(231,231,234,.12);--acc:#4da3ff}
     html,body{height:100%;background:var(--bg)!important}
