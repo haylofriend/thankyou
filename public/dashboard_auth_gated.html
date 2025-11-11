@@ -466,28 +466,52 @@ createApp({
     }
 
     onMounted(async () => {
-      // If Supabase configured, require session
-      if (supabase){
+      if (supabase) {
         auth.value.loading = true;
-        const { data: { session } } = await supabase.auth.getSession();
+
+        // 1) Initial session read
+        let { data: { session } } = await supabase.auth.getSession();
+
+        // 2) If the initial read is empty (fresh OAuth return, magic link, etc.),
+        //    force a refresh to capture the session Supabase just created.
+        if (!session) {
+          try {
+            const { data } = await supabase.auth.refreshSession();
+            session = data?.session || null;
+          } catch (err) {
+            console.warn('refreshSession failed', err);
+          }
+        }
+
         auth.value.session = session;
         auth.value.loading = false;
 
-        // if redirected here from magic link, Supabase will set the session
-        supabase.auth.onAuthStateChange(async (_event, session) => {
-          auth.value.session = session;
-          if (session) { await hydrateFromDb(); }
+        // 3) Live updates when the auth state changes (magic link completion, token refresh, etc.)
+        supabase.auth.onAuthStateChange(async (_event, newSession) => {
+          auth.value.session = newSession;
+          if (newSession) {
+            await hydrateFromDb();
+          }
         });
 
-        if (!auth.value.session) return; // gates dashboard UI, login overlay is shown
+        // 4) Gate logic: if we *still* do not have a session, skip the overlay and
+        //    send the user to the full login page.
+        if (!auth.value.session) {
+          const to = new URL(LOGIN_PATH || '/get-started', location.origin);
+          to.searchParams.set('redirect', window.HF_DASHBOARD_URL || '/your-impact');
+          location.replace(to.toString());
+          return;
+        }
+
+        // 5) Authenticated: hydrate the dashboard data.
         await hydrateFromDb();
       } else {
-        // No Supabase: demo mode only (for local preview)
-        introWow();
+        // No Supabase configured: remain in demo mode.
+        introWow && introWow();
       }
 
       // Minute tick (visual compounding)
-      setInterval(()=> { earningsWeek.value += perMinute.value; }, 60000);
+      setInterval(() => { earningsWeek.value += perMinute.value; }, 60000);
     });
 
     return {
