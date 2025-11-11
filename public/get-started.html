@@ -1,4 +1,10 @@
-<!-- get-started.html (UI from Get-started-UI.html + preserved logic) -->
+<!-- get-started.html (UI from Get-started-UI.html + preserved logic)
+  Hardened:
+  - Safe boot waits for DOM + Vue + Supabase
+  - v-cloak removes mustache flash
+  - Smart One-Click: session→go, else One Tap, else Google redirect
+  - Default redirect target: /your-impact
+-->
 <!DOCTYPE html>
 <html lang="en" class="h-full" style="color-scheme: dark light">
 <head>
@@ -50,6 +56,14 @@
     .focus-ring:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(77,163,255,.5)}
     [v-cloak]{display:none}
   </style>
+
+  <!-- Env fallbacks (replace in prod or inject via host) -->
+  <script>
+    window.SUPABASE_URL   = window.SUPABASE_URL   ?? ''
+    window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY ?? ''
+    window.HF_DASHBOARD_URL  = window.HF_DASHBOARD_URL || '/your-impact'
+    window.GOOGLE_CLIENT_ID  = window.GOOGLE_CLIENT_ID || ''
+  </script>
 
   <!-- Third‑party SDKs (async to avoid blocking) -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -130,146 +144,121 @@
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
-    (function safeBoot(){
-      if(document.readyState === 'loading'){
-        document.addEventListener('DOMContentLoaded', safeBoot, { once: true })
-        return
-      }
-      if(!window.Vue){
-        console.debug('[thankyou:get-started] Waiting for Vue to load…')
-        setTimeout(safeBoot, 40)
-        return
-      }
+    // Robust boot: wait for DOM + Vue + Supabase
+    (function boot(){
+      function start(){
+        const VueLib = window.Vue
+        const supaLib = window.supabase
+        if(!VueLib || !supaLib){ return setTimeout(start, 30) }
+        const { createApp, ref, onMounted } = VueLib
 
-      const { createApp, ref, onMounted } = window.Vue
-      const appEl = document.getElementById('app')
-      if(!appEl){
-        console.error('[thankyou:get-started] Mount point #app missing; aborting boot')
-        return
-      }
-      console.info('[thankyou:get-started] Vue ready; bootstrapping app')
+        createApp({
+          setup(){
+            // ===== ENV / CONSTANTS =====
+            const SUPABASE_URL = window.SUPABASE_URL || ''
+            const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || ''
+            const DASHBOARD_URL = window.HF_DASHBOARD_URL || (location.origin + '/your-impact')
+            const GOOGLE_CLIENT_ID = window.GOOGLE_CLIENT_ID || '' // optional for One Tap
 
-      createApp({
-        setup(){
-          // ===== ENV / CONSTANTS =====
-          const SUPABASE_URL = window.SUPABASE_URL || ''
-          const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || ''
-          // Unified redirect target (Experience page)
-          const DASHBOARD_URL = window.HF_DASHBOARD_URL || (location.origin + '/your-impact')
-          const GOOGLE_CLIENT_ID = window.GOOGLE_CLIENT_ID || '' // optional for One Tap
+            const supa = (SUPABASE_URL && SUPABASE_ANON_KEY && supaLib)
+              ? supaLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+              : null
 
-          if(!window.supabase) console.warn('[thankyou:get-started] Supabase SDK missing; auth disabled')
-          const supa = (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null
+            // ===== STATE =====
+            const user = ref(null)
+            const busy = ref(false)
+            const toast = ref('')
+            const liveStatus = ref('')
 
-          // ===== STATE =====
-          const user = ref(null)
-          const busy = ref(false)
-          const toast = ref('')
-          const liveStatus = ref('')
+            // ===== HELPERS =====
+            const say = (msg)=>{ toast.value = msg; liveStatus.value = msg; setTimeout(()=> toast.value='', 2200) }
+            const goDashboard = ()=> location.href = DASHBOARD_URL
+            async function refreshUser(){ if(!supa) return; const { data:{ user: u } } = await supa.auth.getUser(); user.value = u }
+            async function getSession(){ if(!supa) return null; const { data:{ session } } = await supa.auth.getSession(); return session }
+            async function logout(){ if(!supa) return say('Supabase not configured'); await supa.auth.signOut(); user.value = null; say('Signed out') }
 
-          // ===== HELPERS =====
-          const say = (msg)=>{ toast.value = msg; liveStatus.value = msg; setTimeout(()=> toast.value='', 2200) }
-          const goDashboard = ()=> location.href = DASHBOARD_URL
-          async function refreshUser(){
-            if(!supa) return
-            const { data: { user: u } } = await supa.auth.getUser()
-            user.value = u
-          }
-          async function getSession(){
-            if(!supa) return null
-            const { data: { session } } = await supa.auth.getSession()
-            return session
-          }
-          async function logout(){
-            if(!supa){ console.warn('[thankyou:get-started] Sign out attempted without Supabase client'); return }
-            await supa.auth.signOut()
-            user.value = null
-            say('Signed out')
-          }
-
-          // ===== GOOGLE ONE TAP (optional enhancement) =====
-          function initOneTap(){
-            if(!window.google || !GOOGLE_CLIENT_ID || !supa) return
-            window.google.accounts.id.initialize({
-              client_id: GOOGLE_CLIENT_ID,
-              auto_select: true,
-              cancel_on_tap_outside: false,
-              itp_support: true,
-              callback: async (resp)=>{
-                try {
-                  busy.value = true; liveStatus.value = 'Signing in with Google'
-                  const { error } = await supa.auth.signInWithIdToken({ provider: 'google', token: resp.credential })
-                  if(error) throw error
-                  await refreshUser(); goDashboard()
-                } catch (e) {
-                  console.error(e); say('Google sign‑in failed'); busy.value = false
+            // ===== GOOGLE ONE TAP (optional enhancement) =====
+            function initOneTap(){
+              if(!supa){ say('Supabase not configured'); return }
+              if(!window.google){ say('Launching Google redirect…'); withGoogleRedirect(); return }
+              if(!GOOGLE_CLIENT_ID){ say('Missing GOOGLE_CLIENT_ID; using Google redirect'); withGoogleRedirect(); return }
+              window.google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                auto_select: true,
+                cancel_on_tap_outside: false,
+                itp_support: true,
+                callback: async (resp)=>{
+                  try{
+                    busy.value = true; liveStatus.value = 'Signing in with Google'
+                    const { error } = await supa.auth.signInWithIdToken({ provider:'google', token: resp.credential })
+                    if(error) throw error
+                    await refreshUser(); goDashboard()
+                  }catch(e){
+                    console.error(e); say('Google sign-in failed; using redirect'); busy.value = false; withGoogleRedirect()
+                  }
                 }
-              }
-            })
-            window.google.accounts.id.prompt(()=>{})
-          }
-
-          // ===== PROVIDER FLOWS (Supabase‑native) =====
-          async function withGoogleRedirect(){
-            if(!supa){ say('Supabase unavailable'); return }
-            try{ busy.value = true; liveStatus.value = 'Redirecting to Google…'
-              const { error } = await supa.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: DASHBOARD_URL } })
-              if(error) throw error
-            }catch(e){ console.error(e); say('Could not start Google sign‑in'); busy.value=false }
-          }
-          async function withAppleRedirect(){
-            if(!supa){ say('Supabase unavailable'); return }
-            try{ busy.value = true; liveStatus.value = 'Redirecting to Apple…'
-              const { error } = await supa.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo: DASHBOARD_URL } })
-              if(error) throw error
-            }catch(e){ console.error(e); say('Could not start Apple sign‑in'); busy.value=false }
-          }
-          async function withMagicLink(){
-            const email = prompt('Email for a magic link:')
-            if(!email) return
-            if(!supa){ say('Supabase unavailable'); return }
-            try{ busy.value = true; liveStatus.value = 'Sending magic link…'
-              const { error } = await supa.auth.signInWithOtp({ email, options: { emailRedirectTo: DASHBOARD_URL } })
-              if(error) throw error
-              say('Check your email for a secure sign‑in link.')
-            }catch(e){ console.error(e); say('Could not send magic link') }
-            finally{ busy.value = false }
-          }
-
-          // ===== SMART ONE‑CLICK =====
-          async function smartOneClick(){
-            try{
-              busy.value = true
-              if(!supa){
-                say('Supabase unavailable')
-                busy.value = false
-                return
-              }
-              const session = await getSession()
-              if(session){ await refreshUser(); return goDashboard() }
-              busy.value = false; initOneTap() // trigger GIS if eligible
-            }catch(e){ console.error(e); busy.value=false; say('Could not complete one‑click') }
-          }
-
-          onMounted(async ()=>{
-            console.info('[thankyou:get-started] App mounted', { supabaseConfigured: !!supa, googleClient: !!GOOGLE_CLIENT_ID })
-            if(!supa){
-              say('Supabase not configured')
-              return
+              })
+              window.google.accounts.id.prompt(()=>{})
             }
-            await refreshUser()
-            const { data: { session } } = await supa.auth.getSession()
-            if(session) return goDashboard()
 
-            // optional: auto‑start one‑click when navigating from index with ?autostart=1
-            const qs = new URLSearchParams(location.search)
-            if(qs.get('autostart') === '1') smartOneClick()
-          })
+            // ===== PROVIDER FLOWS (Supabase-native) =====
+            async function withGoogleRedirect(){
+              if(!supa) return say('Supabase not configured')
+              try{ busy.value = true; liveStatus.value = 'Redirecting to Google…'
+                const { error } = await supa.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: DASHBOARD_URL } })
+                if(error) throw error
+              }catch(e){ console.error(e); say('Could not start Google sign-in'); busy.value=false }
+            }
+            async function withAppleRedirect(){
+              if(!supa) return say('Supabase not configured')
+              try{ busy.value = true; liveStatus.value = 'Redirecting to Apple…'
+                const { error } = await supa.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo: DASHBOARD_URL } })
+                if(error) throw error
+              }catch(e){ console.error(e); say('Could not start Apple sign-in'); busy.value=false }
+            }
+            async function withMagicLink(){
+              if(!supa) return say('Supabase not configured')
+              const email = prompt('Email for a magic link:')
+              if(!email) return
+              try{ busy.value = true; liveStatus.value = 'Sending magic link…'
+                const { error } = await supa.auth.signInWithOtp({ email, options: { emailRedirectTo: DASHBOARD_URL } })
+                if(error) throw error
+                say('Check your email for a secure sign-in link.')
+              }catch(e){ console.error(e); say('Could not send magic link') }
+              finally{ busy.value = false }
+            }
 
-          return { user, busy, toast, liveStatus, smartOneClick, withGoogleRedirect, withAppleRedirect, withMagicLink, goDashboard, logout }
-        }
-      }).mount('#app')
-    })()
+            // ===== SMART ONE-CLICK =====
+            async function smartOneClick(){
+              if(!supa) return say('Supabase not configured')
+              try{
+                busy.value = true
+                const session = await getSession()
+                if(session){ await refreshUser(); return goDashboard() }
+                busy.value = false
+                if(!window.google || !GOOGLE_CLIENT_ID){ return withGoogleRedirect() }
+                initOneTap()
+              }catch(e){ console.error(e); busy.value=false; say('Could not complete one-click') }
+            }
+
+            onMounted(async ()=>{
+              if(!supa) return
+              await refreshUser()
+              const session = await getSession()
+              if(session) return goDashboard()
+
+              const qs = new URLSearchParams(location.search)
+              if(qs.get('autostart') === '1') smartOneClick()
+            })
+
+            return { user, busy, toast, liveStatus, smartOneClick, withGoogleRedirect, withAppleRedirect, withMagicLink, goDashboard, logout }
+          }
+        }).mount('#app')
+      }
+
+      if(document.readyState === 'complete' || document.readyState === 'interactive') start();
+      else window.addEventListener('DOMContentLoaded', start);
+    })();
   </script>
 </body>
 </html>
