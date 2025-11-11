@@ -6,6 +6,18 @@ export default function handler(req, res) {
     // Only enable Google One Tap (GIS) on the production host.
     const host = String(req.headers.host || '');
     const isProdHost = host.endsWith('haylofriend.com');
+    const forwardedProto = req.headers['x-forwarded-proto'];
+    const protoHeader = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+    const headerProto = (protoHeader || '').split(',')[0].trim();
+    const inferredProto =
+      headerProto || (host.startsWith('localhost') || host.startsWith('127.') ? 'http' : 'https');
+    const defaultThankHost =
+      process.env.NEXT_PUBLIC_THANK_HOST
+        || (isProdHost
+          ? 'https://grateful.haylofriend.com'
+          : host
+            ? `${inferredProto}://${host}`
+            : 'https://grateful.haylofriend.com');
 
     const cfg = {
       SUPABASE_URL:
@@ -17,7 +29,7 @@ export default function handler(req, res) {
       GOOGLE_CLIENT_ID: isProdHost ? (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '') : '',
 
       HF_DASHBOARD_URL: process.env.NEXT_PUBLIC_HF_DASHBOARD_URL || '/your-impact',
-      THANK_HOST: process.env.NEXT_PUBLIC_THANK_HOST || 'https://grateful.haylofriend.com',
+      THANK_HOST: defaultThankHost,
 
       // Keep dashboard↔auth handshake explicit
       LOGIN_PATH: process.env.NEXT_PUBLIC_LOGIN_PATH || '/get-started',
