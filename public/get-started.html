@@ -68,6 +68,28 @@
 
   <!-- Third‑party SDKs (async to avoid blocking) -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <script>
+    (function () {
+      var SUPABASE_URL = window.SUPABASE_URL || '';
+      var SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';
+      var supa = window.__supabaseClient || (window.createClient && SUPABASE_URL && SUPABASE_ANON_KEY
+        ? window.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+        : null);
+
+      var autostartEnabled = new URLSearchParams(location.search).get('autostart') === '1';
+
+      if (supa) {
+        try {
+          if (!window.__supabaseClient) window.__supabaseClient = supa;
+        } catch (e) {
+          console.error('Failed to expose Supabase client', e);
+        }
+      }
+
+      window.__AUTH_AUTOSTART__ = autostartEnabled;
+    })();
+  </script>
 </head>
 <body class="h-full">
   <main id="app" class="max-w-[980px] mx-auto px-6 py-12" v-cloak>
@@ -162,13 +184,14 @@
             const DASHBOARD_URL = window.HF_DASHBOARD_URL || (location.origin + '/your-impact')
             const GOOGLE_CLIENT_ID = window.GOOGLE_CLIENT_ID || '' // optional for One Tap
 
-            const supa = (SUPABASE_URL && SUPABASE_ANON_KEY && supaLib)
+            const existingClient = window.__supabaseClient || null
+            const supa = existingClient || ((SUPABASE_URL && SUPABASE_ANON_KEY && supaLib)
               ? supaLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-              : null
+              : null)
 
-            if (supa) {
+            if (supa && !existingClient) {
               try {
-                if (!window.__supabaseClient) window.__supabaseClient = supa
+                window.__supabaseClient = supa
               } catch (e) {
                 console.error('Failed to expose Supabase client', e)
               }
@@ -258,7 +281,7 @@
               if(session) return goDashboard()
 
               const qs = new URLSearchParams(location.search)
-              if(qs.get('autostart') === '1') smartOneClick()
+              if(qs.get('autostart') === '1' || window.__AUTH_AUTOSTART__) smartOneClick()
             })
 
             return { user, busy, toast, liveStatus, smartOneClick, withGoogleRedirect, withAppleRedirect, withMagicLink, goDashboard, logout }
