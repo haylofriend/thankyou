@@ -16,7 +16,9 @@ export default function handler(req, res) {
   res.status(200).send(
     `(() => { try {
       window.__ENV__ = ${JSON.stringify(cfg)};
-      for (const k in window.__ENV__) if (!window[k]) window[k] = window.__ENV__[k];
+      for (const k in window.__ENV__) {
+        if (!window[k]) window[k] = window.__ENV__[k];
+      }
     } catch(e){ console.error('env.js', e); } })();`
   );
 }
