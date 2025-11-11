@@ -166,6 +166,14 @@
               ? supaLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
               : null
 
+            if (supa) {
+              try {
+                if (!window.__supabaseClient) window.__supabaseClient = supa
+              } catch (e) {
+                console.error('Failed to expose Supabase client', e)
+              }
+            }
+
             // ===== STATE =====
             const user = ref(null)
             const busy = ref(false)
@@ -260,6 +268,107 @@
 
       if(document.readyState === 'complete' || document.readyState === 'interactive') start();
       else window.addEventListener('DOMContentLoaded', start);
+    })();
+  </script>
+
+  <script>
+    /*
+      Robust auth: always succeed via Supabase redirect OAuth, even if GIS fails.
+      - Works before Vue boots (attaches to the static Google button)
+      - Falls back to direct authorize redirect if the client cannot initialize
+    */
+    (function ensureRedirectOAuth(){
+      var DASHBOARD_URL = window.HF_DASHBOARD_URL || '/your-impact'
+      var SUPABASE_URL = window.SUPABASE_URL || ''
+      var SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || ''
+
+      function resolveRedirect(){
+        try {
+          return new URL(DASHBOARD_URL, location.origin).toString()
+        } catch (_) {
+          return location.origin + '/your-impact'
+        }
+      }
+
+      function ensureClient(){
+        try {
+          if (window.__supabaseClient && window.__supabaseClient.auth) {
+            return window.__supabaseClient
+          }
+          if (window.supabase && window.supabase.auth && typeof window.supabase.auth.signInWithOAuth === 'function') {
+            return window.supabase
+          }
+          if (window.supabase && typeof window.supabase.createClient === 'function' && SUPABASE_URL && SUPABASE_ANON_KEY) {
+            return window.__supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+          }
+          if (typeof window.createClient === 'function' && SUPABASE_URL && SUPABASE_ANON_KEY) {
+            return window.__supabaseClient = window.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+          }
+        } catch (err) {
+          console.error('Supabase client bootstrap failed', err)
+        }
+        return null
+      }
+
+      function startRedirectOAuth(){
+        var redirectTo = resolveRedirect()
+        try {
+          var client = ensureClient()
+          if (!client) throw new Error('no supabase client')
+          client.auth.signInWithOAuth({
+            provider: 'google',
+            options: { redirectTo: redirectTo }
+          })
+        } catch (e) {
+          try {
+            var base = (SUPABASE_URL || '').replace(/\/+$/, '')
+            if (!base) throw new Error('missing SUPABASE_URL')
+            var url = new URL(base + '/auth/v1/authorize')
+            url.searchParams.set('provider', 'google')
+            url.searchParams.set('redirect_to', redirectTo)
+            location.href = url.toString()
+          } catch (fallbackErr) {
+            console.error('OAuth redirect fallback failed', fallbackErr)
+          }
+        }
+      }
+
+      function wireGoogleButton(){
+        var selectors = [
+          '[data-action="google-login"]',
+          '.google-login',
+          'button[aria-label*="Google"]',
+          'button:has(svg[aria-label*="Google"])',
+          'button:has(img[alt*="Google"])'
+        ]
+        var googleBtn = document.querySelector(selectors.join(','))
+        if (googleBtn) {
+          googleBtn.addEventListener('click', function (evt) {
+            evt.preventDefault()
+            evt.stopPropagation()
+            startRedirectOAuth()
+          }, { capture: true })
+        }
+      }
+
+      function onError(evt){
+        try {
+          var msg = String((evt && (evt.message || evt.error || '')) || '').toLowerCase()
+          if (!msg.includes('google')) return
+          if (!(msg.includes('continue') || msg.includes('one tap'))) return
+          var autostart = new URLSearchParams(location.search).get('autostart')
+          if (autostart === '1') startRedirectOAuth()
+        } catch (err) {
+          console.error('OAuth error handler failed', err)
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', wireGoogleButton)
+      } else {
+        wireGoogleButton()
+      }
+      window.addEventListener('error', onError, true)
     })();
   </script>
 </body>
