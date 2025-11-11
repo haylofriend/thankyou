@@ -51,6 +51,14 @@
     [v-cloak]{display:none}
   </style>
 
+  <!-- Env (fallbacks). Provide real values via hosting env; leave blank locally -->
+  <script>
+    window.SUPABASE_URL = window.SUPABASE_URL ?? ''
+    window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY ?? ''
+    window.HF_DASHBOARD_URL = window.HF_DASHBOARD_URL || '/your-impact'
+    window.GOOGLE_CLIENT_ID = window.GOOGLE_CLIENT_ID || ''
+  </script>
+
   <!-- Third‑party SDKs (async to avoid blocking) -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -135,13 +143,15 @@
         document.addEventListener('DOMContentLoaded', safeBoot, { once: true })
         return
       }
-      if(!window.Vue){
-        console.debug('[thankyou:get-started] Waiting for Vue to load…')
+      const VueLib = window.Vue
+      const supaLib = window.supabase
+      if(!VueLib || !supaLib){
+        console.debug('[thankyou:get-started] Waiting for core SDKs…', { vue: !!VueLib, supabase: !!supaLib })
         setTimeout(safeBoot, 40)
         return
       }
 
-      const { createApp, ref, onMounted } = window.Vue
+      const { createApp, ref, onMounted } = VueLib
       const appEl = document.getElementById('app')
       if(!appEl){
         console.error('[thankyou:get-started] Mount point #app missing; aborting boot')
@@ -158,8 +168,8 @@
           const DASHBOARD_URL = window.HF_DASHBOARD_URL || (location.origin + '/your-impact')
           const GOOGLE_CLIENT_ID = window.GOOGLE_CLIENT_ID || '' // optional for One Tap
 
-          if(!window.supabase) console.warn('[thankyou:get-started] Supabase SDK missing; auth disabled')
-          const supa = (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null
+          if(!supaLib) console.warn('[thankyou:get-started] Supabase SDK missing; auth disabled')
+          const supa = (SUPABASE_URL && SUPABASE_ANON_KEY && supaLib) ? supaLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null
 
           // ===== STATE =====
           const user = ref(null)
@@ -189,7 +199,9 @@
 
           // ===== GOOGLE ONE TAP (optional enhancement) =====
           function initOneTap(){
-            if(!window.google || !GOOGLE_CLIENT_ID || !supa) return
+            if(!supa){ say('Supabase not configured'); return }
+            if(!window.google){ say('Launching Google redirect…'); withGoogleRedirect(); return }
+            if(!GOOGLE_CLIENT_ID){ say('Missing GOOGLE_CLIENT_ID; using Google redirect'); withGoogleRedirect(); return }
             window.google.accounts.id.initialize({
               client_id: GOOGLE_CLIENT_ID,
               auto_select: true,
@@ -202,7 +214,7 @@
                   if(error) throw error
                   await refreshUser(); goDashboard()
                 } catch (e) {
-                  console.error(e); say('Google sign‑in failed'); busy.value = false
+                  console.error(e); say('Google sign‑in failed; using redirect'); busy.value = false; withGoogleRedirect()
                 }
               }
             })
@@ -238,16 +250,14 @@
 
           // ===== SMART ONE‑CLICK =====
           async function smartOneClick(){
+            if(!supa) return say('Supabase not configured')
             try{
               busy.value = true
-              if(!supa){
-                say('Supabase unavailable')
-                busy.value = false
-                return
-              }
               const session = await getSession()
               if(session){ await refreshUser(); return goDashboard() }
-              busy.value = false; initOneTap() // trigger GIS if eligible
+              busy.value = false
+              if(!window.google || !GOOGLE_CLIENT_ID){ return withGoogleRedirect() }
+              initOneTap() // trigger GIS if eligible
             }catch(e){ console.error(e); busy.value=false; say('Could not complete one‑click') }
           }
 
