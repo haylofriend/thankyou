@@ -175,26 +175,26 @@
 
             // ===== GOOGLE ONE TAP (optional enhancement) =====
             function initOneTap(){
-              if(!supa){ say('Supabase not configured'); return }
-              if(!window.google){ say('Launching Google redirect…'); withGoogleRedirect(); return }
-              if(!GOOGLE_CLIENT_ID){ say('Missing GOOGLE_CLIENT_ID; using Google redirect'); withGoogleRedirect(); return }
+              if(!supa){ say('Supabase not configured'); return; }
+              if(!window.google){ say('Launching Google redirect…'); withGoogleRedirect(); return; }
+              if(!GOOGLE_CLIENT_ID){ say('Missing GOOGLE_CLIENT_ID; using Google redirect'); withGoogleRedirect(); return; }
               window.google.accounts.id.initialize({
                 client_id: GOOGLE_CLIENT_ID,
                 auto_select: true,
                 cancel_on_tap_outside: false,
                 itp_support: true,
                 callback: async (resp)=>{
-                  try{
-                    busy.value = true; liveStatus.value = 'Signing in with Google'
-                    const { error } = await supa.auth.signInWithIdToken({ provider:'google', token: resp.credential })
-                    if(error) throw error
-                    await refreshUser(); goDashboard()
-                  }catch(e){
-                    console.error(e); say('Google sign-in failed; using redirect'); busy.value = false; withGoogleRedirect()
+                  try {
+                    busy.value = true; liveStatus.value = 'Signing in with Google';
+                    const { error } = await supa.auth.signInWithIdToken({ provider: 'google', token: resp.credential });
+                    if(error) throw error;
+                    await refreshUser(); goDashboard();
+                  } catch (e) {
+                    console.error(e); say('Google sign-in failed; using redirect'); busy.value = false; withGoogleRedirect();
                   }
                 }
-              })
-              window.google.accounts.id.prompt(()=>{})
+              });
+              window.google.accounts.id.prompt(()=>{});
             }
 
             // ===== PROVIDER FLOWS (Supabase-native) =====
