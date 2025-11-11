@@ -59,6 +59,10 @@
 
   <!-- Runtime env (centralized; no secrets in git) -->
   <script src="/env.js"></script>
+  <script>
+    window.SUPABASE_URL = window.SUPABASE_URL || "";
+    window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "";
+  </script>
 
   <!-- Third‑party SDKs (async to avoid blocking) -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>

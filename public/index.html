@@ -136,14 +136,14 @@
   <script src="/env.js"></script>
   <!-- App env: used by get-started + dashboard -->
   <script>
-    window.SUPABASE_URL = "https://YOUR-PROJECT.supabase.co";
-    window.SUPABASE_ANON_KEY = "YOUR-ANON-KEY";
-    window.HF_DASHBOARD_URL = "/your-impact";
-    window.HF_GET_STARTED_URL = "/get-started?autostart=1";
+    window.SUPABASE_URL = window.SUPABASE_URL || "";
+    window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "";
+    window.HF_DASHBOARD_URL = window.HF_DASHBOARD_URL || "/your-impact";
+    window.HF_GET_STARTED_URL = window.HF_GET_STARTED_URL || "/get-started?autostart=1";
     /* Optional (enables Google One Tap when user lands on get-started)
-       window.GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"; */
+       window.GOOGLE_CLIENT_ID = window.GOOGLE_CLIENT_ID || ""; */
     /* Optional (dashboard builds public links with this host)
-       window.THANK_HOST = "https://grateful.haylofriend.com"; */
+       window.THANK_HOST = window.THANK_HOST || "https://grateful.haylofriend.com"; */
   </script>
 </head>
 <body>
