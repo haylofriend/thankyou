@@ -57,7 +57,7 @@
     [v-cloak]{display:none}
   </style>
 
-  <!-- Load runtime env (from Vercel function) -->
+  <!-- Runtime env injection (served by Vercel) -->
   <script src="/env.js"></script>
 
   <!-- Third‑party SDKs (async to avoid blocking) -->
@@ -144,6 +144,7 @@
       function start(){
         const VueLib = window.Vue
         const supaLib = window.supabase
+        // wait for BOTH Vue & Supabase to avoid race conditions
         if(!VueLib || !supaLib){ return setTimeout(start, 30) }
         const { createApp, ref, onMounted } = VueLib
 
