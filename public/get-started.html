@@ -166,6 +166,8 @@
               ? supaLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
               : null
 
+            const autostartEnabled = new URLSearchParams(location.search).get('autostart') === '1'
+
             // ===== STATE =====
             const user = ref(null)
             const busy = ref(false)
@@ -243,14 +245,28 @@
               }catch(e){ console.error(e); busy.value=false; say('Could not complete one-click'); }
             }
 
+            function handleGoogleErrors(evt){
+              if(!autostartEnabled) return
+              try{
+                const message = String((evt && (evt.message || evt.error && evt.error.message || evt.error)) || '').toLowerCase()
+                if(!message) return
+                if(message.includes('google') && (message.includes('continue') || message.includes('one tap'))){
+                  window.removeEventListener('error', handleGoogleErrors, true)
+                  withGoogleRedirect()
+                }
+              }catch(e){ console.error('One Tap fallback failed', e) }
+            }
+
             onMounted(async ()=>{
               if(!supa) return
               await refreshUser()
               const session = await getSession()
               if(session) return goDashboard()
 
-              const qs = new URLSearchParams(location.search)
-              if(qs.get('autostart') === '1') smartOneClick()
+              if(autostartEnabled){
+                window.addEventListener('error', handleGoogleErrors, true)
+                smartOneClick()
+              }
             })
 
             return { user, busy, toast, liveStatus, smartOneClick, withGoogleRedirect, withAppleRedirect, withMagicLink, goDashboard, logout }
