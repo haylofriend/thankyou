@@ -1,24 +1,18 @@
 {
+  "cleanUrls": true,
   "redirects": [
     { "source": "/get-started.html",          "destination": "/get-started",                      "permanent": true },
     { "source": "/dashboard_auth_gated.html", "destination": "/your-impact",                     "permanent": true },
     { "source": "/mission-control.html",      "destination": "https://grateful.haylofriend.com", "permanent": true }
   ],
   "rewrites": [
-    /* Public entry points */
     { "source": "/",                 "destination": "/public/index.html" },
     { "source": "/index.html",       "destination": "/public/index.html" },
 
-    /* Story URLs */
     { "source": "/get-started",      "destination": "/public/get-started.html" },
     { "source": "/your-impact",      "destination": "/public/dashboard_auth_gated.html" },
 
-    /* Convenience (keep old links working) */
-    { "source": "/get-started.html", "destination": "/public/get-started.html" },
     { "source": "/dashboard",        "destination": "/public/dashboard_auth_gated.html" },
-    { "source": "/dashboard_auth_gated.html", "destination": "/public/dashboard_auth_gated.html" },
-
-    /* Everything else falls back to index */
     { "source": "/(.*)",             "destination": "/public/index.html" }
   ]
 }
