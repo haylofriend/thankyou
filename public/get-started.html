@@ -176,8 +176,8 @@
             // ===== GOOGLE ONE TAP (optional enhancement) =====
             function initOneTap(){
               if(!supa){ say('Supabase not configured'); return; }
-              if(!window.google){ say('Launching Google redirect…'); return withGoogleRedirect(); }
-              if(!GOOGLE_CLIENT_ID){ say('Missing GOOGLE_CLIENT_ID; using Google redirect'); return withGoogleRedirect(); }
+              if(!window.google){ say('Launching Google redirect…'); withGoogleRedirect(); return; }
+              if(!GOOGLE_CLIENT_ID){ say('Missing GOOGLE_CLIENT_ID; using Google redirect'); withGoogleRedirect(); return; }
               window.google.accounts.id.initialize({
                 client_id: GOOGLE_CLIENT_ID,
                 auto_select: true,
@@ -190,7 +190,7 @@
                     if(error) throw error;
                     await refreshUser(); goDashboard();
                   } catch (e) {
-                    console.error(e); say('Google sign-in failed; using redirect'); busy.value = false; return withGoogleRedirect();
+                    console.error(e); say('Google sign-in failed; using redirect'); busy.value = false; withGoogleRedirect();
                   }
                 }
               });
@@ -226,15 +226,15 @@
 
             // ===== SMART ONE-CLICK =====
             async function smartOneClick(){
-              if(!supa) return say('Supabase not configured')
+              if(!supa) return say('Supabase not configured');
               try{
-                busy.value = true
-                const session = await getSession()
-                if(session){ await refreshUser(); return goDashboard() }
-                busy.value = false
-                if(!window.google || !GOOGLE_CLIENT_ID){ return withGoogleRedirect() }
-                initOneTap()
-              }catch(e){ console.error(e); busy.value=false; say('Could not complete one-click') }
+                busy.value = true;
+                const session = await getSession();
+                if(session){ await refreshUser(); return goDashboard(); }
+                busy.value = false;
+                if(!window.google || !GOOGLE_CLIENT_ID){ return withGoogleRedirect(); }
+                initOneTap();
+              }catch(e){ console.error(e); busy.value=false; say('Could not complete one-click'); }
             }
 
             onMounted(async ()=>{
