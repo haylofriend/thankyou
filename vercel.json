@@ -6,6 +6,7 @@
     { "source": "/mission-control.html",      "destination": "https://grateful.haylofriend.com", "permanent": true }
   ],
   "rewrites": [
+    { "source": "/env.js",           "destination": "/api/env.js" },
     { "source": "/",                 "destination": "/public/index.html" },
     { "source": "/index.html",       "destination": "/public/index.html" },
 
