@@ -7,11 +7,6 @@
       "permanent": true
     },
     {
-      "source": "/dashboard_auth_gated.html",
-      "destination": "/your-impact",
-      "permanent": true
-    },
-    {
       "source": "/mission-control.html",
       "destination": "https://grateful.haylofriend.com",
       "permanent": true
@@ -38,10 +33,6 @@
     {
       "source": "/get-started",
       "destination": "/get-started.html"
-    },
-    {
-      "source": "/your-impact",
-      "destination": "/dashboard_auth_gated.html"
     },
     {
       "source": "/dashboard",
