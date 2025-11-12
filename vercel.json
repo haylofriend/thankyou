@@ -1,4 +1,14 @@
 {
+  "rewrites": [
+    {
+      "source": "/env.js",
+      "destination": "/api/env.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
   "cleanUrls": true,
   "redirects": [
     {
@@ -25,16 +35,6 @@
       "source": "/mission-control.html",
       "destination": "https://grateful.haylofriend.com",
       "permanent": true
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/env.js",
-      "destination": "/api/env.js"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
     }
   ]
 }
