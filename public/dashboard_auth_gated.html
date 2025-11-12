@@ -48,29 +48,6 @@
   </script>
   <!-- Supabase (CDN) -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <!-- Early auth check: redirect to full login before Vue mounts -->
-  <script>
-    (async () => {
-      try {
-        const SUPABASE_URL  = window.SUPABASE_URL      || '';
-        const SUPABASE_KEY  = window.SUPABASE_ANON_KEY || '';
-        const LOGIN_PATH    = window.LOGIN_PATH        || '/get-started';
-        const DASHBOARD_URL = window.HF_DASHBOARD_URL  || '/your-impact';
-
-        if (window.supabase && SUPABASE_URL && SUPABASE_KEY) {
-          const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-          const { data: { session } } = await client.auth.getSession();
-          if (!session) {
-            const to = new URL(LOGIN_PATH, location.origin);
-            to.searchParams.set('redirect', DASHBOARD_URL);
-            location.replace(to.toString());
-          }
-        }
-      } catch (e) {
-        console.warn('Early auth check failed', e);
-      }
-    })();
-  </script>
   <style>
     :root{--bg:#0b0b0c;--card:#121214;--ink:#e7e7ea;--hair:rgba(231,231,234,.12);--acc:#4da3ff}
     html,body{height:100%;background:var(--bg)!important}
@@ -310,7 +287,8 @@ const { createApp, ref, computed, onMounted } = Vue;
 const SUPABASE_URL = window.SUPABASE_URL || '';
 const SUPABASE_KEY = window.SUPABASE_ANON_KEY || '';
 const THANK_HOST   = window.THANK_HOST || 'https://grateful.haylofriend.com';
-const LOGIN_PATH   = window.LOGIN_PATH || '/get-started'; // your dedicated login page (optional)
+// Always bounce to get-started when user explicitly taps "Open full login"
+const LOGIN_PATH   = window.LOGIN_PATH || '/get-started';
 
 const supabase = (SUPABASE_URL && SUPABASE_KEY && window.supabase)
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
@@ -466,58 +444,40 @@ createApp({
     }
 
     onMounted(async () => {
-      if (!supabase) {
-        // No Supabase configured: keep the demo/overlay behavior.
-        introWow && introWow();
-        // Minute tick (visual compounding)
-        setInterval(() => { earningsWeek.value += perMinute.value; }, 60000);
-        return;
-      }
-
-      auth.value.loading = true;
-
-      // 1) Initial read
-      let { data: { session } } = await supabase.auth.getSession();
-
-      // 2) Force a refresh (handles fresh returns from OAuth)
-      if (!session) {
-        try {
-          const { data } = await supabase.auth.refreshSession();
-          session = data?.session || null;
-        } catch (_) {}
-      }
-
-      // 3) Short poll (max ~2.5s) to allow session to settle after redirect
-      if (!session) {
-        const deadline = Date.now() + 2500;
-        while (!session && Date.now() < deadline) {
-          await new Promise(r => setTimeout(r, 250));
-          const res = await supabase.auth.getSession();
-          session = res?.data?.session || null;
+      // If Supabase configured, verify/refresh session BEFORE showing overlay to avoid false "Sign in required".
+      if (supabase){
+        auth.value.loading = true;
+        let { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          try {
+            const { data } = await supabase.auth.refreshSession();
+            session = data?.session || null;
+          } catch {}
+          if (!session) {
+            // short settle window for fresh OAuth redirects
+            const deadline = Date.now() + 2000;
+            while (!session && Date.now() < deadline) {
+              await new Promise(r => setTimeout(r, 200));
+              const res = await supabase.auth.getSession();
+              session = res?.data?.session || null;
+            }
+          }
         }
-      }
+        auth.value.session = session;
+        auth.value.loading = false;
 
-      auth.value.session = session;
-      auth.value.loading = false;
+        // keep in sync for magic links / background refresh
+        supabase.auth.onAuthStateChange(async (_evt, s) => {
+          auth.value.session = s;
+          if (s) await hydrateFromDb();
+        });
 
-      // 4) Subscribe so future refreshes/magic links hydrate automatically
-      supabase.auth.onAuthStateChange(async (_event, s) => {
-        auth.value.session = s;
-        if (s) await hydrateFromDb();
-      });
-
-      // 5) Final decision
-      if (auth.value.session) {
-        // Auth OK → render dashboard
+        if (!auth.value.session) return; // gate stays, user can click "Open full login"
         await hydrateFromDb();
       } else {
-        // Still no session → DO NOT auto-redirect (prevents loops).
-        // The built-in gate will show, and "Open full login" already routes to /get-started.
-        // If you want a button-less auto-forward, we can add a delayed redirect later.
+        introWow(); // demo mode
       }
-
-      // existing visuals/timers
-      setInterval(() => { earningsWeek.value += perMinute.value; }, 60000);
+      setInterval(()=> { earningsWeek.value += perMinute.value; }, 60000);
     });
 
     return {
