@@ -17,6 +17,9 @@ export default function handler(req, res) {
       LOGIN_PATH:          process.env.NEXT_PUBLIC_LOGIN_PATH         || '/auth/google',
       HF_DASHBOARD_URL:    process.env.NEXT_PUBLIC_HF_DASHBOARD_URL   || '/your-impact',
 
+      // Preferred marketing domain
+      CANONICAL_ORIGIN:    process.env.NEXT_PUBLIC_CANONICAL_ORIGIN   || 'https://www.haylofriend.com',
+
       // Public host for share links
       THANK_HOST:          process.env.NEXT_PUBLIC_THANK_HOST || 'https://grateful.haylofriend.com'
     };
@@ -36,6 +39,37 @@ export default function handler(req, res) {
       if (!window.THANK_HOST)        window.THANK_HOST        = window.__ENV__.THANK_HOST;
       // Keep GOOGLE_CLIENT_ID empty to prevent GIS init
       window.GOOGLE_CLIENT_ID = '';
+
+      // Enforce canonical host (www) for production visitors
+      const canonical = window.__ENV__.CANONICAL_ORIGIN;
+      if (canonical && typeof window.location !== 'undefined') {
+        try {
+          const canonicalUrl = new URL(canonical);
+          const bareHost = canonicalUrl.hostname.replace(/^www\./, '');
+          const currentHost = window.location.hostname;
+          const isLocal = /^(localhost|127\.0\.0\.1)$/i.test(currentHost);
+
+          if (!isLocal && currentHost === bareHost && canonicalUrl.hostname !== bareHost) {
+            const suffix = window.location.pathname + window.location.search + window.location.hash;
+            const target = canonicalUrl.origin.replace(/\/$/, '') + suffix;
+            window.location.replace(target);
+            return;
+          }
+
+          const onCanonicalFamily = currentHost === canonicalUrl.hostname || currentHost === bareHost;
+          if (onCanonicalFamily) {
+            const ctaBase = canonicalUrl.origin.replace(/\/$/, '');
+            const defaultCta = '/auth/google?redirect=/your-impact';
+            if (!window.__ENV__.HF_GET_STARTED_URL || window.__ENV__.HF_GET_STARTED_URL === defaultCta) {
+              const canonicalCta = ctaBase + '/auth/google?redirect=' + encodeURIComponent('/your-impact');
+              window.__ENV__.HF_GET_STARTED_URL = canonicalCta;
+              window.HF_GET_STARTED_URL = canonicalCta;
+            }
+          }
+        } catch (canonErr) {
+          console.error('Canonical enforcement failed', canonErr);
+        }
+      }
     } catch(e){ console.error('env.js apply failed', e); } })();`;
 
     res.status(200).send(js);
