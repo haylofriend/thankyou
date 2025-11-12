@@ -4,51 +4,46 @@
   <meta charset="utf-8" />
   <title>Connecting with Google…</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="/env.js"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
     // Minimal, dependency-free launcher for Supabase Google auth.
     (function () {
-      // Read env (your build already exposes env via /env.js -> window.NEXT_PUBLIC_* )
-      function loadEnv(cb){
-        var s=document.createElement('script');
-        s.src='/env.js'; s.onload=cb; document.head.appendChild(s);
-      }
       function q(name){ return new URL(location.href).searchParams.get(name) }
-      function toAbs(path){ try{ return new URL(path, location.origin).toString() }catch(_){ return location.origin + (path||'/') } }
+      function toAbs(path){ try{ return new URL(path, location.origin).toString() }catch(_){ return location.origin + (path||'/' ) } }
 
-      loadEnv(function(){
-        var SUPABASE_URL = (window.NEXT_PUBLIC_SUPABASE_URL||'').trim();
-        var ANON = (window.NEXT_PUBLIC_SUPABASE_ANON_KEY||'').trim();
+      var SUPABASE_URL = (window.NEXT_PUBLIC_SUPABASE_URL||'').trim();
+      var ANON = (window.NEXT_PUBLIC_SUPABASE_ANON_KEY||'').trim();
 
-        // Pick redirect target:
-        // 1) explicit ?redirect=… wins
-        // 2) legacy ?autostart=1 falls back to /your-impact
-        // 3) final fallback: /your-impact
-        var redirectParam = q('redirect');
-        var autostart = q('autostart');
-        var redirectPath = redirectParam || (autostart ? '/your-impact' : '/your-impact');
+      // Pick redirect target:
+      // 1) explicit ?redirect=… wins
+      // 2) legacy ?autostart=1 falls back to /your-impact
+      // 3) final fallback: /your-impact
+      var redirectParam = q('redirect');
+      var autostart = q('autostart');
+      var redirectPath = redirectParam || (autostart ? '/your-impact' : '/your-impact');
 
-        // If already signed in, just go to the redirect target.
-        try {
-          var hasSb = document.cookie.match(/(?:^|;\s*)sb-access-token=/) ||
-                      document.cookie.match(/(?:^|;\s*)supabase.auth.token=/);
-          if (hasSb) { location.replace(toAbs(redirectPath)); return; }
-        } catch(_){}
+      // If already signed in, just go to the redirect target.
+      try {
+        var hasSb = document.cookie.match(/(?:^|;\s*)sb-access-token=/) ||
+                    document.cookie.match(/(?:^|;\s*)supabase.auth.token=/);
+        if (hasSb) { location.replace(toAbs(redirectPath)); return; }
+      } catch(_){}
 
-        if(!SUPABASE_URL || !ANON){
-          // Fail safe: bounce to public site if env missing
-          location.replace(toAbs(redirectPath)); return;
-        }
+      if(!SUPABASE_URL || !ANON){
+        // Fail safe: bounce to public site if env missing
+        location.replace(toAbs(redirectPath)); return;
+      }
 
-        // Build Supabase authorize URL for Google
-        var authorize = new URL('/auth/v1/authorize', SUPABASE_URL);
-        authorize.searchParams.set('provider', 'google');
-        authorize.searchParams.set('redirect_to', toAbs(redirectPath));
+      // Build Supabase authorize URL for Google
+      var authorize = new URL('/auth/v1/authorize', SUPABASE_URL);
+      authorize.searchParams.set('provider', 'google');
+      authorize.searchParams.set('redirect_to', toAbs(redirectPath));
 
-        // Optional UX: carry through any state you want (nonce, etc.)
-        // authorize.searchParams.set('scopes','');
+      // Optional UX: carry through any state you want (nonce, etc.)
+      // authorize.searchParams.set('scopes','');
 
-        location.replace(authorize.toString());
-      });
+      location.replace(authorize.toString());
     })();
   </script>
   <style>
