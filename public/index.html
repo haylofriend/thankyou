@@ -544,7 +544,7 @@
       const fadeInHero = ref(false);
       const fadeInSections = ref(false);
       const thankHost = (window.THANK_HOST || location.origin || 'https://haylofriend.com').replace(/\/$/, '');
-      const getStartedUrl = window.HF_GET_STARTED_URL || '/get-started?autostart=1';
+      const getStartedUrl = window.HF_GET_STARTED_URL || '/auth/google';
 
       // DERIVED
       const earningsDisplay = computed(() => earnings.value.toFixed(2));
