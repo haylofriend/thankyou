@@ -18,7 +18,10 @@ export default function handler(req, res) {
       HF_DASHBOARD_URL:    process.env.NEXT_PUBLIC_HF_DASHBOARD_URL   || '/your-impact',
 
       // Public host for share links
-      THANK_HOST:          process.env.NEXT_PUBLIC_THANK_HOST || 'https://grateful.haylofriend.com'
+      THANK_HOST:          process.env.NEXT_PUBLIC_THANK_HOST || 'https://grateful.haylofriend.com',
+
+      // Admin email (lower-cased for comparisons)
+      ADMIN_EMAIL:         (process.env.NEXT_PUBLIC_ADMIN_EMAIL || process.env.ADMIN_EMAIL || '').toLowerCase()
     };
 
     const js = `(() => { try {
@@ -34,6 +37,7 @@ export default function handler(req, res) {
       if (!window.SUPABASE_URL)      window.SUPABASE_URL      = window.__ENV__.SUPABASE_URL;
       if (!window.SUPABASE_ANON_KEY) window.SUPABASE_ANON_KEY = window.__ENV__.SUPABASE_ANON_KEY;
       if (!window.THANK_HOST)        window.THANK_HOST        = window.__ENV__.THANK_HOST;
+      if (!window.ADMIN_EMAIL)       window.ADMIN_EMAIL       = window.__ENV__.ADMIN_EMAIL;
       // Keep GOOGLE_CLIENT_ID empty to prevent GIS init
       window.GOOGLE_CLIENT_ID = '';
     } catch(e){ console.error('env.js apply failed', e); } })();`;

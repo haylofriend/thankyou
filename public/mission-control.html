@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mission Control — HayloFriend</title>
 
+  <!-- Runtime env (exposes ADMIN_EMAIL, LOGIN_PATH, etc.) -->
+  <script src="/api/env.js"></script>
+
   <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -192,12 +195,14 @@
   <script src="https://unpkg.com/vue@3"></script>
   <!-- Supabase client -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="/haylo-auth.js"></script>
 
   <script>
-  const { createApp, ref, reactive, computed, onMounted } = Vue;
+  function initMissionControlApp(){
+    const { createApp, ref, reactive, computed, onMounted } = Vue;
 
-  createApp({
-    setup(){
+    createApp({
+      setup(){
       // ---- Live state ----
       const live = ref(true);
 
@@ -384,8 +389,36 @@
         verify, pause, override, refresh,
         eventDot, timeAgo
       };
+      }
+    }).mount('#app');
+  }
+  </script>
+  <script>
+  (async function guardAndBoot() {
+    try {
+      if (window.HayloAuth && typeof window.HayloAuth.requireAdmin === 'function') {
+        const result = await window.HayloAuth.requireAdmin({
+          redirectTo: window.LOGIN_PATH || '/auth/google',
+          redirectBackTo: '/mission-control.html',
+          fallbackUrl: '/',
+          adminEmail: (window.ADMIN_EMAIL || '').toLowerCase()
+        });
+
+        if (!result || result.status !== 'allowed') {
+          console.warn('Admin guard denied or errored:', result);
+          return;
+        }
+      } else {
+        console.warn('Admin guard missing (HayloAuth not loaded) — failing closed.');
+        return;
+      }
+    } catch (err) {
+      console.error('Admin guard crashed — failing closed.', err);
+      return;
     }
-  }).mount('#app');
+
+    initMissionControlApp();
+  })();
   </script>
 </body>
 </html>

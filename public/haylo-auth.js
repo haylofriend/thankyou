@@ -87,6 +87,68 @@
     location.replace(abs(redirect));
   }
 
+  async function requireAdmin(options = {}) {
+    const opts = options || {};
+    const redirectTo = opts.redirectTo || loginPath();
+    const redirectBackTo = opts.redirectBackTo || '/';
+    const fallbackUrl = opts.fallbackUrl || '/';
+    const adminEmail = (opts.adminEmail || '').toLowerCase();
+
+    const goLogin = () => {
+      if (!redirectTo) return { status: 'denied', reason: 'login-required' };
+      try {
+        const loginUrl = new URL(redirectTo, location.origin);
+        if (redirectBackTo) loginUrl.searchParams.set('redirect', redirectBackTo);
+        location.replace(loginUrl.toString());
+      } catch {
+        location.replace(abs(loginPath()));
+      }
+      return { status: 'redirect', reason: 'login-required' };
+    };
+
+    const deny = (reason, user) => {
+      if (!fallbackUrl) return { status: 'denied', reason, user: user || null };
+      try {
+        const target = new URL(fallbackUrl, location.origin);
+        location.replace(target.toString());
+      } catch {
+        location.replace(abs('/'));
+      }
+      return { status: 'redirect', reason, user: user || null };
+    };
+
+    try {
+      await ensureEnv();
+      const { user } = await whoami();
+
+      if (!user) {
+        return goLogin();
+      }
+
+      if (!adminEmail) {
+        console.warn('HayloAuth.requireAdmin: adminEmail missing; denying access.');
+        return deny('admin-email-missing', user);
+      }
+
+      const email = (user.email || '').toLowerCase();
+      if (email === adminEmail) {
+        return { status: 'allowed', user };
+      }
+
+      return deny('not-admin', user);
+    } catch (error) {
+      console.error('HayloAuth.requireAdmin crashed', error);
+      if (!fallbackUrl) return { status: 'error', error };
+      try {
+        const target = new URL(fallbackUrl, location.origin);
+        location.replace(target.toString());
+      } catch {
+        location.replace(abs('/'));
+      }
+      return { status: 'error', error };
+    }
+  }
+
   // expose
-  g.HayloAuth = { ensureEnv, getClient, whoami, login, gate, logout, buildAuthorizeUrl, dash, loginPath };
+  g.HayloAuth = { ensureEnv, getClient, whoami, login, gate, logout, buildAuthorizeUrl, dash, loginPath, requireAdmin };
 })(window);
