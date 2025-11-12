@@ -108,11 +108,11 @@
       const to = new URL(LOGIN_PATH, location.origin);
       to.searchParams.set('redirect', targetPath);
       location.replace(to.toString());
+      return null;
     }
 
     if (!SUPABASE_URL || !SUPABASE_KEY) {
-      redirectToLogin();
-      return;
+      return redirectToLogin();
     }
 
     try {
@@ -120,14 +120,12 @@
       if (!ok) throw new Error('supabase-js failed to load');
     } catch (err) {
       console.warn('Supabase script failed', err);
-      redirectToLogin();
-      return;
+      return redirectToLogin();
     }
 
     const client = getClient();
     if (!client) {
-      redirectToLogin();
-      return;
+      return redirectToLogin();
     }
 
     const isOauthReturn = /[?&](code|access_token)=/.test(location.search + location.hash);
@@ -152,8 +150,10 @@
     }
 
     if (!session) {
-      redirectToLogin();
+      return redirectToLogin();
     }
+
+    return session;
   }
 
   async function logout(redirect = '/') {
