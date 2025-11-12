@@ -142,6 +142,8 @@
   </style>
   <!-- Load runtime env (from Vercel function) -->
   <script src="/env.js"></script>
+  <!-- Auth helpers (auto-wires data-get-started links) -->
+  <script defer src="/haylo-auth.js"></script>
   <!-- App env: used by auth + dashboard -->
   <script>
     window.SUPABASE_URL = window.SUPABASE_URL || "";
@@ -544,17 +546,6 @@
       const fadeInHero = ref(false);
       const fadeInSections = ref(false);
       const thankHost = (window.THANK_HOST || location.origin || 'https://haylofriend.com').replace(/\/$/, '');
-      const getStartedUrl = window.HF_GET_STARTED_URL || '/auth/google?redirect=/your-impact';
-      const defaultRedirectPath = '/your-impact';
-      const getStartedRedirect = (() => {
-        try {
-          const url = new URL(getStartedUrl, location.origin);
-          return url.searchParams.get('redirect') || defaultRedirectPath;
-        } catch (err) {
-          console.warn('Unable to parse get started redirect, falling back to default.', err);
-          return defaultRedirectPath;
-        }
-      })();
 
       // DERIVED
       const earningsDisplay = computed(() => earnings.value.toFixed(2));
@@ -633,21 +624,6 @@
       }
 
       // ACTIONS
-      function startGetStartedFlow(event) {
-        if (event && typeof event.preventDefault === 'function') {
-          event.preventDefault();
-        }
-
-        const hayloAuth = window.HayloAuth;
-        if (hayloAuth && typeof hayloAuth.login === 'function') {
-          hayloAuth.login(getStartedRedirect);
-          return false;
-        }
-
-        window.location.href = getStartedUrl;
-        return false;
-      }
-
       function login() {
         createRipple(event);
         setTimeout(() => {
@@ -792,13 +768,6 @@
       onMounted(() => {
         introWow();
 
-        document.querySelectorAll('[data-get-started]').forEach((el) => {
-          el.setAttribute('href', getStartedUrl);
-          const fallbackJs = `if (window.HayloAuth && typeof window.HayloAuth.login === 'function') { window.HayloAuth.login('${getStartedRedirect}'); } else { window.location.href='${getStartedUrl.replace(/'/g, "\\'")}'; } return false;`;
-          el.setAttribute('onclick', fallbackJs);
-          el.addEventListener('click', startGetStartedFlow);
-        });
-        
         document.addEventListener('click', function(e) {
           if (e.target.tagName === 'BUTTON') {
             createRipple(e);
@@ -830,8 +799,7 @@
         shareQuick,
         mockPayout,
         plaidLink,
-        getEventColor,
-        getStartedUrl
+        getEventColor
       };
     }
   }).mount('#app');
