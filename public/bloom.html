@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Thank‑You — One‑Tap Tip</title>
+  <meta name="description" content="Tap once to send a thank‑you tip via Apple Pay or Google Pay. Feel‑good flow, instant joy, zero friction." />
+  <link rel="preconnect" href="https://js.stripe.com" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#e7e7ea', bg: '#0b0b0c', card: '#121214', hair: 'rgba(231,231,234,.12)', acc: '#4da3ff', good:'#15c39a'
+          },
+          animation: {
+            'pulse-glow': 'pulse-glow 2s ease-in-out infinite alternate',
+            'float': 'float 6s ease-in-out infinite'
+          },
+          keyframes: {
+            'pulse-glow': { '0%': { boxShadow: '0 0 5px rgba(77,163,255,.4)' }, '100%': { boxShadow: '0 0 20px rgba(77,163,255,.8), 0 0 30px rgba(77,163,255,.4)' } },
+            'float': { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-8px)' } }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root{--bg:#0b0b0c;--card:#121214;--ink:#e7e7ea;--hair:rgba(231,231,234,.12);--acc:#4da3ff}
+    html,body{height:100%;background:var(--bg)}
+    body{margin:0;min-height:100vh;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+    .glass{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));border:1px solid var(--hair);box-shadow:0 8px 24px rgba(0,0,0,.35);backdrop-filter:blur(10px)}
+    .tap{touch-action:manipulation}
+  </style>
+</head>
+<body>
+  <main class="max-w-[520px] mx-auto px-5 py-8">
+    <!-- BRAND / RECIPIENT HEADER -->
+    <header class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-md animate-pulse-glow" style="background:linear-gradient(135deg,var(--acc),#8acbff)"></div>
+        <div class="text-sm tracking-[.14em] uppercase text-white/80">Thank‑You</div>
+      </div>
+      <a id="ctaSignInTop" href="#signup" class="text-xs text-white/70 hover:text-white">Get your link</a>
+    </header>
+
+    <!-- GREETING -->
+    <section class="mt-6 glass rounded-2xl p-5">
+      <div class="flex items-center gap-3">
+        <div id="avatar" class="w-12 h-12 rounded-full flex items-center justify-center text-lg font-medium" style="background:linear-gradient(135deg,#1f2937,#111827)">😊</div>
+        <div>
+          <div class="text-white/70 text-xs">You’re tipping</div>
+          <h1 class="text-xl font-semibold" id="name">Another Great Human</h1>
+        </div>
+      </div>
+      <p class="mt-3 text-white/80 text-sm" id="tagline">This is their thank‑you link. One tap → instant joy.</p>
+    </section>
+
+    <!-- AMOUNT PICKER -->
+    <section class="mt-5 glass rounded-2xl p-5">
+      <div class="text-xs uppercase text-white/60">Choose amount</div>
+      <div class="grid grid-cols-4 gap-2 mt-3">
+        <button class="tap px-3 py-2 rounded-xl border border-white/10 hover:border-white/30" data-amt="200">$2</button>
+        <button class="tap px-3 py-2 rounded-xl border border-white/10 hover:border-white/30" data-amt="500">$5</button>
+        <button class="tap px-3 py-2 rounded-xl border border-white/10 hover:border-white/30" data-amt="1000">$10</button>
+        <button class="tap px-3 py-2 rounded-xl border border-white/10 hover:border-white/30" data-amt="0" id="customBtn">Custom</button>
+      </div>
+      <div class="mt-3 hidden" id="customWrap">
+        <label class="text-xs text-white/60">Custom amount</label>
+        <div class="mt-1 flex items-center gap-2">
+          <span class="text-white/70">$</span>
+          <input id="customInput" inputmode="decimal" pattern="[0-9]*" class="w-24 bg-transparent border-b border-white/20 focus:outline-none" placeholder="3" />
+        </div>
+      </div>
+      <label class="text-xs text-white/60 block mt-4">Say something nice (optional)</label>
+      <textarea id="note" rows="2" class="mt-1 w-full bg-transparent border border-white/10 rounded-xl p-3 text-sm placeholder-white/40 focus:outline-none focus:border-white/30" placeholder="Your kindness made my day!"></textarea>
+    </section>
+
+    <!-- PAYMENT REQUEST (APPLE / GOOGLE PAY) -->
+    <section class="mt-5 glass rounded-2xl p-5">
+      <div class="flex items-center justify-between">
+        <div class="text-xs uppercase text-white/60">Tap to tip</div>
+        <div class="flex items-center gap-2 opacity-80">
+          <img src="https://storage.googleapis.com/support-kms-prod/2F707950E2E6F62DFE2B5C3D2F8F7D6E5D7F" alt="Google Pay" class="h-4"/>
+          <img src="https://developer.apple.com/apple-pay/marketing/images/view-on-apple-pay/lockup-on-light.svg" class="h-4 invert" alt="Apple Pay"/>
+        </div>
+      </div>
+
+      <!-- ONE-CLICK TO STRIPE CHECKOUT / PAYMENT LINK -->
+      <div id="oneClickWrap" class="mt-3 hidden">
+        <button id="oneClickBtn" class="tap w-full py-3 rounded-xl" style="background:linear-gradient(135deg,var(--acc),#8acbff)">
+          Pay $<span id="oneClickAmt">5</span> — Secure by Stripe
+        </button>
+        <p class="text-xs text-white/60 mt-2">Opens Stripe Checkout. Apple Pay & Google Pay available when supported.</p>
+      </div>
+
+      <!-- NATIVE APPLE/GOOGLE PAY (Payment Request Button) -->
+      <div id="prbWrap" class="mt-3"></div>
+
+      <!-- FALLBACK CARD FLOW -->
+      <div id="fallback" class="mt-3 hidden">
+        <button id="fallbackBtn" class="tap w-full py-3 rounded-xl bg-white/10 hover:bg-white/20">Pay $<span id="fallbackAmt">5</span> securely</button>
+        <p class="text-xs text-white/60 mt-2">Apple/Google Pay not available? We’ll use a secure card flow.</p>
+      </div>
+
+      <p class="text-[11px] text-white/40 mt-3">Protected by Stripe • We never store your card. Tips are final.</p>
+    </section>
+
+    <!-- TRUST / SOCIAL PROOF -->
+    <section class="mt-5 grid grid-cols-3 gap-2 text-center">
+      <div class="glass rounded-xl p-3">
+        <div class="text-xs text-white/60">Avg. tip</div>
+        <div class="text-lg font-semibold" id="avg">$4.20</div>
+      </div>
+      <div class="glass rounded-xl p-3">
+        <div class="text-xs text-white/60">Time to tip</div>
+        <div class="text-lg font-semibold">3s</div>
+      </div>
+      <div class="glass rounded-xl p-3">
+        <div class="text-xs text-white/60">Happy tippers</div>
+        <div class="text-lg font-semibold" id="count">12,481</div>
+      </div>
+    </section>
+
+    <!-- STICKY SIGNUP NUDGE -->
+    <a id="stickySignup" href="#signup" class="fixed left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:right-auto max-w-[520px] bottom-6 tap glass rounded-2xl px-4 py-3 flex items-center justify-between border border-white/10">
+      <div class="text-sm">Love this flow? <span class="text-white/80">Get your own link</span></div>
+      <div class="text-xs px-3 py-1 rounded-full border border-white/20">Free to start</div>
+    </a>
+  </main>
+
+  <!-- WOW MODAL -->
+  <div id="wow" class="fixed inset-0 bg-black/70 hidden items-center justify-center z-50">
+    <div class="max-w-[520px] mx-auto px-6">
+      <div class="glass rounded-3xl p-6 text-center relative overflow-hidden">
+        <div class="absolute -top-10 left-1/2 -translate-x-1/2 w-40 h-40 rounded-full" style="background:radial-gradient(closest-side, rgba(77,163,255,.35), transparent)"></div>
+        <div class="text-xs uppercase text-white/60">Thank you sent</div>
+        <h2 class="text-3xl font-semibold mt-1">You made <span id="wowName">their</span> day ✨</h2>
+        <p class="text-white/80 mt-2">That felt good, right? Keep the ripple going.</p>
+        <div class="grid grid-cols-2 gap-2 mt-4">
+          <a id="ctaShare" href="#" class="tap block py-3 rounded-xl bg-white/10 hover:bg-white/20">Share this moment</a>
+          <a id="ctaSignup" href="#signup" class="tap block py-3 rounded-xl" style="background:linear-gradient(135deg,var(--acc),#8acbff)">Get your link</a>
+        </div>
+        <button id="closeWow" class="mt-4 text-white/60 text-sm">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIGNUP TARGET -->
+  <section id="signup" class="max-w-[520px] mx-auto px-5 pb-24">
+    <div class="mt-12 text-center">
+      <h3 class="text-2xl font-semibold">Start receiving thank‑you tips</h3>
+      <p class="text-white/70 mt-2">Create a free link in 30 seconds. Works with Apple Pay & Google Pay.</p>
+      <a href="/get-started" class="inline-flex items-center gap-2 mt-4 px-5 py-3 rounded-2xl" style="background:linear-gradient(135deg,var(--acc),#8acbff)">
+        <span>Claim your link</span>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+      </a>
+    </div>
+  </section>
+
+  <!-- LIBS -->
+  <script src="https://js.stripe.com/v3/"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  
+  <script>
+  // ------- CONFIG (swap at build) ---------
+  const STRIPE_PK = window.STRIPE_PK || 'pk_test_XXXXXXXXXXXXXXXXXXXXXXXX';
+  const BACKEND_URL = window.BACKEND_URL || '/api'; // Implement as Supabase Edge Function or server
+  const CURRENCY = (new URL(location).searchParams.get('cur') || 'usd').toLowerCase();
+  // NEW: If you prefer a single Stripe-hosted link, set PAYMENT_LINK_URL to your Stripe Payment Link URL.
+  // Example: window.PAYMENT_LINK_URL = 'https://buy.stripe.com/test_abc123';
+  const PAYMENT_LINK_URL = window.PAYMENT_LINK_URL || null; // static Payment Link (optional)
+  const FORCE_ONE_CLICK = window.FORCE_ONE_CLICK || false; // set true to always send to Checkout/Payment Link
+  
+  // ------- STATE ---------
+  const qs = new URLSearchParams(location.search);
+  const recipientName = qs.get('n') || 'A Great Human';
+  const recipientHandle = qs.get('u') || 'thankyou';
+  const preset = parseInt(qs.get('amt')||'500',10); // cents
+
+  // ------- UI INIT ---------
+  const nameEl = document.getElementById('name');
+  const wowNameEl = document.getElementById('wowName');
+  nameEl.textContent = recipientName;
+  wowNameEl.textContent = recipientName.split(' ')[0];
+  document.getElementById('avatar').textContent = (recipientName[0]||'😊').toUpperCase();
+  const amountButtons = [...document.querySelectorAll('[data-amt]')];
+  const customBtn = document.getElementById('customBtn');
+  const customWrap = document.getElementById('customWrap');
+  const customInput = document.getElementById('customInput');
+  const fallback = document.getElementById('fallback');
+  const fallbackAmt = document.getElementById('fallbackAmt');
+  const noteEl = document.getElementById('note');
+  let amount = isNaN(preset)?500:preset; // cents
+  const oneClickWrap = document.getElementById('oneClickWrap');
+  const oneClickBtn = document.getElementById('oneClickBtn');
+  const oneClickAmt = document.getElementById('oneClickAmt');
+  
+  function formatDollars(cents){ return (cents/100).toFixed(2).replace(/\.00$/,''); }
+
+  function selectAmount(cents){
+    amount = cents;
+    amountButtons.forEach(b=>b.classList.remove('ring-2','ring-[var(--acc)]'));
+    const btn = amountButtons.find(b=>parseInt(b.dataset.amt,10)===cents);
+    if(btn) btn.classList.add('ring-2','ring-[var(--acc)]');
+    fallbackAmt.textContent = formatDollars(amount);
+    updatePaymentRequestTotal();
+  }
+
+  amountButtons.forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const v = parseInt(btn.dataset.amt,10);
+      if(v===0){ customWrap.classList.remove('hidden'); customInput.focus(); }
+      else { customWrap.classList.add('hidden'); selectAmount(v); }
+    });
+  });
+
+  customInput.addEventListener('input',()=>{
+    const v = Math.round(parseFloat(customInput.value||'0')*100);
+    if(!isNaN(v) && v>0){ selectAmount(v); }
+  });
+
+  selectAmount(amount);
+  // reflect amount on one-click UI as well
+  oneClickAmt.textContent = formatDollars(amount);
+
+  // ------- STRIPE PAYMENT REQUEST OR ONE-CLICK STRIPE ---------
+  const stripe = Stripe(STRIPE_PK, { apiVersion: '2022-11-15' });
+  const elements = stripe.elements();
+
+  // If FORCE_ONE_CLICK or PAYMENT_LINK_URL is provided, prefer one-click redirect to Stripe
+  if (FORCE_ONE_CLICK || PAYMENT_LINK_URL) {
+    oneClickWrap.classList.remove('hidden');
+    document.getElementById('fallback').classList.add('hidden');
+    // On click, either go to Payment Link, or create a Checkout Session for dynamic amount
+    oneClickBtn.addEventListener('click', async ()=>{
+      try{
+        const note = (noteEl.value||'').slice(0,180);
+        if (PAYMENT_LINK_URL) {
+          // Static Payment Link (amount defined in Stripe). Optional: append client_reference_id & metadata via redirect params if enabled.
+          const url = new URL(PAYMENT_LINK_URL);
+          url.searchParams.set('client_reference_id', recipientHandle);
+          location.href = url.toString();
+        } else {
+          // Dynamic: create Checkout Session with chosen amount
+          const res = await fetch(`${BACKEND_URL}/create-checkout-session`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ amount, currency:CURRENCY, recipientHandle, note, success_url: location.href + '#paid', cancel_url: location.href })
+          });
+          const { url } = await res.json();
+          if(url) location.href = url; else alert('Checkout unavailable');
+        }
+      }catch(e){ console.error(e); alert('Checkout unavailable'); }
+    });
+  } else {
+    // Default: show native Apple/Google Pay via Payment Request Button
+    let paymentRequest = stripe.paymentRequest({
+      country: 'US',
+      currency: CURRENCY,
+      total: { label: `Tip for ${recipientName}`, amount },
+      requestPayerName: true,
+      requestPayerEmail: true,
+    });
+
+    let prButton = elements.create('paymentRequestButton', { paymentRequest, style: { paymentRequestButton: { theme: 'dark', height: '48px' }}});
+
+    async function mountPRB(){
+      try{
+        const result = await paymentRequest.canMakePayment();
+        if(result){ prButton.mount('#prbWrap'); document.getElementById('fallback').classList.add('hidden'); }
+        else { document.getElementById('fallback').classList.remove('hidden'); }
+      }catch(e){ console.warn(e); document.getElementById('fallback').classList.remove('hidden'); }
+    }
+    mountPRB();
+
+    function updatePaymentRequestTotal(){
+      try{ paymentRequest.update({ total: { label: `Tip for ${recipientName}`, amount } }); }catch(_){}
+    }
+
+    // Handle Apple/Google Pay payment flow (requires backend)
+    paymentRequest.on('paymentmethod', async ev => {
+      try{
+        const note = (noteEl.value||'').slice(0,180);
+        const res = await fetch(`${BACKEND_URL}/create-payment-intent`, {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ amount, currency:CURRENCY, recipientHandle, note })
+        });
+        const { clientSecret, requiresAction } = await res.json();
+        let { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, { payment_method: ev.paymentMethod.id }, { handleActions: !requiresAction });
+        if(error){ ev.complete('fail'); alert(error.message||'Payment failed'); return; }
+        if(paymentIntent && paymentIntent.status === 'requires_action'){
+          const { error: actionError } = await stripe.confirmCardPayment(clientSecret);
+          if(actionError){ ev.complete('fail'); alert(actionError.message||'Payment failed'); return; }
+        }
+        ev.complete('success');
+        wow();
+      }catch(err){ console.error(err); ev.complete('fail'); alert('Unable to process payment right now.'); }
+    });
+  }
+
+  function updatePaymentRequestTotal(){
+    try{ paymentRequest.update({ total: { label: `Tip for ${recipientName}`, amount } }); }catch(_){}
+  }
+
+  // Handle Apple/Google Pay payment flow (requires backend)
+  paymentRequest.on('paymentmethod', async ev => {
+    try{
+      const note = (noteEl.value||'').slice(0,180);
+      const res = await fetch(`${BACKEND_URL}/create-payment-intent`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ amount, currency:CURRENCY, recipientHandle, note })
+      });
+      const { clientSecret, requiresAction } = await res.json();
+      let { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, { payment_method: ev.paymentMethod.id }, { handleActions: !requiresAction });
+      if(error){ ev.complete('fail'); alert(error.message||'Payment failed'); return; }
+      if(paymentIntent && paymentIntent.status === 'requires_action'){
+        const { error: actionError, paymentIntent: pi } = await stripe.confirmCardPayment(clientSecret);
+        if(actionError){ ev.complete('fail'); alert(actionError.message||'Payment failed'); return; }
+      }
+      ev.complete('success');
+      wow();
+    }catch(err){ console.error(err); ev.complete('fail'); alert('Unable to process payment right now.'); }
+  });
+
+  // Fallback secure flow (use Checkout Session backend)
+  document.getElementById('fallbackBtn').addEventListener('click', async ()=>{
+    try{
+      const note = (noteEl.value||'').slice(0,180);
+      const res = await fetch(`${BACKEND_URL}/create-checkout-session`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ amount, currency:CURRENCY, recipientHandle, note, success_url: location.href + '#paid', cancel_url: location.href })
+      });
+      const { url } = await res.json();
+      if(url) location.href = url; else alert('Checkout unavailable');
+    }catch(e){ console.error(e); alert('Checkout unavailable'); }
+  });
+
+  // Success detect on return
+  if(location.hash==='#paid'){ setTimeout(()=>wow(),300); }
+
+  // WOW sequence
+  function wow(){
+    try{ navigator.vibrate && navigator.vibrate([30,30,30]); }catch(_){ }
+    const modal = document.getElementById('wow');
+    modal.classList.remove('hidden'); modal.classList.add('flex');
+    // confetti burst
+    confetti({ particleCount: 140, spread: 70, origin: { y: 0.6 } });
+    // share link with prefilled text
+    const share = document.getElementById('ctaShare');
+    const text = `I just sent a thank‑you tip to ${recipientName} 🙌`;
+    const url = location.href.split('#')[0];
+    if(navigator.share){ share.addEventListener('click', (e)=>{ e.preventDefault(); navigator.share({ title:'Thank‑You', text, url }); }); }
+    else { share.setAttribute('href', `https://twitter.com/intent/tweet?text=${encodeURIComponent(text+' '+url)}`); }
+    document.getElementById('closeWow').onclick = ()=>{ modal.classList.add('hidden'); };
+  }
+  </script>
+</body>
+</html>
