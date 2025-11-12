@@ -1,7 +1,7 @@
 /* public/haylo-auth.js — central auth & env helpers (no deps) */
 (function (g) {
   const W = (typeof window !== 'undefined') ? window : {};
-  const STATE = { supa: null, envLoaded: false, envPromise: null };
+  const STATE = { supa: null, envLoaded: false, envPromise: null, supabasePromise: null };
 
   // -------- Env Loader (reads your /api/env.js) --------
   function loadEnv() {
@@ -19,7 +19,33 @@
     return STATE.envPromise;
   }
 
-  // -------- Supabase Client Singleton (via CDN) --------
+  // -------- Supabase Loader + Client Singleton (via CDN) --------
+  function loadSupabase() {
+    if (STATE.supabasePromise) return STATE.supabasePromise;
+    if (W.supabase) {
+      STATE.supabasePromise = Promise.resolve(true);
+      return STATE.supabasePromise;
+    }
+    STATE.supabasePromise = new Promise((resolve) => {
+      if (typeof document === 'undefined') { resolve(false); return; }
+      const existing = document.querySelector('script[data-haylo-supabase]');
+      if (existing) {
+        if (existing.dataset.loaded === 'true') { resolve(!!W.supabase); return; }
+        existing.addEventListener('load', () => { existing.dataset.loaded = 'true'; resolve(!!W.supabase); }, { once: true });
+        existing.addEventListener('error', () => resolve(false), { once: true });
+        return;
+      }
+      const s = document.createElement('script');
+      s.src = (W.SUPABASE_SRC || 'https://unpkg.com/@supabase/supabase-js@2');
+      s.async = false;
+      s.dataset.hayloSupabase = 'true';
+      s.addEventListener('load', () => { s.dataset.loaded = 'true'; resolve(!!W.supabase); }, { once: true });
+      s.addEventListener('error', () => resolve(false), { once: true });
+      document.head.appendChild(s);
+    });
+    return STATE.supabasePromise;
+  }
+
   function getClient() {
     if (STATE.supa) return STATE.supa;
     const url = (W.NEXT_PUBLIC_SUPABASE_URL || W.SUPABASE_URL || '').trim();
@@ -54,10 +80,11 @@
 
   async function whoami() {
     await ensureEnv();
+    const supaReady = await loadSupabase();
     const supa = getClient();
-    if (!supa) return { user: null, session: null };
+    if (!supaReady || !supa) return { user: null, session: null, ready: false };
     const { data: { session } } = await supa.auth.getSession();
-    return { user: session?.user ?? null, session: session ?? null };
+    return { user: session?.user ?? null, session: session ?? null, ready: true };
   }
 
   async function login(redirect = dash()) {
@@ -72,7 +99,8 @@
   async function gate(redirect = dash()) {
     // Call at top of any protected page
     await ensureEnv();
-    const { session } = await whoami();
+    const { session, ready } = await whoami();
+    if (ready === false) return; // fail open if Supabase script missing
     if (!session) {
       const go = new URL(loginPath(), location.origin);
       go.searchParams.set('redirect', redirect);
@@ -82,6 +110,7 @@
 
   async function logout(redirect = '/') {
     await ensureEnv();
+    await loadSupabase();
     const supa = getClient();
     if (supa) await supa.auth.signOut();
     location.replace(abs(redirect));
