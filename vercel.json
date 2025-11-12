@@ -17,6 +17,11 @@
       "permanent": true
     },
     {
+      "source": "/",
+      "destination": "https://grateful.haylofriend.com",
+      "permanent": true
+    },
+    {
       "source": "/login",
       "destination": "/auth/google",
       "permanent": true
@@ -40,11 +45,6 @@
       "source": "/mission-control.html",
       "destination": "https://grateful.haylofriend.com",
       "permanent": true
-    },
-    {
-      "source": "/:slug/your-impact",
-      "destination": "/your-impact.html",
-      "permanent": true
     }
   ],
   "rewrites": [
@@ -53,20 +53,31 @@
       "destination": "/api/env.js"
     },
     {
-      "source": "/",
-      "destination": "/index.html"
+      "source": "/auth/google",
+      "destination": "/auth.google.html"
     },
     {
       "source": "/your-impact",
       "destination": "/your-impact"
     },
     {
-      "source": "/auth/google",
-      "destination": "/auth/google/index.html"
+      "source": "/:slug/your-impact",
+      "destination": "/your-impact"
     },
     {
       "source": "/(.*)",
       "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/your-impact",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/html; charset=utf-8"
+        }
+      ]
     }
   ]
 }
