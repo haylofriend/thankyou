@@ -20,29 +20,28 @@
   }
 
   // -------- Supabase Loader + Client Singleton (via CDN) --------
-  function loadSupabase() {
+  async function ensureSupabaseLoaded() {
+    if (W.supabase) return true;
     if (STATE.supabasePromise) return STATE.supabasePromise;
-    if (W.supabase) {
-      STATE.supabasePromise = Promise.resolve(true);
-      return STATE.supabasePromise;
-    }
+    if (typeof document === 'undefined') return false;
+
     STATE.supabasePromise = new Promise((resolve) => {
-      if (typeof document === 'undefined') { resolve(false); return; }
-      const existing = document.querySelector('script[data-haylo-supabase]');
-      if (existing) {
-        if (existing.dataset.loaded === 'true') { resolve(!!W.supabase); return; }
-        existing.addEventListener('load', () => { existing.dataset.loaded = 'true'; resolve(!!W.supabase); }, { once: true });
-        existing.addEventListener('error', () => resolve(false), { once: true });
-        return;
-      }
       const s = document.createElement('script');
       s.src = (W.SUPABASE_SRC || 'https://unpkg.com/@supabase/supabase-js@2');
-      s.async = false;
-      s.dataset.hayloSupabase = 'true';
-      s.addEventListener('load', () => { s.dataset.loaded = 'true'; resolve(!!W.supabase); }, { once: true });
-      s.addEventListener('error', () => resolve(false), { once: true });
+      s.async = true;
+      s.onload = () => resolve(true);
+      s.onerror = () => resolve(false);
       document.head.appendChild(s);
     });
+
+    const ok = await STATE.supabasePromise;
+    if (!ok) STATE.supabasePromise = null;
+    return ok;
+  }
+
+  function loadSupabase() {
+    if (STATE.supabasePromise) return STATE.supabasePromise;
+    STATE.supabasePromise = ensureSupabaseLoaded();
     return STATE.supabasePromise;
   }
 
@@ -51,7 +50,9 @@
     const url = (W.NEXT_PUBLIC_SUPABASE_URL || W.SUPABASE_URL || '').trim();
     const key = (W.NEXT_PUBLIC_SUPABASE_ANON_KEY || W.SUPABASE_ANON_KEY || '').trim();
     if (!url || !key || !W.supabase) return null;
-    STATE.supa = W.supabase.createClient(url, key);
+    STATE.supa = W.supabase.createClient(url, key, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    });
     return STATE.supa;
   }
 
@@ -96,26 +97,62 @@
     location.replace(buildAuthorizeUrl(redirect));
   }
 
-  async function gate(redirect = dash()) {
-    // Call at top of any protected page
+  async function gate(targetPath = dash()) {
     await ensureEnv();
 
-    const supaUrl = (W.NEXT_PUBLIC_SUPABASE_URL || W.SUPABASE_URL || '').trim();
-    const supaKey = (W.NEXT_PUBLIC_SUPABASE_ANON_KEY || W.SUPABASE_ANON_KEY || '').trim();
+    const LOGIN_PATH = loginPath();
+    const SUPABASE_URL = (W.NEXT_PUBLIC_SUPABASE_URL || W.SUPABASE_URL || '').trim();
+    const SUPABASE_KEY = (W.NEXT_PUBLIC_SUPABASE_ANON_KEY || W.SUPABASE_ANON_KEY || '').trim();
 
-    // Fail-safe: if Supabase isn't configured or ready, send user to login with redirect
-    if (!W.supabase || !supaUrl || !supaKey) {
-      const failover = new URL(loginPath(), location.origin);
-      failover.searchParams.set('redirect', redirect);
-      location.replace(failover.toString());
+    function redirectToLogin() {
+      const to = new URL(LOGIN_PATH, location.origin);
+      to.searchParams.set('redirect', targetPath);
+      location.replace(to.toString());
+    }
+
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+      redirectToLogin();
       return;
     }
 
-    const { session } = await whoami();
+    try {
+      const ok = await ensureSupabaseLoaded();
+      if (!ok) throw new Error('supabase-js failed to load');
+    } catch (err) {
+      console.warn('Supabase script failed', err);
+      redirectToLogin();
+      return;
+    }
+
+    const client = getClient();
+    if (!client) {
+      redirectToLogin();
+      return;
+    }
+
+    const isOauthReturn = /[?&](code|access_token)=/.test(location.search + location.hash);
+
+    async function waitForSession(ms = 2000) {
+      const t0 = Date.now();
+      while (Date.now() - t0 < ms) {
+        const { data: { session: innerSession } } = await client.auth.getSession();
+        if (innerSession) return innerSession;
+        await new Promise((resolve) => setTimeout(resolve, 150));
+      }
+      return null;
+    }
+
+    let { data: { session } } = await client.auth.getSession();
+    if (!session && isOauthReturn) {
+      session = await waitForSession(2000);
+      const u = new URL(location.href);
+      ['code', 'access_token', 'refresh_token', 'provider_token', 'expires_in', 'token_type', 'scope']
+        .forEach((p) => u.searchParams.delete(p));
+      history.replaceState({}, '', u.toString());
+    }
+
     if (!session) {
-      const go = new URL(loginPath(), location.origin);
-      go.searchParams.set('redirect', redirect);
-      location.replace(go.toString());
+      redirectToLogin();
     }
   }
 
@@ -128,5 +165,5 @@
   }
 
   // expose
-  g.HayloAuth = { ensureEnv, getClient, whoami, login, gate, logout, buildAuthorizeUrl, dash, loginPath };
+  g.HayloAuth = { ensureEnv, getClient, whoami, login, gate, logout, buildAuthorizeUrl, dash, loginPath, ensureSupabaseLoaded };
 })(window);
