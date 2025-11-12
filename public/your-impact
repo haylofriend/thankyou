@@ -48,28 +48,10 @@
   </script>
   <!-- Supabase (CDN) -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <!-- Early auth check: redirect to full login before Vue mounts -->
+  <!-- Shared auth helper -->
+  <script src="/haylo-auth.js"></script>
   <script>
-    (async () => {
-      try {
-        const SUPABASE_URL  = window.SUPABASE_URL      || '';
-        const SUPABASE_KEY  = window.SUPABASE_ANON_KEY || '';
-        const LOGIN_PATH    = window.LOGIN_PATH        || '/auth/google';
-        const DASHBOARD_URL = window.HF_DASHBOARD_URL  || '/your-impact';
-
-        if (window.supabase && SUPABASE_URL && SUPABASE_KEY) {
-          const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-          const { data: { session } } = await client.auth.getSession();
-          if (!session) {
-            const to = new URL(LOGIN_PATH, location.origin);
-            to.searchParams.set('redirect', DASHBOARD_URL);
-            location.replace(to.toString());
-          }
-        }
-      } catch (e) {
-        console.warn('Early auth check failed', e);
-      }
-    })();
+    HayloAuth.gate('/your-impact'); // redirects to /auth/google?redirect=/your-impact if no session
   </script>
   <style>
     :root{--bg:#0b0b0c;--card:#121214;--ink:#e7e7ea;--hair:rgba(231,231,234,.12);--acc:#4da3ff}
