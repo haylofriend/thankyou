@@ -304,7 +304,7 @@
 <script src="https://unpkg.com/vue@3"></script>
 
 <script>
-const { createApp, ref, computed, onMounted } = Vue;
+const { createApp, ref, computed, onMounted, watch } = Vue;
 
 // ===== ENV =====
 const SUPABASE_URL = window.SUPABASE_URL || '';
@@ -325,6 +325,20 @@ async function copyToClipboard(text) {
   } catch (err) { alert(`Copy this link: ${text}`); return false; }
 }
 
+function promotePrettyUrl(slugValue) {
+  try {
+    const value = typeof slugValue === 'string' ? slugValue.trim() : '';
+    if (!value || value === 'your-name') return;
+    const desiredPath = `/${encodeURIComponent(value)}/your-impact`;
+    const suffix = `${location.search || ''}${location.hash || ''}`;
+    if (location.pathname !== desiredPath) {
+      history.replaceState(null, '', `${desiredPath}${suffix}`);
+    }
+  } catch (err) {
+    console.warn('Failed to promote pretty URL', err);
+  }
+}
+
 createApp({
   setup(){
     // ===== AUTH STATE =====
@@ -334,6 +348,7 @@ createApp({
     const displayName = ref('You');
     const avatarUrl = ref('https://api.dicebear.com/7.x/initials/svg?seed=YOU&backgroundType=gradientLinear');
     const slug = ref('your-name');
+    window.slug = slug;
 
     const earningsToday = ref(0);
     const earningsWeek = ref(0);
@@ -465,7 +480,11 @@ createApp({
       setTimeout(()=>earningsToday.value = +(target/7).toFixed(2), 600);
     }
 
+    watch(slug, promotePrettyUrl);
+
     onMounted(async () => {
+      promotePrettyUrl(slug.value);
+
       if (!supabase) {
         // No Supabase configured: keep the demo/overlay behavior.
         introWow && introWow();
