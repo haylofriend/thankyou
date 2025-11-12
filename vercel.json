@@ -17,13 +17,18 @@
       "permanent": true
     },
     {
-      "source": "/dashboard_auth_gated",
-      "destination": "/your-impact",
+      "source": "/get-started.html",
+      "destination": "/auth/google",
       "permanent": true
     },
     {
-      "source": "/dashboard_auth_gated.html",
-      "destination": "/your-impact",
+      "source": "/create",
+      "destination": "/auth/google",
+      "permanent": true
+    },
+    {
+      "source": "/login",
+      "destination": "/auth/google",
       "permanent": true
     },
     {
