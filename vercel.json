@@ -44,6 +44,10 @@
   ],
   "rewrites": [
     {
+      "source": "/mission-control.html",
+      "destination": "/api/admin-guard"
+    },
+    {
       "source": "/env.js",
       "destination": "/api/env.js"
     },
