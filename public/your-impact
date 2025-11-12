@@ -1,4 +1,6 @@
 <!-- dashboard_auth_gated.html -->
+<script src="/haylo-auth.js"></script>
+<script>HayloAuth.gate('/your-impact');</script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
