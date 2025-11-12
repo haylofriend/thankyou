@@ -197,4 +197,22 @@
 
   // expose
   g.HayloAuth = { ensureEnv, getClient, whoami, login, gate, logout, buildAuthorizeUrl, dash, loginPath, ensureSupabaseLoaded };
+
+  function emitReady(target) {
+    if (!target || typeof target.dispatchEvent !== 'function') return;
+    let evt;
+    try {
+      evt = new CustomEvent('hayloauth:ready', { detail: g.HayloAuth });
+    } catch (_) {
+      if (typeof document !== 'undefined' && typeof document.createEvent === 'function') {
+        evt = document.createEvent('Event');
+        evt.initEvent('hayloauth:ready', false, false);
+        evt.detail = g.HayloAuth;
+      }
+    }
+    if (evt) target.dispatchEvent(evt);
+  }
+
+  emitReady(typeof window !== 'undefined' ? window : null);
+  emitReady(typeof document !== 'undefined' ? document : null);
 })(window);
