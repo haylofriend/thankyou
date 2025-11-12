@@ -2,71 +2,34 @@
   "cleanUrls": true,
   "redirects": [
     {
-      "source": "/get-started",
-      "destination": "/auth/google",
-      "permanent": true
-    },
-    {
-      "source": "/get-started.html",
-      "destination": "/auth/google",
-      "permanent": true
-    },
-    {
-      "source": "/create",
-      "destination": "/auth/google",
+      "source": "/",
+      "destination": "https://grateful.haylofriend.com",
       "permanent": true
     },
     {
       "source": "/login",
       "destination": "/auth/google",
       "permanent": true
-    },
-    {
-      "source": "/dashboard_auth_gated",
-      "destination": "/your-impact",
-      "permanent": true
-    },
-    {
-      "source": "/dashboard_auth_gated.html",
-      "destination": "/your-impact",
-      "permanent": true
-    },
-    {
-      "source": "/dashboard",
-      "destination": "/your-impact",
-      "permanent": true
-    },
-    {
-      "source": "/mission-control.html",
-      "destination": "https://grateful.haylofriend.com",
-      "permanent": true
-    },
-    {
-      "source": "/:slug/your-impact",
-      "destination": "/your-impact.html",
-      "permanent": true
     }
+    /* IMPORTANT: Do NOT put a redirect for "/:slug/your-impact" here.
+       We want to KEEP the pretty URL. We'll REWRITE it below. */
   ],
   "rewrites": [
-    {
-      "source": "/env.js",
-      "destination": "/api/env.js"
-    },
-    {
-      "source": "/",
-      "destination": "/index.html"
-    },
+    { "source": "/env.js", "destination": "/api/env.js" },
+    { "source": "/auth/google", "destination": "/auth.google.html" },
+
+    /* Serve the extensionless dashboard file for both paths */
+    { "source": "/your-impact", "destination": "/your-impact" },
+    { "source": "/:slug/your-impact", "destination": "/your-impact" },
+
+    /* Keep your SPA catch-all last */
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    /* Since the dashboard file is extensionless, make sure it’s served as HTML */
     {
       "source": "/your-impact",
-      "destination": "/your-impact"
-    },
-    {
-      "source": "/auth/google",
-      "destination": "/auth/google/index.html"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }]
     }
   ]
 }
