@@ -1,49 +1,37 @@
-export default function handler(req, res) {
-  try {
-    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-store');
+export const config = {
+  runtime: "edge"
+};
 
-    const cfg = {
-      // Supabase creds (must be set in Vercel env)
-      SUPABASE_URL:        process.env.NEXT_PUBLIC_SUPABASE_URL      || process.env.SUPABASE_URL || '',
-      SUPABASE_ANON_KEY:   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '',
+export default async function handler(req) {
+  const cfg = {
+    SUPABASE_URL:        process.env.NEXT_PUBLIC_SUPABASE_URL      || process.env.SUPABASE_URL || "",
+    SUPABASE_ANON_KEY:   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "",
+    GOOGLE_CLIENT_ID:    "",
+    HF_GET_STARTED_URL:  process.env.NEXT_PUBLIC_HF_GET_STARTED_URL || "/auth/google?redirect=/your-impact",
+    LOGIN_PATH:          process.env.NEXT_PUBLIC_LOGIN_PATH         || "/auth/google",
+    HF_DASHBOARD_URL:    process.env.NEXT_PUBLIC_HF_DASHBOARD_URL   || "/your-impact",
+    THANK_HOST:          process.env.NEXT_PUBLIC_THANK_HOST || "https://grateful.haylofriend.com",
+    BACKEND_URL:         process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || ""
+  };
 
-      // 🔒 Kill Google One Tap everywhere (avoid "Can't continue with google.com")
-      GOOGLE_CLIENT_ID:    '',
+  const js = `(() => { try {
+    window.__ENV__ = ${JSON.stringify(cfg)};
+    window.HF_GET_STARTED_URL = window.__ENV__.HF_GET_STARTED_URL;
+    window.LOGIN_PATH         = window.__ENV__.LOGIN_PATH;
+    window.HF_DASHBOARD_URL   = window.__ENV__.HF_DASHBOARD_URL;
 
-      // Canonical routes (CTA, fallback login, dashboard)
-      HF_GET_STARTED_URL:  process.env.NEXT_PUBLIC_HF_GET_STARTED_URL || '/auth/google?redirect=/your-impact',
-      // Canonical login entry routes straight to Google auth (no intermediate UI)
-      LOGIN_PATH:          process.env.NEXT_PUBLIC_LOGIN_PATH         || '/auth/google',
-      HF_DASHBOARD_URL:    process.env.NEXT_PUBLIC_HF_DASHBOARD_URL   || '/your-impact',
+    if (!window.SUPABASE_URL)      window.SUPABASE_URL      = window.__ENV__.SUPABASE_URL;
+    if (!window.SUPABASE_ANON_KEY) window.SUPABASE_ANON_KEY = window.__ENV__.SUPABASE_ANON_KEY;
+    if (!window.THANK_HOST)        window.THANK_HOST        = window.__ENV__.THANK_HOST;
+    if (!window.BACKEND_URL)       window.BACKEND_URL       = window.__ENV__.BACKEND_URL;
 
-      // Public host for share links
-      THANK_HOST:          process.env.NEXT_PUBLIC_THANK_HOST || 'https://grateful.haylofriend.com',
+    window.GOOGLE_CLIENT_ID = "";
+  } catch(e){ console.error('env.js apply failed', e); } })();`;
 
-      // Backend base URL for hosted payment endpoints
-      BACKEND_URL:         process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || ''
-    };
-
-    const js = `(() => { try {
-      // Export config
-      window.__ENV__ = ${JSON.stringify(cfg)};
-
-      // 🔐 Force the three nav constants every time
-      window.HF_GET_STARTED_URL = window.__ENV__.HF_GET_STARTED_URL; // CTA → /auth/google?redirect=/your-impact
-      window.LOGIN_PATH         = window.__ENV__.LOGIN_PATH;         // Dashboard overlay → /auth/google
-      window.HF_DASHBOARD_URL   = window.__ENV__.HF_DASHBOARD_URL;   // Post-login → /your-impact
-
-      // Supply creds if missing
-      if (!window.SUPABASE_URL)      window.SUPABASE_URL      = window.__ENV__.SUPABASE_URL;
-      if (!window.SUPABASE_ANON_KEY) window.SUPABASE_ANON_KEY = window.__ENV__.SUPABASE_ANON_KEY;
-      if (!window.THANK_HOST)        window.THANK_HOST        = window.__ENV__.THANK_HOST;
-      if (!window.BACKEND_URL)       window.BACKEND_URL       = window.__ENV__.BACKEND_URL;
-      // Keep GOOGLE_CLIENT_ID empty to prevent GIS init
-      window.GOOGLE_CLIENT_ID = '';
-    } catch(e){ console.error('env.js apply failed', e); } })();`;
-
-    res.status(200).send(js);
-  } catch (e) {
-    res.status(200).send(`console.error('env.js failed', ${JSON.stringify(String(e))});`);
-  }
+  return new Response(js, {
+    headers: {
+      "Content-Type": "application/javascript; charset=utf-8",
+      "Cache-Control": "no-store"
+    }
+  });
 }
