@@ -3,10 +3,6 @@
     {
       "source": "/env.js",
       "destination": "/api/env.js"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
     }
   ],
   "cleanUrls": true,
