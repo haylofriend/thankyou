@@ -25,12 +25,43 @@
     if (STATE.supabasePromise) return STATE.supabasePromise;
     if (typeof document === 'undefined') return false;
 
+    const SUPABASE_SRC = (W.SUPABASE_SRC || 'https://unpkg.com/@supabase/supabase-js@2');
+
     STATE.supabasePromise = new Promise((resolve) => {
+      const finalize = (ok) => resolve(ok && !!W.supabase);
+
+      const existing = Array.from(document.querySelectorAll('script[src]'))
+        .find((el) => el.src === SUPABASE_SRC);
+
+      if (existing) {
+        if (existing.dataset.hayloSupabase === 'failed') {
+          existing.remove();
+        } else {
+          if (existing.dataset.hayloSupabase === 'loaded') {
+            finalize(true);
+            return;
+          }
+          existing.addEventListener('load', () => finalize(true), { once: true });
+          existing.addEventListener('error', () => {
+            existing.dataset.hayloSupabase = 'failed';
+            finalize(false);
+          }, { once: true });
+          return;
+        }
+      }
+
       const s = document.createElement('script');
-      s.src = (W.SUPABASE_SRC || 'https://unpkg.com/@supabase/supabase-js@2');
+      s.src = SUPABASE_SRC;
       s.async = true;
-      s.onload = () => resolve(true);
-      s.onerror = () => resolve(false);
+      s.dataset.hayloSupabase = 'loading';
+      s.onload = () => {
+        s.dataset.hayloSupabase = 'loaded';
+        finalize(true);
+      };
+      s.onerror = () => {
+        s.dataset.hayloSupabase = 'failed';
+        finalize(false);
+      };
       document.head.appendChild(s);
     });
 
