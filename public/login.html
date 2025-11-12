@@ -2,57 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Redirecting to Google login…</title>
+  <title>Redirecting to HayloAuth…</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <!-- Runtime env (load Supabase URL, dashboard redirect, etc.) -->
-  <script src="/api/env.js"></script>
-  <noscript>
-    <meta http-equiv="refresh" content="0;url=/auth/google?redirect=/your-impact">
-  </noscript>
+  <script src="/haylo-auth.js"></script>
   <script>
     (function () {
-      var fallback = window.HF_DASHBOARD_URL || '/your-impact';
-      var redirectPath;
-
-      try {
-        var params = new URLSearchParams(location.search);
-        var redirectParam = params.get('redirect') || '';
-
-        function normalizeRedirect(value) {
-          if (!value) return fallback;
-          try {
-            var url = new URL(value, location.origin);
-            if (url.origin !== location.origin) return fallback;
-            return url.pathname + (url.search || '') + (url.hash || '');
-          } catch (_) {
-            return fallback;
-          }
-        }
-
-        redirectPath = normalizeRedirect(redirectParam);
-        var supabaseUrl = (window.SUPABASE_URL || '').replace(/\/+$/, '');
-
-        if (!supabaseUrl) {
-          var fallbackUrl = '/auth/google?redirect=' + encodeURIComponent(redirectPath);
-          document.write('<meta http-equiv="refresh" content="0;url=' + fallbackUrl + '">');
-          location.replace(fallbackUrl);
-          return;
-        }
-
-        var authorizeUrl = supabaseUrl + '/auth/v1/authorize?provider=google&redirect_to='
-          + encodeURIComponent(location.origin + redirectPath);
-
-        document.write('<meta http-equiv="refresh" content="0;url=' + authorizeUrl + '">');
-        location.replace(authorizeUrl);
-      } catch (error) {
-        console.error('Login redirect failed', error);
-        var fallbackRedirect = (typeof redirectPath === 'string' && redirectPath) ? redirectPath : fallback;
-        location.href = '/auth/google?redirect=' + encodeURIComponent(fallbackRedirect);
+      const next = new URL(window.location.href).searchParams.get('redirect') || '/your-impact';
+      if (window.HayloAuth && typeof window.HayloAuth.login === 'function') {
+        window.HayloAuth.login(next);
+      } else {
+        const fallback = new URL('/auth/google', window.location.origin);
+        fallback.searchParams.set('redirect', next);
+        window.location.replace(fallback.toString());
       }
     })();
   </script>
 </head>
 <body>
-  <p>Redirecting to Google login…</p>
+  <p>Redirecting to sign in…</p>
 </body>
 </html>
