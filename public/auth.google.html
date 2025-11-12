@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Connecting to Google…</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <script src="/haylo-auth.js"></script>
+  <script>
+    (function () {
+      var next = new URL(window.location.href).searchParams.get('redirect') || '/your-impact';
+      if (window.HayloAuth && typeof window.HayloAuth.login === 'function') {
+        window.HayloAuth.login(next);
+      } else {
+        window.location.replace(next);
+      }
+    })();
+  </script>
+  <style>
+    html,body{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;background:#0b0b0c;color:#e7e7ea;display:grid;place-items:center}
+    .card{padding:24px 28px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(18,18,20,.92)}
+  </style>
+</head>
+<body>
+  <div class="card">Connecting to Google…</div>
+</body>
+</html>

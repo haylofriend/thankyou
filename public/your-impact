@@ -42,6 +42,8 @@
   </script>
   <!-- Runtime env (load from working API path) -->
   <script src="/api/env.js"></script>
+  <!-- Shared auth helpers -->
+  <script src="/haylo-auth.js"></script>
 
   <script>
     // Only-if-unset fallbacks (do not overwrite values that env.js sets)
@@ -53,11 +55,19 @@
   <!-- Early auth check: redirect to full login before Vue mounts -->
   <script>
     (async () => {
+      const DASHBOARD_URL = window.HF_DASHBOARD_URL || '/your-impact';
       try {
-        const SUPABASE_URL  = window.SUPABASE_URL      || '';
-        const SUPABASE_KEY  = window.SUPABASE_ANON_KEY || '';
-        const LOGIN_PATH    = window.LOGIN_PATH        || '/auth/google';
-        const DASHBOARD_URL = window.HF_DASHBOARD_URL  || '/your-impact';
+        if (window.HayloAuth && typeof window.HayloAuth.gate === 'function') {
+          await window.HayloAuth.gate(DASHBOARD_URL);
+          return;
+        }
+      } catch (err) {
+        console.warn('HayloAuth gate failed', err);
+      }
+      try {
+        const SUPABASE_URL = window.SUPABASE_URL || '';
+        const SUPABASE_KEY = window.SUPABASE_ANON_KEY || '';
+        const LOGIN_PATH = window.LOGIN_PATH || '/auth/google';
 
         if (window.supabase && SUPABASE_URL && SUPABASE_KEY) {
           const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -309,14 +319,21 @@
 const { createApp, ref, computed, onMounted, watch } = Vue;
 
 // ===== ENV =====
-const SUPABASE_URL = window.SUPABASE_URL || '';
-const SUPABASE_KEY = window.SUPABASE_ANON_KEY || '';
+if (window.HayloAuth && typeof window.HayloAuth.ensureEnv === 'function') {
+  window.HayloAuth.ensureEnv();
+}
+const SUPABASE_URL = window.SUPABASE_URL || window.NEXT_PUBLIC_SUPABASE_URL || '';
+const SUPABASE_KEY = window.SUPABASE_ANON_KEY || window.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const THANK_HOST   = window.THANK_HOST || 'https://grateful.haylofriend.com';
-const LOGIN_PATH   = window.LOGIN_PATH || '/auth/google'; // your dedicated login page (optional)
+const LOGIN_PATH   = (window.HayloAuth && typeof window.HayloAuth.loginPath === 'function')
+  ? window.HayloAuth.loginPath()
+  : (window.LOGIN_PATH || '/auth/google');
 
-const supabase = (SUPABASE_URL && SUPABASE_KEY && window.supabase)
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
-  : null;
+const supabase = (window.HayloAuth && typeof window.HayloAuth.getClient === 'function')
+  ? window.HayloAuth.getClient()
+  : ((SUPABASE_URL && SUPABASE_KEY && window.supabase)
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+    : null);
 
 // ===== UTIL =====
 async function copyToClipboard(text) {
@@ -429,8 +446,13 @@ createApp({
     }
 
     function goLogin(){
+      const redirectTarget = `${window.location.pathname}${window.location.search || ''}${window.location.hash || ''}` || '/your-impact';
+      if (window.HayloAuth && typeof window.HayloAuth.login === 'function') {
+        window.HayloAuth.login(redirectTarget);
+        return;
+      }
       const url = new URL(LOGIN_PATH, window.location.origin);
-      url.searchParams.set('redirect', window.location.pathname);
+      url.searchParams.set('redirect', redirectTarget);
       window.location.href = url.toString();
     }
 
