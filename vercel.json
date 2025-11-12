@@ -17,11 +17,6 @@
       "permanent": true
     },
     {
-      "source": "/",
-      "destination": "https://grateful.haylofriend.com",
-      "permanent": true
-    },
-    {
       "source": "/login",
       "destination": "/auth/google",
       "permanent": true
@@ -54,7 +49,7 @@
     },
     {
       "source": "/auth/google",
-      "destination": "/auth/google/auth.google.html"
+      "destination": "/auth.google.html"
     },
     {
       "source": "/your-impact",
