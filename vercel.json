@@ -58,7 +58,7 @@
     },
     {
       "source": "/your-impact",
-      "destination": "/your-impact.html"
+      "destination": "/your-impact"
     },
     {
       "source": "/auth/google",
