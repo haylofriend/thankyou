@@ -52,7 +52,7 @@
     },
     {
       "source": "/auth/google",
-      "destination": "/auth.google.html"
+      "destination": "/auth/google/index.html"
     },
     {
       "source": "/(.*)",
