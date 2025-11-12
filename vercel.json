@@ -1,74 +1,14 @@
 {
   "cleanUrls": true,
   "redirects": [
-    {
-      "source": "/get-started",
-      "destination": "/auth/google",
-      "permanent": true
-    },
-    {
-      "source": "/get-started.html",
-      "destination": "/auth/google",
-      "permanent": true
-    },
-    {
-      "source": "/create",
-      "destination": "/auth/google",
-      "permanent": true
-    },
-    {
-      "source": "/login",
-      "destination": "/auth/google",
-      "permanent": true
-    },
-    {
-      "source": "/dashboard_auth_gated",
-      "destination": "/your-impact",
-      "permanent": true
-    },
-    {
-      "source": "/dashboard_auth_gated.html",
-      "destination": "/your-impact",
-      "permanent": true
-    },
-    {
-      "source": "/dashboard",
-      "destination": "/your-impact",
-      "permanent": true
-    },
-    {
-      "source": "/mission-control.html",
-      "destination": "https://grateful.haylofriend.com",
-      "permanent": true
-    }
+    { "source": "/get-started", "destination": "/auth/google", "permanent": true },
+    { "source": "/dashboard_auth_gated", "destination": "/your-impact", "permanent": true },
+    { "source": "/dashboard_auth_gated.html", "destination": "/your-impact", "permanent": true },
+    { "source": "/dashboard", "destination": "/your-impact", "permanent": true },
+    { "source": "/mission-control.html", "destination": "https://grateful.haylofriend.com", "permanent": true }
   ],
   "rewrites": [
-    {
-      "source": "/env.js",
-      "destination": "/api/env.js"
-    },
-    {
-      "source": "/your-impact",
-      "destination": "/your-impact"
-    },
-    {
-      "source": "/:slug/your-impact",
-      "destination": "/your-impact"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/your-impact",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "text/html; charset=utf-8"
-        }
-      ]
-    }
+    { "source": "/env.js", "destination": "/api/env.js" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
