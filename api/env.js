@@ -18,7 +18,10 @@ export default function handler(req, res) {
       HF_DASHBOARD_URL:    process.env.NEXT_PUBLIC_HF_DASHBOARD_URL   || '/your-impact',
 
       // Public host for share links
-      THANK_HOST:          process.env.NEXT_PUBLIC_THANK_HOST || 'https://grateful.haylofriend.com'
+      THANK_HOST:          process.env.NEXT_PUBLIC_THANK_HOST || 'https://grateful.haylofriend.com',
+
+      // Admin tooling (used by Mission Control)
+      ADMIN_EMAIL:         process.env.NEXT_PUBLIC_ADMIN_EMAIL || process.env.ADMIN_EMAIL || ''
     };
 
     const js = `(() => { try {
@@ -36,6 +39,10 @@ export default function handler(req, res) {
       if (!window.THANK_HOST)        window.THANK_HOST        = window.__ENV__.THANK_HOST;
       // Keep GOOGLE_CLIENT_ID empty to prevent GIS init
       window.GOOGLE_CLIENT_ID = '';
+
+      if (!window.ADMIN_EMAIL && window.__ENV__.ADMIN_EMAIL) {
+        window.ADMIN_EMAIL = window.__ENV__.ADMIN_EMAIL;
+      }
     } catch(e){ console.error('env.js apply failed', e); } })();`;
 
     res.status(200).send(js);

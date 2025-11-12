@@ -24,6 +24,9 @@
     }
   </script>
 
+  <!-- Runtime env (Supabase credentials, admin email, etc.) -->
+  <script src="/api/env.js"></script>
+
   <style>
     :root{--bg:#0b0b0c;--card:#121214;--ink:#e7e7ea;--hair:rgba(231,231,234,.12);--acc:#4da3ff}
     html,body{height:100%}
@@ -190,15 +193,17 @@
 
   <!-- Vue -->
   <script src="https://unpkg.com/vue@3"></script>
-  <!-- Optional: Supabase (uncomment + plug in keys to go live)
+  <!-- Supabase CDN -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  -->
+  <!-- Master auth helpers -->
+  <script src="/haylo-auth.js"></script>
 
   <script>
-  const { createApp, ref, reactive, computed, onMounted } = Vue;
+  function initMissionControlApp(){
+    const { createApp, ref, reactive, computed, onMounted } = Vue;
 
-  createApp({
-    setup(){
+    createApp({
+      setup(){
       // ---- Live state ----
       const live = ref(true);
 
@@ -379,14 +384,38 @@
       }, 5000);
       */
 
-      return {
-        live, toggleLive, kpi, status,
-        users, events, pulses, search, filteredUsers,
-        verify, pause, override, refresh,
-        eventDot, timeAgo
-      };
-    }
-  }).mount('#app');
+        return {
+          live, toggleLive, kpi, status,
+          users, events, pulses, search, filteredUsers,
+          verify, pause, override, refresh,
+          eventDot, timeAgo
+        };
+      }
+    }).mount('#app');
+  }
+  </script>
+
+  <script>
+    (async function guardAndBoot(){
+      try {
+        if (window.hayloAuth) {
+          const guardResult = await window.hayloAuth.requireAdmin({
+            redirectTo: window.LOGIN_PATH || '/auth/google',
+            redirectBackTo: '/mission-control.html',
+            fallbackUrl: '/',
+            adminEmail: window.ADMIN_EMAIL || ''
+          });
+
+          if (guardResult && (guardResult.status === 'redirected' || guardResult.status === 'unauthorized')) {
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Mission Control admin guard failed', error);
+      }
+
+      initMissionControlApp();
+    })();
   </script>
 </body>
 </html>
