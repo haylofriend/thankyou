@@ -142,12 +142,12 @@
   </style>
   <!-- Load runtime env (from Vercel function) -->
   <script src="/api/env.js"></script>
-  <!-- App env: used by get-started + dashboard -->
+  <!-- App env: used by auth + dashboard -->
   <script>
     window.SUPABASE_URL = window.SUPABASE_URL || "";
     window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "";
     window.HF_DASHBOARD_URL = window.HF_DASHBOARD_URL || "/your-impact";
-    window.HF_GET_STARTED_URL = window.HF_GET_STARTED_URL || "/get-started?autostart=1";
+    window.HF_GET_STARTED_URL = window.HF_GET_STARTED_URL || "/auth/google?redirect=/your-impact";
     /* Optional (enables Google One Tap when user lands on get-started)
        window.GOOGLE_CLIENT_ID = window.GOOGLE_CLIENT_ID || ""; */
     /* Optional (dashboard builds public links with this host)
@@ -544,7 +544,7 @@
       const fadeInHero = ref(false);
       const fadeInSections = ref(false);
       const thankHost = (window.THANK_HOST || location.origin || 'https://haylofriend.com').replace(/\/$/, '');
-      const getStartedUrl = window.HF_GET_STARTED_URL || '/auth/google';
+      const getStartedUrl = window.HF_GET_STARTED_URL || '/auth/google?redirect=/your-impact';
 
       // DERIVED
       const earningsDisplay = computed(() => earnings.value.toFixed(2));

@@ -54,7 +54,7 @@
       try {
         const SUPABASE_URL  = window.SUPABASE_URL      || '';
         const SUPABASE_KEY  = window.SUPABASE_ANON_KEY || '';
-        const LOGIN_PATH    = window.LOGIN_PATH        || '/get-started';
+        const LOGIN_PATH    = window.LOGIN_PATH        || '/auth/google';
         const DASHBOARD_URL = window.HF_DASHBOARD_URL  || '/your-impact';
 
         if (window.supabase && SUPABASE_URL && SUPABASE_KEY) {
@@ -310,7 +310,7 @@ const { createApp, ref, computed, onMounted } = Vue;
 const SUPABASE_URL = window.SUPABASE_URL || '';
 const SUPABASE_KEY = window.SUPABASE_ANON_KEY || '';
 const THANK_HOST   = window.THANK_HOST || 'https://grateful.haylofriend.com';
-const LOGIN_PATH   = window.LOGIN_PATH || '/get-started'; // your dedicated login page (optional)
+const LOGIN_PATH   = window.LOGIN_PATH || '/auth/google'; // your dedicated login page (optional)
 
 const supabase = (SUPABASE_URL && SUPABASE_KEY && window.supabase)
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
@@ -512,7 +512,7 @@ createApp({
         await hydrateFromDb();
       } else {
         // Still no session → DO NOT auto-redirect (prevents loops).
-        // The built-in gate will show, and "Open full login" already routes to /get-started.
+        // The built-in gate will show, and "Open full login" already routes to /auth/google.
         // If you want a button-less auto-forward, we can add a delayed redirect later.
       }
 

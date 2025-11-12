@@ -12,9 +12,9 @@ export default function handler(req, res) {
       GOOGLE_CLIENT_ID:    '',
 
       // Canonical routes (CTA, fallback login, dashboard)
-      HF_GET_STARTED_URL:  process.env.NEXT_PUBLIC_HF_GET_STARTED_URL || '/create?autostart=1',
-      // Canonical login entry always routes through get-started (auth UI + One Tap)
-      LOGIN_PATH:          process.env.NEXT_PUBLIC_LOGIN_PATH         || '/get-started',
+      HF_GET_STARTED_URL:  process.env.NEXT_PUBLIC_HF_GET_STARTED_URL || '/auth/google?redirect=/your-impact',
+      // Canonical login entry routes straight to Google auth (no intermediate UI)
+      LOGIN_PATH:          process.env.NEXT_PUBLIC_LOGIN_PATH         || '/auth/google',
       HF_DASHBOARD_URL:    process.env.NEXT_PUBLIC_HF_DASHBOARD_URL   || '/your-impact',
 
       // Public host for share links
@@ -26,8 +26,8 @@ export default function handler(req, res) {
       window.__ENV__ = ${JSON.stringify(cfg)};
 
       // 🔐 Force the three nav constants every time
-      window.HF_GET_STARTED_URL = window.__ENV__.HF_GET_STARTED_URL; // CTA → /create?autostart=1
-      window.LOGIN_PATH         = window.__ENV__.LOGIN_PATH;         // Dashboard overlay → /get-started
+      window.HF_GET_STARTED_URL = window.__ENV__.HF_GET_STARTED_URL; // CTA → /auth/google?redirect=/your-impact
+      window.LOGIN_PATH         = window.__ENV__.LOGIN_PATH;         // Dashboard overlay → /auth/google
       window.HF_DASHBOARD_URL   = window.__ENV__.HF_DASHBOARD_URL;   // Post-login → /your-impact
 
       // Supply creds if missing
