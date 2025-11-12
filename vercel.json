@@ -35,6 +35,11 @@
       "source": "/mission-control.html",
       "destination": "https://grateful.haylofriend.com",
       "permanent": true
+    },
+    {
+      "source": "/:slug/your-impact",
+      "destination": "/your-impact",
+      "permanent": true
     }
   ],
   "rewrites": [
