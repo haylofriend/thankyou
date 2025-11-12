@@ -22,6 +22,11 @@
       "permanent": true
     },
     {
+      "source": "/dashboard_auth_gated",
+      "destination": "/your-impact",
+      "permanent": true
+    },
+    {
       "source": "/dashboard_auth_gated.html",
       "destination": "/your-impact",
       "permanent": true
