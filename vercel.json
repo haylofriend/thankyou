@@ -12,6 +12,11 @@
       "permanent": true
     },
     {
+      "source": "/create",
+      "destination": "/auth/google",
+      "permanent": true
+    },
+    {
       "source": "/login",
       "destination": "/auth/google",
       "permanent": true

@@ -7,7 +7,7 @@
   <!-- Runtime env (load Supabase URL, dashboard redirect, etc.) -->
   <script src="/api/env.js"></script>
   <noscript>
-    <meta http-equiv="refresh" content="0;url=/get-started?redirect=/your-impact">
+    <meta http-equiv="refresh" content="0;url=/auth/google?redirect=/your-impact">
   </noscript>
   <script>
     (function () {
@@ -33,7 +33,7 @@
         var supabaseUrl = (window.SUPABASE_URL || '').replace(/\/+$/, '');
 
         if (!supabaseUrl) {
-          var fallbackUrl = '/get-started?redirect=' + encodeURIComponent(redirectPath);
+          var fallbackUrl = '/auth/google?redirect=' + encodeURIComponent(redirectPath);
           document.write('<meta http-equiv="refresh" content="0;url=' + fallbackUrl + '">');
           location.replace(fallbackUrl);
           return;
@@ -47,7 +47,7 @@
       } catch (error) {
         console.error('Login redirect failed', error);
         var fallbackRedirect = (typeof redirectPath === 'string' && redirectPath) ? redirectPath : fallback;
-        location.href = '/get-started?redirect=' + encodeURIComponent(fallbackRedirect);
+        location.href = '/auth/google?redirect=' + encodeURIComponent(fallbackRedirect);
       }
     })();
   </script>
