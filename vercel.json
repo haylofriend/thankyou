@@ -44,10 +44,6 @@
   ],
   "rewrites": [
     {
-      "source": "/auth/google",
-      "destination": "/auth.google.html"
-    },
-    {
       "source": "/env.js",
       "destination": "/api/env.js"
     },
