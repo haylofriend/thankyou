@@ -4,21 +4,14 @@
   <meta charset="utf-8" />
   <title>Connecting with Google…</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="/haylo-auth.js"></script>
   <script>
     // Minimal, dependency-free launcher for Supabase Google auth.
     (function () {
-      // Read env (your build already exposes env via /env.js -> window.NEXT_PUBLIC_* )
-      function loadEnv(cb){
-        var s=document.createElement('script');
-        s.src='/env.js'; s.onload=cb; document.head.appendChild(s);
-      }
       function q(name){ return new URL(location.href).searchParams.get(name) }
       function toAbs(path){ try{ return new URL(path, location.origin).toString() }catch(_){ return location.origin + (path||'/') } }
 
-      loadEnv(function(){
-        var SUPABASE_URL = (window.NEXT_PUBLIC_SUPABASE_URL||'').trim();
-        var ANON = (window.NEXT_PUBLIC_SUPABASE_ANON_KEY||'').trim();
-
+      function start(){
         // Pick redirect target:
         // 1) explicit ?redirect=… wins
         // 2) legacy ?autostart=1 falls back to /your-impact
@@ -34,6 +27,14 @@
           if (hasSb) { location.replace(toAbs(redirectPath)); return; }
         } catch(_){}
 
+        if (window.HayloAuth && typeof window.HayloAuth.login === 'function') {
+          window.HayloAuth.login(redirectPath);
+          return;
+        }
+
+        var SUPABASE_URL = (window.SUPABASE_URL || window.NEXT_PUBLIC_SUPABASE_URL || '').trim();
+        var ANON = (window.SUPABASE_ANON_KEY || window.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim();
+
         if(!SUPABASE_URL || !ANON){
           // Fail safe: bounce to public site if env missing
           location.replace(toAbs(redirectPath)); return;
@@ -44,11 +45,14 @@
         authorize.searchParams.set('provider', 'google');
         authorize.searchParams.set('redirect_to', toAbs(redirectPath));
 
-        // Optional UX: carry through any state you want (nonce, etc.)
-        // authorize.searchParams.set('scopes','');
-
         location.replace(authorize.toString());
-      });
+      }
+
+      if (window.HayloAuth && typeof window.HayloAuth.ensureEnv === 'function') {
+        window.HayloAuth.ensureEnv().then(start).catch(start);
+      } else {
+        start();
+      }
     })();
   </script>
   <style>

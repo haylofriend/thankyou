@@ -40,6 +40,8 @@
   </script>
   <!-- Runtime env (load from working API path) -->
   <script src="/api/env.js"></script>
+  <!-- Central auth helpers (Supabase session gate) -->
+  <script src="/haylo-auth.js"></script>
 
   <script>
     // Only-if-unset fallbacks (do not overwrite values that env.js sets)
@@ -48,26 +50,40 @@
   </script>
   <!-- Supabase (CDN) -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <!-- Early auth check: redirect to full login before Vue mounts -->
+  <!-- Early auth gate: prefer HayloAuth, fall back to legacy check -->
   <script>
     (async () => {
-      try {
-        const SUPABASE_URL  = window.SUPABASE_URL      || '';
-        const SUPABASE_KEY  = window.SUPABASE_ANON_KEY || '';
-        const LOGIN_PATH    = window.LOGIN_PATH        || '/auth/google';
-        const DASHBOARD_URL = window.HF_DASHBOARD_URL  || '/your-impact';
+      const DASHBOARD_URL = window.HF_DASHBOARD_URL || '/your-impact';
+      const LOGIN_PATH = window.LOGIN_PATH || '/auth/google';
 
-        if (window.supabase && SUPABASE_URL && SUPABASE_KEY) {
-          const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-          const { data: { session } } = await client.auth.getSession();
-          if (!session) {
-            const to = new URL(LOGIN_PATH, location.origin);
-            to.searchParams.set('redirect', DASHBOARD_URL);
-            location.replace(to.toString());
+      async function legacyGate() {
+        try {
+          const SUPABASE_URL  = window.SUPABASE_URL      || '';
+          const SUPABASE_KEY  = window.SUPABASE_ANON_KEY || '';
+
+          if (window.supabase && SUPABASE_URL && SUPABASE_KEY) {
+            const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            const { data: { session } } = await client.auth.getSession();
+            if (!session) {
+              const to = new URL(LOGIN_PATH, location.origin);
+              to.searchParams.set('redirect', DASHBOARD_URL);
+              location.replace(to.toString());
+            }
           }
+        } catch (e) {
+          console.warn('Legacy auth gate failed', e);
         }
-      } catch (e) {
-        console.warn('Early auth check failed', e);
+      }
+
+      try {
+        if (window.HayloAuth && typeof window.HayloAuth.gate === 'function') {
+          await window.HayloAuth.gate(DASHBOARD_URL);
+        } else {
+          await legacyGate();
+        }
+      } catch (error) {
+        console.warn('HayloAuth gate failed, falling back', error);
+        await legacyGate();
       }
     })();
   </script>
