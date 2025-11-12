@@ -13,6 +13,7 @@ export default function handler(req, res) {
 
       // Canonical routes (CTA, fallback login, dashboard)
       HF_GET_STARTED_URL:  process.env.NEXT_PUBLIC_HF_GET_STARTED_URL || '/create?autostart=1',
+      // Canonical login entry always routes through get-started (auth UI + One Tap)
       LOGIN_PATH:          process.env.NEXT_PUBLIC_LOGIN_PATH         || '/get-started',
       HF_DASHBOARD_URL:    process.env.NEXT_PUBLIC_HF_DASHBOARD_URL   || '/your-impact',
 
