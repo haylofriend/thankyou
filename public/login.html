@@ -4,50 +4,46 @@
   <meta charset="utf-8" />
   <title>Redirecting to Google login…</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <!-- Runtime env (load Supabase URL, dashboard redirect, etc.) -->
-  <script src="/api/env.js"></script>
+  <script src="/haylo-auth.js"></script>
   <noscript>
     <meta http-equiv="refresh" content="0;url=/auth/google?redirect=/your-impact">
   </noscript>
   <script>
     (function () {
-      var fallback = window.HF_DASHBOARD_URL || '/your-impact';
-      var redirectPath;
+      function sanitizeRedirect(value, fallback) {
+        if (!value) return fallback;
+        try {
+          var url = new URL(value, location.origin);
+          if (url.origin !== location.origin) return fallback;
+          return url.pathname + (url.search || '') + (url.hash || '');
+        } catch (_) {
+          return fallback;
+        }
+      }
+
+      var desired = (window.HayloAuth && typeof window.HayloAuth.dash === 'function')
+        ? window.HayloAuth.dash()
+        : '/your-impact';
+      var fallback = sanitizeRedirect(desired, '/your-impact');
+
+      function go(target) {
+        var safeTarget = sanitizeRedirect(target, fallback);
+        if (!window.HayloAuth || typeof window.HayloAuth.login !== 'function') {
+          location.replace('/auth/google?redirect=' + encodeURIComponent(safeTarget));
+          return;
+        }
+        Promise.resolve(window.HayloAuth.login(safeTarget)).catch(function (error) {
+          console.error('HayloAuth login failed', error);
+          location.replace('/auth/google?redirect=' + encodeURIComponent(safeTarget));
+        });
+      }
 
       try {
         var params = new URLSearchParams(location.search);
-        var redirectParam = params.get('redirect') || '';
-
-        function normalizeRedirect(value) {
-          if (!value) return fallback;
-          try {
-            var url = new URL(value, location.origin);
-            if (url.origin !== location.origin) return fallback;
-            return url.pathname + (url.search || '') + (url.hash || '');
-          } catch (_) {
-            return fallback;
-          }
-        }
-
-        redirectPath = normalizeRedirect(redirectParam);
-        var supabaseUrl = (window.SUPABASE_URL || '').replace(/\/+$/, '');
-
-        if (!supabaseUrl) {
-          var fallbackUrl = '/auth/google?redirect=' + encodeURIComponent(redirectPath);
-          document.write('<meta http-equiv="refresh" content="0;url=' + fallbackUrl + '">');
-          location.replace(fallbackUrl);
-          return;
-        }
-
-        var authorizeUrl = supabaseUrl + '/auth/v1/authorize?provider=google&redirect_to='
-          + encodeURIComponent(location.origin + redirectPath);
-
-        document.write('<meta http-equiv="refresh" content="0;url=' + authorizeUrl + '">');
-        location.replace(authorizeUrl);
+        go(params.get('redirect'));
       } catch (error) {
         console.error('Login redirect failed', error);
-        var fallbackRedirect = (typeof redirectPath === 'string' && redirectPath) ? redirectPath : fallback;
-        location.href = '/auth/google?redirect=' + encodeURIComponent(fallbackRedirect);
+        go(fallback);
       }
     })();
   </script>
