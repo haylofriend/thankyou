@@ -99,8 +99,19 @@
   async function gate(redirect = dash()) {
     // Call at top of any protected page
     await ensureEnv();
-    const { session, ready } = await whoami();
-    if (ready === false) return; // fail open if Supabase script missing
+
+    const supaUrl = (W.NEXT_PUBLIC_SUPABASE_URL || W.SUPABASE_URL || '').trim();
+    const supaKey = (W.NEXT_PUBLIC_SUPABASE_ANON_KEY || W.SUPABASE_ANON_KEY || '').trim();
+
+    // Fail-safe: if Supabase isn't configured or ready, send user to login with redirect
+    if (!W.supabase || !supaUrl || !supaKey) {
+      const failover = new URL(loginPath(), location.origin);
+      failover.searchParams.set('redirect', redirect);
+      location.replace(failover.toString());
+      return;
+    }
+
+    const { session } = await whoami();
     if (!session) {
       const go = new URL(loginPath(), location.origin);
       go.searchParams.set('redirect', redirect);
