@@ -49,12 +49,16 @@
   ],
   "rewrites": [
     {
+      "source": "/mission-control.html",
+      "destination": "/api/admin-guard"
+    },
+    {
       "source": "/env.js",
       "destination": "/api/env.js"
     },
     {
       "source": "/auth/google",
-      "destination": "/auth/google/auth.google.html"
+      "destination": "/auth.google.html"
     },
     {
       "source": "/your-impact",
