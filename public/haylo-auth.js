@@ -2,6 +2,9 @@
 (function (g) {
   const W = (typeof window !== 'undefined') ? window : {};
   const STATE = { supa: null, envLoaded: false, envPromise: null, supabasePromise: null };
+  const GET_STARTED = { url: null, redirect: null, observer: null };
+  const DEFAULT_GET_STARTED_URL = '/auth/google?redirect=/your-impact';
+  const DEFAULT_GET_STARTED_REDIRECT = '/your-impact';
 
   // -------- Env Loader (reads your /env.js rewrite) --------
   function loadEnv() {
@@ -195,8 +198,172 @@
     location.replace(abs(redirect));
   }
 
+  // -------- Get Started helpers --------
+  function getStartedConfig() {
+    if (GET_STARTED.url && GET_STARTED.redirect) {
+      return { url: GET_STARTED.url, redirect: GET_STARTED.redirect };
+    }
+
+    const rawUrl = (W.HF_GET_STARTED_URL || DEFAULT_GET_STARTED_URL);
+    const fallbackRedirect = (W.HF_GET_STARTED_REDIRECT || DEFAULT_GET_STARTED_REDIRECT);
+    let resolvedUrl = rawUrl;
+    let redirectPath = fallbackRedirect;
+
+    try {
+      const base = (typeof location !== 'undefined' && location.origin) ? location.origin : 'https://example.com';
+      const parsed = new URL(rawUrl, base);
+      resolvedUrl = parsed.toString();
+      redirectPath = parsed.searchParams.get('redirect') || fallbackRedirect;
+    } catch (err) {
+      console.warn('HayloAuth: unable to parse HF_GET_STARTED_URL, falling back to defaults.', err);
+    }
+
+    GET_STARTED.url = resolvedUrl;
+    GET_STARTED.redirect = redirectPath;
+    return { url: resolvedUrl, redirect: redirectPath };
+  }
+
+  function startGetStartedFlow(event) {
+    if (event && typeof event.preventDefault === 'function') {
+      event.preventDefault();
+    }
+
+    const cfg = getStartedConfig();
+    let handled = false;
+    try {
+      const attempt = login(cfg.redirect);
+      handled = true;
+      if (attempt && typeof attempt.catch === 'function') {
+        attempt.catch(() => { location.href = cfg.url; });
+      }
+    } catch (err) {
+      console.warn('HayloAuth: login failed, falling back to raw URL.', err);
+      handled = false;
+    }
+
+    if (!handled) {
+      location.href = cfg.url;
+    }
+    return false;
+  }
+
+  function handleGetStartedKey(event) {
+    const key = event.key || event.code;
+    if (key === 'Enter' || key === ' ') {
+      startGetStartedFlow(event);
+    }
+  }
+
+  function applyGetStartedBehavior(el) {
+    if (!el || el.nodeType !== 1 || el.__hayloGetStarted) return;
+    const cfg = getStartedConfig();
+
+    try {
+      if (typeof el.setAttribute === 'function') {
+        const tag = (el.tagName || '').toLowerCase();
+        if (tag === 'a' || el.hasAttribute('href')) {
+          el.setAttribute('href', cfg.url);
+        } else {
+          if (!el.getAttribute('role')) el.setAttribute('role', 'button');
+          if (!el.getAttribute('tabindex')) el.setAttribute('tabindex', '0');
+        }
+        el.setAttribute('data-get-started-ready', '1');
+      }
+    } catch (_) {}
+
+    try {
+      el.addEventListener('click', startGetStartedFlow);
+      const tag = (el.tagName || '').toLowerCase();
+      if (tag !== 'a' && tag !== 'button') {
+        el.addEventListener('keydown', handleGetStartedKey);
+      }
+    } catch (_) {}
+
+    el.__hayloGetStarted = true;
+  }
+
+  function wireGetStartedButtons(scope) {
+    const root = scope || (typeof document !== 'undefined' ? document : null);
+    if (!root) return [];
+
+    const wired = [];
+    const seen = new Set();
+
+    function enqueue(el) {
+      if (!el || seen.has(el) || !el.getAttribute || !el.hasAttribute('data-get-started')) return;
+      seen.add(el);
+      applyGetStartedBehavior(el);
+      wired.push(el);
+    }
+
+    if (root.nodeType === 1 && typeof root.matches === 'function' && root.matches('[data-get-started]')) {
+      enqueue(root);
+    }
+
+    if (typeof root.querySelectorAll === 'function') {
+      root.querySelectorAll('[data-get-started]').forEach((el) => enqueue(el));
+    }
+
+    return wired;
+  }
+
+  function monitorGetStartedButtons() {
+    if (typeof document === 'undefined') return;
+
+    const ready = () => {
+      wireGetStartedButtons(document);
+
+      if (typeof MutationObserver === 'function' && !GET_STARTED.observer) {
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            if (mutation.type === 'childList') {
+              mutation.addedNodes.forEach((node) => {
+                if (node.nodeType === 1) wireGetStartedButtons(node);
+              });
+            } else if (mutation.type === 'attributes' && mutation.target) {
+              wireGetStartedButtons(mutation.target);
+            }
+          });
+        });
+
+        observer.observe(document.documentElement || document.body, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['data-get-started']
+        });
+
+        GET_STARTED.observer = observer;
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', ready, { once: true });
+    } else {
+      ready();
+    }
+  }
+
   // expose
-  g.HayloAuth = { ensureEnv, getClient, whoami, login, gate, logout, buildAuthorizeUrl, dash, loginPath, ensureSupabaseLoaded };
+  const api = {
+    ensureEnv,
+    getClient,
+    whoami,
+    login,
+    gate,
+    logout,
+    buildAuthorizeUrl,
+    dash,
+    loginPath,
+    ensureSupabaseLoaded,
+    getStartedConfig,
+    startGetStartedFlow,
+    wireGetStartedButtons
+  };
+
+  g.HayloAuth = api;
+
+  monitorGetStartedButtons();
 
   function emitReady(target) {
     if (!target || typeof target.dispatchEvent !== 'function') return;
