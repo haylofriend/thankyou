@@ -3,7 +3,7 @@
   const W = (typeof window !== 'undefined') ? window : {};
   const STATE = { supa: null, envLoaded: false, envPromise: null, supabasePromise: null };
 
-  // -------- Env Loader (reads your /api/env.js) --------
+  // -------- Env Loader (reads your /env.js rewrite) --------
   function loadEnv() {
     if (STATE.envPromise) return STATE.envPromise;
     STATE.envPromise = new Promise((resolve) => {
@@ -11,7 +11,7 @@
         STATE.envLoaded = true; return resolve();
       }
       const s = document.createElement('script');
-      s.src = '/api/env.js';  // already routed by vercel.json
+      s.src = '/env.js';
       s.onload = () => { STATE.envLoaded = true; resolve(); };
       s.onerror = () => resolve(); // fail-open: pages still work in demo
       document.head.appendChild(s);
