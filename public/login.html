@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <!-- Runtime env (load Supabase URL, dashboard redirect, etc.) -->
   <script src="/api/env.js"></script>
+  <script src="/haylo-auth.js"></script>
   <noscript>
     <meta http-equiv="refresh" content="0;url=/auth/google?redirect=/your-impact">
   </noscript>
@@ -32,6 +33,11 @@
         redirectPath = normalizeRedirect(redirectParam);
         var supabaseUrl = (window.SUPABASE_URL || '').replace(/\/+$/, '');
 
+        if (window.HayloAuth && typeof window.HayloAuth.login === 'function') {
+          window.HayloAuth.login(redirectPath);
+          return;
+        }
+
         if (!supabaseUrl) {
           var fallbackUrl = '/auth/google?redirect=' + encodeURIComponent(redirectPath);
           document.write('<meta http-equiv="refresh" content="0;url=' + fallbackUrl + '">');
@@ -47,7 +53,11 @@
       } catch (error) {
         console.error('Login redirect failed', error);
         var fallbackRedirect = (typeof redirectPath === 'string' && redirectPath) ? redirectPath : fallback;
-        location.href = '/auth/google?redirect=' + encodeURIComponent(fallbackRedirect);
+        if (window.HayloAuth && typeof window.HayloAuth.login === 'function') {
+          window.HayloAuth.login(fallbackRedirect);
+        } else {
+          location.href = '/auth/google?redirect=' + encodeURIComponent(fallbackRedirect);
+        }
       }
     })();
   </script>
