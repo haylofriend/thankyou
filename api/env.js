@@ -1,8 +1,6 @@
-export const config = {
-  runtime: "edge"
-};
+// api/env.js  (Node serverless function)
 
-export default async function handler(req) {
+module.exports = (req, res) => {
   function canonicalLoginPath(raw) {
     const fallback = "/auth/google";
     if (!raw || typeof raw !== "string") return fallback;
@@ -22,8 +20,7 @@ export default async function handler(req) {
       process.env.SUPABASE_ANON_KEY ||
       "",
     GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "",
-    HF_GET_STARTED_URL:
-      process.env.NEXT_PUBLIC_HF_GET_STARTED_URL || "",
+    HF_GET_STARTED_URL: process.env.NEXT_PUBLIC_HF_GET_STARTED_URL || "",
     HF_GET_STARTED_REDIRECT:
       process.env.NEXT_PUBLIC_HF_GET_STARTED_REDIRECT || "/your-impact",
     LOGIN_PATH: canonicalLoginPath(process.env.NEXT_PUBLIC_LOGIN_PATH),
@@ -35,7 +32,7 @@ export default async function handler(req) {
     BACKEND_URL:
       process.env.NEXT_PUBLIC_BACKEND_URL ||
       process.env.BACKEND_URL ||
-      ""
+      "",
   };
 
   const js = `(() => { try {
@@ -48,18 +45,18 @@ export default async function handler(req) {
     window.HF_DASHBOARD_URL        = window.HF_DASHBOARD_URL        || window.__ENV__.HF_DASHBOARD_URL;
     window.THANK_HOST              = window.THANK_HOST              || window.__ENV__.THANK_HOST;
     window.BACKEND_URL             = window.BACKEND_URL             || window.__ENV__.BACKEND_URL;
+    window.GOOGLE_CLIENT_ID        = window.GOOGLE_CLIENT_ID        || window.__ENV__.GOOGLE_CLIENT_ID;
 
-    // backward-compat for pages that still look for NEXT_PUBLIC_*
+    // Backwards compat:
     window.NEXT_PUBLIC_SUPABASE_URL      = window.NEXT_PUBLIC_SUPABASE_URL      || window.__ENV__.SUPABASE_URL;
     window.NEXT_PUBLIC_SUPABASE_ANON_KEY = window.NEXT_PUBLIC_SUPABASE_ANON_KEY || window.__ENV__.SUPABASE_ANON_KEY;
-  } catch (err) {
-    console.error("env bootstrap failed", err);
-  }})();`;
+  } catch (e) {
+    console.error("env.js apply failed", e);
+  } })();`;
 
-  return new Response(js, {
-    headers: {
-      "content-type": "application/javascript; charset=utf-8",
-      "cache-control": "public, max-age=60"
-    }
-  });
-}
+  res.setHeader(
+    "Content-Type",
+    "application/javascript; charset=utf-8"
+  );
+  res.status(200).send(js);
+};
