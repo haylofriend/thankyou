@@ -61,7 +61,7 @@
       }
 
       // Expect an admin marker (role, custom claim, or metadata)
-      var role = user.role || user.app_role || user.user_role || user?.user_metadata?.role;
+      var role = user.role || user.app_role || user.user_role || (user.user_metadata && user.user_metadata.role);
 
       // Not admin? → No access
       if (role !== "admin") {
