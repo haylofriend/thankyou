@@ -1,54 +1,56 @@
-<script src="/env.js"></script>
-<script src="/haylo-auth.js"></script>
-<script>
-  (function () {
-    var targetPath = window.HF_DASHBOARD_URL || '/your-impact';
-    var loginPath = (window.LOGIN_PATH || '/auth/google');
-    var attempted = false;
-    var fallbackTimer = setTimeout(runGate, 4000);
-
-    function toLogin() {
-      try {
-        var url = new URL(loginPath, location.origin);
-        url.searchParams.set('redirect', targetPath);
-        location.replace(url.toString());
-      } catch (_) {
-        location.replace(loginPath + '?redirect=' + encodeURIComponent(targetPath));
-      }
-    }
-
-    function runGate() {
-      if (attempted) return;
-      attempted = true;
-      clearTimeout(fallbackTimer);
-      try {
-        var api = window.HayloAuth;
-        if (api && typeof api.gate === 'function') {
-          api.gate(targetPath).catch(function (err) {
-            console.warn('Auth gate redirect failed', err);
-            toLogin();
-          });
-          return;
-        }
-      } catch (error) {
-        console.error('Auth gate threw an error', error);
-      }
-      toLogin();
-    }
-
-    if (window.HayloAuth && typeof window.HayloAuth.gate === 'function') {
-      runGate();
-    } else {
-      window.addEventListener('hayloauth:ready', runGate, { once: true });
-    }
-  })();
-</script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Thank-You Link — Dashboard</title>
+  <!-- Runtime env (load from working API path) -->
+  <script src="/env.js"></script>
+  <!-- Auth helpers (auto-wires data-get-started links + gating) -->
+  <script defer src="/haylo-auth.js"></script>
+  <script>
+    (function () {
+      var targetPath = window.HF_DASHBOARD_URL || '/your-impact';
+      var loginPath = (window.LOGIN_PATH || '/auth/google');
+      var attempted = false;
+      var fallbackTimer = setTimeout(runGate, 4000);
+
+      function toLogin() {
+        try {
+          var url = new URL(loginPath, location.origin);
+          url.searchParams.set('redirect', targetPath);
+          location.replace(url.toString());
+        } catch (_) {
+          location.replace(loginPath + '?redirect=' + encodeURIComponent(targetPath));
+        }
+      }
+
+      function runGate() {
+        if (attempted) return;
+        attempted = true;
+        clearTimeout(fallbackTimer);
+        try {
+          var api = window.HayloAuth;
+          if (api && typeof api.gate === 'function') {
+            api.gate(targetPath).catch(function (err) {
+              console.warn('Auth gate redirect failed', err);
+              toLogin();
+            });
+            return;
+          }
+        } catch (error) {
+          console.error('Auth gate threw an error', error);
+        }
+        toLogin();
+      }
+
+      if (window.HayloAuth && typeof window.HayloAuth.gate === 'function') {
+        runGate();
+      } else {
+        window.addEventListener('hayloauth:ready', runGate, { once: true });
+      }
+    })();
+  </script>
   <!-- Tailwind (CDN) -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -82,9 +84,6 @@
       }
     }
   </script>
-  <!-- Runtime env (load from working API path) -->
-  <script src="/env.js"></script>
-
   <script>
     // Only-if-unset fallbacks (do not overwrite values that env.js sets)
     window.SUPABASE_URL      = window.SUPABASE_URL      || "";
