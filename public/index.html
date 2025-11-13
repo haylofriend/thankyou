@@ -159,7 +159,7 @@
 <body>
   <div id="app" class="max-w-[1120px] mx-auto px-6 py-8 pb-36">
     <!-- NAV -->
-    <nav class="sticky top-0 z-50 backdrop-blur bg-black/30 border-b border-white/10" data-noprint>
+    <nav class="sticky top-0 z-50 backdrop-blur bg-black/30 border-b border-white/10" data-noprint data-sticky-header>
       <div class="max-w-[1120px] mx-auto px-6 py-3 flex items-center justify-between">
         <div class="flex items-center gap-2">
           <div class="w-6 h-6 rounded-md animate-pulse-glow" style="background:linear-gradient(135deg,var(--acc),#8acbff)"></div>
@@ -172,7 +172,8 @@
           <a href="#cashout" class="hover:text-[var(--acc)] transition-colors">Your Impact</a>
         </div>
         <a href="/auth/google?redirect=/your-impact"
-           class="px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] hover:bg-[var(--acc)]/10 transition-all text-sm font-medium">
+           class="px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] hover:bg-[var(--acc)]/10 transition-all text-sm font-medium"
+           data-cta-glow>
           Get Started
         </a>
       </div>
@@ -183,18 +184,21 @@
       <div class="fade-in" :class="{visible: fadeInHero}">
         <div class="uppercase text-xs text-white/60 tracking-widest mb-2">The revolution of gratitude</div>
         <h1 class="text-5xl md:text-6xl font-semibold leading-[1.05]">
-          <span class="typing-effect">Thank‑You</span><br>
+          <span class="typing-effect" data-typewriter="Thank‑You">Thank‑You</span><br>
           <span class="text-[var(--acc)] mt-2 block">Creates Value</span>
         </h1>
         <p class="text-white/80 mt-4 max-w-xl text-lg">We're turning gratitude into the most powerful currency. Every thank-you creates tangible value for both sender and receiver. This isn't just payments—it's human connection amplified.</p>
         <div class="flex flex-col sm:flex-row gap-3 mt-6" data-noprint>
-          <button @click="createLink" class="glass px-6 py-3 rounded-xl text-sm font-medium hover:animate-pulse-glow transition-all flex items-center justify-center gap-2">
+          <button @click="createLink"
+                  class="glass px-6 py-3 rounded-xl text-sm font-medium hover:animate-pulse-glow transition-all flex items-center justify-center gap-2"
+                  data-cta-glow
+                  data-create-demo-link>
             <span>Create My Link</span>
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
             </svg>
           </button>
-          <button @click="openPayDemo" class="px-6 py-3 rounded-xl border border-white/20 text-sm font-medium hover:border-[var(--acc)] transition-colors flex items-center justify-center gap-2">
+          <button @click="openPayDemo" class="px-6 py-3 rounded-xl border border-white/20 text-sm font-medium hover:border-[var(--acc)] transition-colors flex items-center justify-center gap-2" data-cta-glow>
             <span>See The Magic</span>
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
@@ -206,6 +210,7 @@
           <div class="w-2 h-2 rounded-full bg-[var(--acc)] animate-pulse"></div>
           <span>Live example: <b class="text-white">{{ wowCopy }}</b></span>
         </div>
+        <div class="mt-3 text-sm text-white/70 opacity-0 translate-y-2 transition-all duration-300" data-demo-output aria-live="polite"></div>
       </div>
       <div class="fade-in" :class="{visible: fadeInHero}" style="animation-delay: 0.2s">
         <div class="glass rounded-2xl p-6 animate-float">
@@ -266,7 +271,7 @@
           <div class="text-xs uppercase text-white/60 mb-2">01 — Share Your Link</div>
           <div class="text-xl font-medium mb-3">Create your personal thank-you hub</div>
           <p class="text-white/80 text-sm mb-4">Get a beautiful, personalized link in seconds. Share it anywhere—email, social media, messages.</p>
-          <button class="mt-2 text-sm px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] transition-colors w-full" @click="createLink">Create My Link</button>
+          <button class="mt-2 text-sm px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] transition-colors w-full" @click="createLink" data-cta-glow>Create My Link</button>
         </div>
         
         <div class="glass p-6 rounded-2xl fade-in" :class="{visible: fadeInSections}" style="animation-delay: 0.2s">
@@ -278,7 +283,7 @@
           <div class="text-xs uppercase text-white/60 mb-2">02 — Receive Gratitude</div>
           <div class="text-xl font-medium mb-3">Get thanked with meaningful gestures</div>
           <p class="text-white/80 text-sm mb-4">People send you tips, micro-payments, or simply words of appreciation. Every interaction builds your gratitude value.</p>
-          <button class="mt-2 text-sm px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] transition-colors w-full" @click="openPayDemo">Try It Now</button>
+          <button class="mt-2 text-sm px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] transition-colors w-full" @click="openPayDemo" data-cta-glow>Try It Now</button>
         </div>
         
         <div class="glass p-6 rounded-2xl fade-in" :class="{visible: fadeInSections}" style="animation-delay: 0.3s">
@@ -290,7 +295,7 @@
           <div class="text-xs uppercase text-white/60 mb-2">03 — Grow & Withdraw</div>
           <div class="text-xl font-medium mb-3">Watch your impact grow weekly</div>
           <p class="text-white/80 text-sm mb-4">Your gratitude value compounds. Withdraw to your bank every Friday or let it grow to create even more impact.</p>
-          <button class="mt-2 text-sm px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] transition-colors w-full" @click="mockPayout">Simulate Growth</button>
+          <button class="mt-2 text-sm px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] transition-colors w-full" @click="mockPayout" data-cta-glow>Simulate Growth</button>
         </div>
       </div>
     </section>
@@ -308,7 +313,7 @@
             <div class="text-xs uppercase text-white/60">Secure & Private</div>
             <h3 class="text-2xl mt-1 font-medium">Bank-Level Security</h3>
             <p class="text-white/80 text-sm mt-2">Connect your bank with industry-leading security through Plaid. Your data is encrypted and never stored on our servers.</p>
-            <button class="mt-4 px-5 py-2.5 rounded-xl glass text-sm font-medium hover:animate-pulse-glow transition-all" @click="plaidLink">
+            <button class="mt-4 px-5 py-2.5 rounded-xl glass text-sm font-medium hover:animate-pulse-glow transition-all" @click="plaidLink" data-cta-glow>
               Connect Securely
             </button>
             <div class="text-xs text-white/60 mt-3 flex items-center gap-2">
@@ -432,7 +437,8 @@
           <span class="text-sm text-white/70">+2,438 creators this month</span>
         </div>
         <a href="/auth/google?redirect=/your-impact"
-           class="mt-6 glass px-6 py-3 rounded-xl text-sm font-medium hover:animate-pulse-glow transition-all inline-block">
+           class="mt-6 glass px-6 py-3 rounded-xl text-sm font-medium hover:animate-pulse-glow transition-all inline-block"
+           data-cta-glow>
           Join Them Now
         </a>
       </div>
@@ -448,7 +454,8 @@
       <div class="glass rounded-full px-5 py-3 flex items-center gap-4 shadow-xl animate-pulse-glow">
         <span class="text-sm text-white/90 font-medium">Ready to create value with gratitude?</span>
         <a href="/auth/google?redirect=/your-impact"
-           class="px-4 py-2 rounded-full bg-[var(--acc)] text-white text-sm font-medium hover:bg-[#3a94e0] transition-colors">
+           class="px-4 py-2 rounded-full bg-[var(--acc)] text-white text-sm font-medium hover:bg-[#3a94e0] transition-colors"
+           data-cta-glow>
           Get Started
         </a>
       </div>
@@ -496,9 +503,9 @@
         </div>
         
         <div class="mt-6 flex gap-3">
-          <button class="flex-1 glass px-4 py-3 rounded-xl text-sm font-medium hover:animate-pulse-glow transition-all" @click="confirmPay">
-            Send ${{ amount.toFixed(2) }}
-          </button>
+        <button class="flex-1 glass px-4 py-3 rounded-xl text-sm font-medium hover:animate-pulse-glow transition-all" @click="confirmPay" data-cta-glow>
+          Send ${{ amount.toFixed(2) }}
+        </button>
           <button class="px-4 py-3 rounded-xl border border-white/20 text-sm font-medium hover:border-white/40 transition-colors" @click="showPay=false">
             Cancel
           </button>
@@ -516,7 +523,8 @@
         <h3 class="text-xl font-medium">Thank You Sent!</h3>
         <p class="text-white/80 text-sm mt-2">You've just created value with gratitude. Now imagine receiving these thank-yous yourself.</p>
         <a href="/auth/google?redirect=/your-impact"
-           class="mt-4 glass px-5 py-3 rounded-xl text-sm font-medium w-full hover:animate-pulse-glow transition-all inline-block">
+           class="mt-4 glass px-5 py-3 rounded-xl text-sm font-medium w-full hover:animate-pulse-glow transition-all inline-block"
+           data-cta-glow>
           Create My Thank-You Link
         </a>
         <button class="mt-2 px-5 py-3 rounded-xl border border-white/20 text-sm font-medium w-full hover:border-white/40 transition-colors" @click="showReflex=false">
@@ -531,6 +539,100 @@
   <script src="/get-started-links.js"></script>
   <script>
   const { createApp, ref, computed, onMounted } = Vue;
+
+  function startGlowAnimations() {
+    const applyGlow = root => {
+      if (root instanceof Element && root.matches('[data-cta-glow]')) {
+        root.classList.add('animate-pulse-glow');
+      }
+
+      if (typeof root.querySelectorAll === 'function') {
+        root.querySelectorAll('[data-cta-glow]').forEach(el => {
+          el.classList.add('animate-pulse-glow');
+        });
+      }
+    };
+
+    applyGlow(document);
+
+    const observer = new MutationObserver(mutations => {
+      mutations.forEach(mutation => {
+        mutation.addedNodes.forEach(node => {
+          if (node.nodeType !== 1) return;
+          applyGlow(node);
+        });
+      });
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  function initTypewriterEffects() {
+    document.querySelectorAll('[data-typewriter]').forEach(target => {
+      const text = target.getAttribute('data-typewriter');
+      if (!text) return;
+
+      target.textContent = '';
+      let index = 0;
+
+      const type = () => {
+        if (index < text.length) {
+          target.textContent = text.slice(0, index + 1);
+          index += 1;
+          setTimeout(type, 70);
+        }
+      };
+
+      type();
+    });
+  }
+
+  function initDemoLinkGenerator() {
+    const createLinkButton = document.querySelector('[data-create-demo-link]');
+    const demoOutput = document.querySelector('[data-demo-output]');
+
+    if (!createLinkButton || !demoOutput) return;
+
+    createLinkButton.addEventListener('click', () => {
+      const id = Math.random().toString(36).slice(2, 10);
+      const url = `https://thankyou.link/demo/${id}`;
+
+      demoOutput.textContent = url;
+      demoOutput.classList.remove('opacity-0', 'translate-y-2');
+      demoOutput.classList.add('opacity-100', 'translate-y-0');
+    });
+  }
+
+  function initSmoothScroll() {
+    document.querySelectorAll("a[href^='#']").forEach(anchor => {
+      anchor.addEventListener('click', e => {
+        const selector = anchor.getAttribute('href');
+        if (!selector) return;
+
+        const target = document.querySelector(selector);
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+    });
+  }
+
+  function initStickyHeaderGlow() {
+    const stickyHeader = document.querySelector('[data-sticky-header]');
+    if (!stickyHeader) return;
+
+    const toggleGlow = () => {
+      if (window.scrollY > 20) {
+        stickyHeader.classList.add('backdrop-blur-md', 'bg-black/40');
+      } else {
+        stickyHeader.classList.remove('backdrop-blur-md', 'bg-black/40');
+      }
+    };
+
+    toggleGlow();
+    window.addEventListener('scroll', toggleGlow);
+  }
   
   // Parse /thank/<slug> on page load
   const match = window.location.pathname.match(/^\/thank\/([a-z0-9\-_.~%]+)$/i);
@@ -776,6 +878,12 @@
 
       onMounted(() => {
         introWow();
+
+        startGlowAnimations();
+        initTypewriterEffects();
+        initDemoLinkGenerator();
+        initSmoothScroll();
+        initStickyHeaderGlow();
 
         document.addEventListener('click', function(e) {
           if (e.target.tagName === 'BUTTON') {
