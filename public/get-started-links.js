@@ -63,7 +63,12 @@
     }
   }
 
-  var redirectTarget = dash;
+  var redirectTarget = normalizeRedirect(
+    typeof window.HF_GET_STARTED_REDIRECT === "string"
+      ? window.HF_GET_STARTED_REDIRECT
+      : undefined,
+    dash
+  );
   var href = envUrl || buildLoginUrl(redirectTarget);
 
   document.querySelectorAll("[data-get-started]").forEach(function (el) {
