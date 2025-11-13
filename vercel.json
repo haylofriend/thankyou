@@ -11,6 +11,11 @@
     }
   ],
   "cleanUrls": true,
+  "functions": {
+    "api/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
   "redirects": [
     {
       "source": "/get-started",
