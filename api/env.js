@@ -3,6 +3,20 @@ export const config = {
 };
 
 export default async function handler(req) {
+  function canonicalLoginPath(raw) {
+    const fallback = "/auth/google";
+    if (!raw || typeof raw !== "string") return fallback;
+    const value = raw.trim();
+    if (!value) return fallback;
+    if (value.startsWith("/")) return value;
+    // We don't want to accidentally emit an absolute URL here because the
+    // runtime (Edge) doesn't know the canonical origin. If an absolute URL is
+    // provided we only honour it when it matches the deployment host at
+    // runtime; that additional check happens client-side. For the env snapshot
+    // we fall back to the built-in path.
+    return fallback;
+  }
+
   const cfg = {
     // Core Supabase project (for auth + data)
     SUPABASE_URL:
@@ -23,7 +37,7 @@ export default async function handler(req) {
 
     // 🔑 Canonical login path on your domain
     // Everything should go through this (HayloAuth.login / gate / admin-guard / /login forwarder).
-    LOGIN_PATH: process.env.NEXT_PUBLIC_LOGIN_PATH || "/auth/google",
+    LOGIN_PATH: canonicalLoginPath(process.env.NEXT_PUBLIC_LOGIN_PATH),
 
     // Where to send users after auth if nothing else is specified
     HF_DASHBOARD_URL: process.env.NEXT_PUBLIC_HF_DASHBOARD_URL || "/your-impact",

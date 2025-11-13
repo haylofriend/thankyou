@@ -5,7 +5,27 @@
 (function () {
   // Canonical dashboard & login path
   var dash = window.HF_DASHBOARD_URL || "/your-impact";
-  var loginPath = window.LOGIN_PATH || "/auth/google";
+
+  function canonicalLoginPath(raw) {
+    var fallback = "/auth/google";
+    if (typeof raw !== "string") return fallback;
+    var value = raw.trim();
+    if (!value) return fallback;
+    if (value.startsWith("http://") || value.startsWith("https://")) {
+      try {
+        var origin = typeof location !== "undefined" && location.origin ? location.origin : "";
+        var url = new URL(value, origin || "https://www.haylofriend.com");
+        if (origin && url.origin !== origin) return fallback;
+        return url.pathname + (url.search || "") + (url.hash || "");
+      } catch (_) {
+        return fallback;
+      }
+    }
+    if (value.charAt(0) !== "/") return fallback;
+    return value;
+  }
+
+  var loginPath = canonicalLoginPath(window.LOGIN_PATH);
 
   // Optional: full override for Get Started URL
   var envUrl = (typeof window.HF_GET_STARTED_URL === "string" && window.HF_GET_STARTED_URL.trim())
