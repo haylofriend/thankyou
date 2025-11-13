@@ -30,10 +30,37 @@
   /**
    * Redirects to the canonical login path.
    */
+  function canonicalLoginPath(raw) {
+    var fallback = "/auth/google";
+    if (typeof raw !== "string") return fallback;
+    var value = raw.trim();
+    if (!value) return fallback;
+    if (value.startsWith("http://") || value.startsWith("https://")) {
+      try {
+        var origin = typeof location !== "undefined" && location.origin ? location.origin : "";
+        var url = new URL(value, origin || "https://www.haylofriend.com");
+        if (origin && url.origin !== origin) return fallback;
+        return url.pathname + (url.search || "") + (url.hash || "");
+      } catch (_) {
+        return fallback;
+      }
+    }
+    if (value.charAt(0) !== "/") return fallback;
+    return value;
+  }
+
   function sendToLogin(target) {
-    var login = window.LOGIN_PATH || "/auth/google";
-    var url = login + "?redirect=" + encodeURIComponent(target);
-    location.replace(url);
+    var login = canonicalLoginPath(window.LOGIN_PATH);
+    try {
+      var origin = typeof location !== "undefined" && location.origin ? location.origin : "";
+      if (origin) {
+        var url = new URL(login, origin);
+        url.searchParams.set("redirect", target);
+        location.replace(url.toString());
+        return;
+      }
+    } catch (_) {}
+    location.replace(login + "?redirect=" + encodeURIComponent(target));
   }
 
   /**

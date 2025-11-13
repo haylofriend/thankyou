@@ -139,8 +139,26 @@
     return (W.HF_DASHBOARD_URL || "/your-impact");
   }
 
+  function canonicalLoginPath(raw) {
+    var fallback = "/auth/google";
+    if (typeof raw !== "string") return fallback;
+    var value = raw.trim();
+    if (!value) return fallback;
+    if (value.startsWith("http://") || value.startsWith("https://")) {
+      try {
+        var url = new URL(value, currentOrigin());
+        if (url.origin !== currentOrigin()) return fallback;
+        return url.pathname + (url.search || "") + (url.hash || "");
+      } catch (_) {
+        return fallback;
+      }
+    }
+    if (value.charAt(0) !== "/") return fallback;
+    return value;
+  }
+
   function getLoginPath() {
-    return (W.LOGIN_PATH || "/auth/google");
+    return canonicalLoginPath(W.LOGIN_PATH);
   }
 
   function normalizeRedirect(raw, fallbackPath) {
