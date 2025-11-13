@@ -7,6 +7,39 @@
 // Canonical login path = window.LOGIN_PATH || "/auth/google"
 
 (function () {
+  var DEFAULT_REDIRECT = "/your-impact";
+
+  function sanitizeRedirect(raw, fallback) {
+    var fallbackValue = (typeof fallback === "string" && fallback.trim().charAt(0) === "/")
+      ? fallback.trim() || DEFAULT_REDIRECT
+      : DEFAULT_REDIRECT;
+    if (typeof raw !== "string") return fallbackValue;
+    var value = raw.trim();
+    if (!value) return fallbackValue;
+    try {
+      var url = new URL(value, location.origin);
+      if (url.origin !== location.origin) return fallbackValue;
+      return url.pathname + (url.search || "") + (url.hash || "");
+    } catch (_) {
+      return fallbackValue;
+    }
+  }
+
+  function defaultRedirectPath() {
+    var fallback = DEFAULT_REDIRECT;
+    var candidate = "";
+
+    if (typeof window.HF_GET_STARTED_REDIRECT === "string") {
+      candidate = window.HF_GET_STARTED_REDIRECT.trim();
+    } else if (typeof window.HF_DASHBOARD_URL === "string") {
+      candidate = window.HF_DASHBOARD_URL.trim();
+    } else if (typeof window.__HF_DEFAULT_REDIRECT_PATH === "string") {
+      candidate = window.__HF_DEFAULT_REDIRECT_PATH.trim();
+    }
+
+    return sanitizeRedirect(candidate || fallback, fallback);
+  }
+
   /**
    * Safely extracts a same-origin redirect target.
    * Prevents open-redirect vulnerabilities.
@@ -68,7 +101,7 @@
    */
   async function enforceAdmin() {
     // Get dashboard fallback from env, or use the default.
-    var fallbackTarget = (window.HF_DASHBOARD_URL || "/your-impact");
+    var fallbackTarget = defaultRedirectPath();
     var redirectTarget = safeRedirectTarget(fallbackTarget);
 
     // If HayloAuth is not loaded yet, redirect through login.

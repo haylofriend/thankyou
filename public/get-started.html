@@ -169,6 +169,62 @@
   <script>
     // Robust boot: wait for DOM + Vue + Supabase
     (function boot(){
+      const DEFAULT_REDIRECT_PATH = '/your-impact'
+
+      function sanitizeRedirect(raw, fallback){
+        const fallbackValue = (typeof fallback === 'string' && fallback.trim().charAt(0) === '/')
+          ? fallback.trim() || DEFAULT_REDIRECT_PATH
+          : DEFAULT_REDIRECT_PATH
+        if (typeof raw !== 'string') return fallbackValue
+        const value = raw.trim()
+        if (!value) return fallbackValue
+        try {
+          const url = new URL(value, location.origin)
+          if (url.origin !== location.origin) return fallbackValue
+          return url.pathname + (url.search || '') + (url.hash || '')
+        } catch (_) {
+          return fallbackValue
+        }
+      }
+
+      function preferredRedirectPath(){
+        const fallback = DEFAULT_REDIRECT_PATH
+        let candidate = ''
+
+        if (typeof window.HF_GET_STARTED_REDIRECT === 'string') {
+          candidate = window.HF_GET_STARTED_REDIRECT.trim()
+        } else if (typeof window.HF_DASHBOARD_URL === 'string') {
+          candidate = window.HF_DASHBOARD_URL.trim()
+        }
+
+        return sanitizeRedirect(candidate || fallback, fallback)
+      }
+
+      function absoluteFromPath(path){
+        const safePath = sanitizeRedirect(path, DEFAULT_REDIRECT_PATH)
+        try {
+          return new URL(safePath, location.origin).toString()
+        } catch (_) {
+          if (!safePath) return location.origin + DEFAULT_REDIRECT_PATH
+          if (safePath.charAt(0) === '/') return location.origin + safePath
+          return location.origin + '/' + safePath
+        }
+      }
+
+      const CANONICAL_REDIRECT_PATH = preferredRedirectPath()
+      const CANONICAL_REDIRECT_URL = absoluteFromPath(CANONICAL_REDIRECT_PATH)
+
+      try {
+        if (!window.__HF_DEFAULT_REDIRECT_PATH) {
+          window.__HF_DEFAULT_REDIRECT_PATH = CANONICAL_REDIRECT_PATH
+        }
+        if (!window.__HF_DEFAULT_REDIRECT_URL) {
+          window.__HF_DEFAULT_REDIRECT_URL = CANONICAL_REDIRECT_URL
+        }
+      } catch (err) {
+        console.warn('Failed to seed default redirect globals', err)
+      }
+
       function start(){
         const VueLib = window.Vue
         const supaLib = window.supabase
@@ -181,7 +237,7 @@
             // ===== ENV / CONSTANTS =====
             const SUPABASE_URL = window.SUPABASE_URL || ''
             const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || ''
-            const DASHBOARD_URL = window.HF_DASHBOARD_URL || (location.origin + '/your-impact')
+            const DASHBOARD_URL = window.__HF_DEFAULT_REDIRECT_URL || absoluteFromPath(window.__HF_DEFAULT_REDIRECT_PATH || CANONICAL_REDIRECT_PATH)
             const GOOGLE_CLIENT_ID = window.GOOGLE_CLIENT_ID || '' // optional for One Tap
 
             const existingClient = window.__supabaseClient || null
@@ -297,7 +353,52 @@
   <script>
     /* Robust Google sign-in: always use Supabase redirect OAuth; auto-fallback if any GIS script errors */
     (function () {
-      var DASHBOARD_URL = window.HF_DASHBOARD_URL || '/your-impact'
+      var DEFAULT_REDIRECT_PATH = '/your-impact'
+
+      function sanitizeRedirect(raw, fallback) {
+        var fallbackValue = (typeof fallback === 'string' && fallback.trim().charAt(0) === '/')
+          ? fallback.trim() || DEFAULT_REDIRECT_PATH
+          : DEFAULT_REDIRECT_PATH
+        if (typeof raw !== 'string') return fallbackValue
+        var value = raw.trim()
+        if (!value) return fallbackValue
+        try {
+          var url = new URL(value, location.origin)
+          if (url.origin !== location.origin) return fallbackValue
+          return url.pathname + (url.search || '') + (url.hash || '')
+        } catch (_) {
+          return fallbackValue
+        }
+      }
+
+      function absoluteFromPath(path) {
+        var safePath = sanitizeRedirect(path, DEFAULT_REDIRECT_PATH)
+        try {
+          return new URL(safePath, location.origin).toString()
+        } catch (_) {
+          if (!safePath) return location.origin + DEFAULT_REDIRECT_PATH
+          if (safePath.charAt(0) === '/') return location.origin + safePath
+          return location.origin + '/' + safePath
+        }
+      }
+
+      function preferredPath() {
+        var fallback = DEFAULT_REDIRECT_PATH
+        var candidate = ''
+
+        if (typeof window.__HF_DEFAULT_REDIRECT_PATH === 'string') {
+          candidate = window.__HF_DEFAULT_REDIRECT_PATH.trim()
+        } else if (typeof window.HF_GET_STARTED_REDIRECT === 'string') {
+          candidate = window.HF_GET_STARTED_REDIRECT.trim()
+        } else if (typeof window.HF_DASHBOARD_URL === 'string') {
+          candidate = window.HF_DASHBOARD_URL.trim()
+        }
+
+        return sanitizeRedirect(candidate || fallback, fallback)
+      }
+
+      var DASHBOARD_PATH = preferredPath()
+      var DASHBOARD_URL = absoluteFromPath(DASHBOARD_PATH)
       var SUPABASE_URL = window.SUPABASE_URL || ''
       var SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || ''
 
@@ -306,11 +407,7 @@
       }
 
       function resolveRedirect() {
-        try {
-          return new URL(DASHBOARD_URL, location.origin).toString()
-        } catch (_) {
-          return location.origin + (DASHBOARD_URL || '/your-impact')
-        }
+        return DASHBOARD_URL
       }
 
       function ensureClient() {
