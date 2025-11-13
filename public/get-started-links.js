@@ -3,8 +3,7 @@
 // LOGIN_PATH (default: /auth/google) + ?redirect=<dashboard>
 
 (function () {
-  // Canonical dashboard & login path
-  var dash = window.HF_DASHBOARD_URL || "/your-impact";
+  var DEFAULT_REDIRECT = "/your-impact";
 
   function canonicalLoginPath(raw) {
     var fallback = "/auth/google";
@@ -25,13 +24,6 @@
     return value;
   }
 
-  var loginPath = canonicalLoginPath(window.LOGIN_PATH);
-
-  // Optional: full override for Get Started URL
-  var envUrl = (typeof window.HF_GET_STARTED_URL === "string" && window.HF_GET_STARTED_URL.trim())
-    ? window.HF_GET_STARTED_URL.trim()
-    : "";
-
   function currentOrigin() {
     try {
       if (typeof location !== "undefined" && location.origin) return location.origin;
@@ -40,7 +32,7 @@
   }
 
   function normalizeRedirect(raw, fallbackPath) {
-    var fallback = fallbackPath || dash;
+    var fallback = fallbackPath || DEFAULT_REDIRECT;
     if (!raw) return fallback;
     try {
       var base = currentOrigin();
@@ -51,6 +43,33 @@
       return fallback;
     }
   }
+
+  function preferredRedirect() {
+    var candidate = "";
+
+    if (typeof window.HF_GET_STARTED_REDIRECT === "string") {
+      candidate = window.HF_GET_STARTED_REDIRECT.trim();
+    }
+
+    if (!candidate && typeof window.__HF_DEFAULT_REDIRECT_PATH === "string") {
+      candidate = window.__HF_DEFAULT_REDIRECT_PATH.trim();
+    }
+
+    if (!candidate && typeof window.HF_DASHBOARD_URL === "string") {
+      candidate = window.HF_DASHBOARD_URL.trim();
+    }
+
+    return normalizeRedirect(candidate || DEFAULT_REDIRECT, DEFAULT_REDIRECT);
+  }
+
+  var loginPath = canonicalLoginPath(window.LOGIN_PATH);
+
+  // Optional: full override for Get Started URL
+  var envUrl = (typeof window.HF_GET_STARTED_URL === "string" && window.HF_GET_STARTED_URL.trim())
+    ? window.HF_GET_STARTED_URL.trim()
+    : "";
+
+  var dash = preferredRedirect();
 
   function buildLoginUrl(targetPath) {
     var normalized = normalizeRedirect(targetPath || dash, dash);
