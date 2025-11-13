@@ -48,18 +48,16 @@ export default async function handler(req) {
     window.HF_DASHBOARD_URL        = window.HF_DASHBOARD_URL        || window.__ENV__.HF_DASHBOARD_URL;
     window.THANK_HOST              = window.THANK_HOST              || window.__ENV__.THANK_HOST;
     window.BACKEND_URL             = window.BACKEND_URL             || window.__ENV__.BACKEND_URL;
-
-    // backward-compat for pages that still look for NEXT_PUBLIC_*
+    window.GOOGLE_CLIENT_ID        = window.GOOGLE_CLIENT_ID        || window.__ENV__.GOOGLE_CLIENT_ID;
     window.NEXT_PUBLIC_SUPABASE_URL      = window.NEXT_PUBLIC_SUPABASE_URL      || window.__ENV__.SUPABASE_URL;
     window.NEXT_PUBLIC_SUPABASE_ANON_KEY = window.NEXT_PUBLIC_SUPABASE_ANON_KEY || window.__ENV__.SUPABASE_ANON_KEY;
-  } catch (err) {
-    console.error("env bootstrap failed", err);
-  }})();`;
+  } catch (e) {
+    console.error("env.js apply failed", e);
+  } })();`;
 
   return new Response(js, {
     headers: {
-      "content-type": "application/javascript; charset=utf-8",
-      "cache-control": "public, max-age=60"
+      "content-type": "application/javascript; charset=utf-8"
     }
   });
 }
