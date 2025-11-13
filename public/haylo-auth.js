@@ -134,14 +134,12 @@
   async function gate(targetPath = dash()) {
     await ensureEnv();
 
-    const LOGIN_PATH = loginPath();
     const SUPABASE_URL = (W.NEXT_PUBLIC_SUPABASE_URL || W.SUPABASE_URL || '').trim();
     const SUPABASE_KEY = (W.NEXT_PUBLIC_SUPABASE_ANON_KEY || W.SUPABASE_ANON_KEY || '').trim();
 
     function redirectToLogin() {
-      const to = new URL(LOGIN_PATH, location.origin);
-      to.searchParams.set('redirect', targetPath);
-      location.replace(to.toString());
+      // Single auth path: always use Supabase OAuth via login()
+      login(targetPath);
       return null;
     }
 
