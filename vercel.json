@@ -16,5 +16,6 @@
       "source": "/get-started",
       "destination": "/",
       "permanent": true
-    },
-    {
+    }
+  ]
+}
