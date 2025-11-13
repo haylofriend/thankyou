@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
   "rewrites": [
     {
       "source": "/env.js",
@@ -9,33 +14,7 @@
   "redirects": [
     {
       "source": "/get-started",
-      "destination": "/auth/google",
+      "destination": "/",
       "permanent": true
     },
     {
-      "source": "/get-started.html",
-      "destination": "/auth/google",
-      "permanent": true
-    },
-    {
-      "source": "/create",
-      "destination": "/auth/google",
-      "permanent": true
-    },
-    {
-      "source": "/login",
-      "destination": "/auth/google",
-      "permanent": true
-    },
-    {
-      "source": "/dashboard",
-      "destination": "/your-impact",
-      "permanent": true
-    },
-    {
-      "source": "/mission-control.html",
-      "destination": "https://grateful.haylofriend.com",
-      "permanent": true
-    }
-  ]
-}
