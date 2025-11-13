@@ -1,6 +1,10 @@
+// public/get-started-links.js
 (function () {
+  // Canonical dashboard & login path
   var dash = window.HF_DASHBOARD_URL || '/your-impact';
-  var loginPath = window.LOGIN_PATH || '/login';
+  var loginPath = window.LOGIN_PATH || '/auth/google';
+
+  // Optional: environment override for full "Get started" URL
   var envUrl = (typeof window.HF_GET_STARTED_URL === 'string' && window.HF_GET_STARTED_URL.trim())
     ? window.HF_GET_STARTED_URL.trim()
     : '';
@@ -29,11 +33,13 @@
   }
 
   function buildAuthorizeUrl(target) {
+    // Prefer central HayloAuth builder if present
     if (window.HayloAuth && typeof window.HayloAuth.buildAuthorizeUrl === 'function') {
       try { return window.HayloAuth.buildAuthorizeUrl(target); }
       catch (_) {}
     }
 
+    // Fallback: build Supabase authorize URL directly
     var supabaseUrl = ((window.NEXT_PUBLIC_SUPABASE_URL || window.SUPABASE_URL || '')).trim().replace(/\/+$/, '');
     if (supabaseUrl) {
       try {
@@ -44,6 +50,7 @@
       } catch (_) {}
     }
 
+    // Final fallback: hit canonical login path with ?redirect=
     return fallbackLoginUrl(target);
   }
 
