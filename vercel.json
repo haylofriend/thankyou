@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/env.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
   "cleanUrls": true,
   "rewrites": [
     {
