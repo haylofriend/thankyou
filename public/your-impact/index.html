@@ -3,18 +3,21 @@
 <script>
   (function () {
     var targetPath = window.HF_DASHBOARD_URL || '/your-impact';
-    var loginPath = (window.LOGIN_PATH || '/auth/google');
     var attempted = false;
     var fallbackTimer = setTimeout(runGate, 4000);
 
-    function toLogin() {
+    function redirectViaLogin() {
       try {
-        var url = new URL(loginPath, location.origin);
-        url.searchParams.set('redirect', targetPath);
-        location.replace(url.toString());
-      } catch (_) {
-        location.replace(loginPath + '?redirect=' + encodeURIComponent(targetPath));
+        var api = window.HayloAuth;
+        if (api && typeof api.login === 'function') {
+          api.login(targetPath);
+          return;
+        }
+      } catch (err) {
+        console.warn('HayloAuth login fallback failed', err);
       }
+
+      location.replace(targetPath);
     }
 
     function runGate() {
@@ -26,14 +29,14 @@
         if (api && typeof api.gate === 'function') {
           api.gate(targetPath).catch(function (err) {
             console.warn('Auth gate redirect failed', err);
-            toLogin();
+            redirectViaLogin();
           });
           return;
         }
       } catch (error) {
         console.error('Auth gate threw an error', error);
       }
-      toLogin();
+      redirectViaLogin();
     }
 
     if (window.HayloAuth && typeof window.HayloAuth.gate === 'function') {
@@ -331,7 +334,7 @@ const { createApp, ref, computed, onMounted, watch } = Vue;
 const SUPABASE_URL = window.SUPABASE_URL || '';
 const SUPABASE_KEY = window.SUPABASE_ANON_KEY || '';
 const THANK_HOST   = window.THANK_HOST || 'https://grateful.haylofriend.com';
-const LOGIN_PATH   = window.LOGIN_PATH || '/auth/google'; // your dedicated login page (optional)
+const DASHBOARD_REDIRECT_DEFAULT = window.HF_DASHBOARD_URL || '/your-impact';
 
 const supabase = (SUPABASE_URL && SUPABASE_KEY && window.supabase)
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
@@ -448,9 +451,22 @@ createApp({
     }
 
     function goLogin(){
-      const url = new URL(LOGIN_PATH, window.location.origin);
-      url.searchParams.set('redirect', window.location.pathname);
-      window.location.href = url.toString();
+      var redirectTarget = window.location.pathname + window.location.search + window.location.hash;
+      if (!redirectTarget) {
+        redirectTarget = DASHBOARD_REDIRECT_DEFAULT;
+      }
+
+      try {
+        var api = window.HayloAuth;
+        if (api && typeof api.login === 'function') {
+          api.login(redirectTarget);
+          return;
+        }
+      } catch (err) {
+        console.warn('HayloAuth login fallback failed', err);
+      }
+
+      window.location.href = redirectTarget || DASHBOARD_REDIRECT_DEFAULT;
     }
 
     // ===== DATA LOAD (requires auth) =====
@@ -552,7 +568,7 @@ createApp({
         await hydrateFromDb();
       } else {
         // Still no session → DO NOT auto-redirect (prevents loops).
-        // The built-in gate will show, and "Open full login" already routes to /auth/google.
+        // The built-in gate will show, and "Open full login" uses HayloAuth.login to complete the flow.
         // If you want a button-less auto-forward, we can add a delayed redirect later.
       }
 
