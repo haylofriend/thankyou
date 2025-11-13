@@ -7,7 +7,7 @@ export default async function handler(req) {
     SUPABASE_URL:        process.env.NEXT_PUBLIC_SUPABASE_URL      || process.env.SUPABASE_URL || "",
     SUPABASE_ANON_KEY:   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "",
     GOOGLE_CLIENT_ID:    "",
-    HF_GET_STARTED_URL:  process.env.NEXT_PUBLIC_HF_GET_STARTED_URL || "/auth/google?redirect=/your-impact",
+    HF_GET_STARTED_URL:  process.env.NEXT_PUBLIC_HF_GET_STARTED_URL || "",
     LOGIN_PATH:          process.env.NEXT_PUBLIC_LOGIN_PATH         || "/auth/google",
     HF_DASHBOARD_URL:    process.env.NEXT_PUBLIC_HF_DASHBOARD_URL   || "/your-impact",
     THANK_HOST:          process.env.NEXT_PUBLIC_THANK_HOST || "https://grateful.haylofriend.com",
