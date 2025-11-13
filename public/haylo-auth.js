@@ -1,60 +1,320 @@
-export const config = {
-  runtime: "edge"
-};
-
-export default async function handler(req) {
-  const cfg = {
-    // Core Supabase project (for auth + data)
-    SUPABASE_URL:
-      process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      process.env.SUPABASE_URL ||
-      "",
-    SUPABASE_ANON_KEY:
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      process.env.SUPABASE_ANON_KEY ||
-      "",
-
-    // Optional: Google client ID for One Tap / OAuth UI
-    GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "",
-
-    // Marketing / get-started link overrides
-    HF_GET_STARTED_URL:       process.env.NEXT_PUBLIC_HF_GET_STARTED_URL       || "",
-    HF_GET_STARTED_REDIRECT:  process.env.NEXT_PUBLIC_HF_GET_STARTED_REDIRECT  || "/your-impact",
-
-    // 🔑 Canonical login path on your domain
-    // Everything should go through this (HayloAuth.login / gate / admin-guard / /login forwarder).
-    LOGIN_PATH: process.env.NEXT_PUBLIC_LOGIN_PATH || "/auth/google",
-
-    // Where to send users after auth if nothing else is specified
-    HF_DASHBOARD_URL: process.env.NEXT_PUBLIC_HF_DASHBOARD_URL || "/your-impact",
-
-    // Thank-you link host + backend API
-    THANK_HOST:  process.env.NEXT_PUBLIC_THANK_HOST  || "https://grateful.haylofriend.com",
-    BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || ""
+/* public/haylo-auth.js — unified auth helper (uses LOGIN_PATH + Supabase) */
+(function (g) {
+  var W = (typeof window !== "undefined") ? window : {};
+  var STATE = {
+    envLoaded: false,
+    envPromise: null,
+    supabasePromise: null,
+    supa: null
   };
 
-  const js = `(() => { try {
-    // Raw config snapshot
-    window.__ENV__ = ${JSON.stringify(cfg)};
+  // -------- Env Loader (reads /env.js which sets window.LOGIN_PATH, SUPABASE_URL, etc.) --------
+  function loadEnv() {
+    if (STATE.envPromise) return STATE.envPromise;
 
-    // Only set globals if they aren't already set (so pages can override for testing)
-    window.SUPABASE_URL            = window.SUPABASE_URL            || window.__ENV__.SUPABASE_URL;
-    window.SUPABASE_ANON_KEY       = window.SUPABASE_ANON_KEY       || window.__ENV__.SUPABASE_ANON_KEY;
-    window.HF_GET_STARTED_URL      = window.HF_GET_STARTED_URL      || window.__ENV__.HF_GET_STARTED_URL;
-    window.HF_GET_STARTED_REDIRECT = window.HF_GET_STARTED_REDIRECT || window.__ENV__.HF_GET_STARTED_REDIRECT;
-    window.LOGIN_PATH              = window.LOGIN_PATH              || window.__ENV__.LOGIN_PATH;
-    window.HF_DASHBOARD_URL        = window.HF_DASHBOARD_URL        || window.__ENV__.HF_DASHBOARD_URL;
-    window.THANK_HOST              = window.THANK_HOST              || window.__ENV__.THANK_HOST;
-    window.BACKEND_URL             = window.BACKEND_URL             || window.__ENV__.BACKEND_URL;
-    window.GOOGLE_CLIENT_ID        = window.GOOGLE_CLIENT_ID        || window.__ENV__.GOOGLE_CLIENT_ID;
-  } catch (e) {
-    console.error('env.js apply failed', e);
-  } })();`;
+    STATE.envPromise = new Promise(function (resolve) {
+      // If env already present, don't load again
+      if ((W.SUPABASE_URL && W.SUPABASE_ANON_KEY) || STATE.envLoaded) {
+        STATE.envLoaded = true;
+        return resolve();
+      }
+      if (typeof document === "undefined") {
+        STATE.envLoaded = true;
+        return resolve();
+      }
+      var existing = document.querySelector('script[data-haylo-env]');
+      if (existing) {
+        existing.addEventListener("load", function () {
+          STATE.envLoaded = true;
+          resolve();
+        }, { once: true });
+        existing.addEventListener("error", function () {
+          resolve();
+        }, { once: true });
+        return;
+      }
+      var s = document.createElement("script");
+      s.src = "/env.js";
+      s.async = true;
+      s.dataset.hayloEnv = "true";
+      s.addEventListener("load", function () {
+        STATE.envLoaded = true;
+        resolve();
+      }, { once: true });
+      s.addEventListener("error", function () {
+        resolve();
+      }, { once: true });
+      document.head.appendChild(s);
+    });
 
-  return new Response(js, {
-    headers: {
-      "Content-Type": "application/javascript; charset=utf-8",
-      "Cache-Control": "no-store"
+    return STATE.envPromise;
+  }
+
+  // -------- Supabase Loader (lazy-load CDN build if needed) --------
+  function loadSupabase() {
+    if (STATE.supabasePromise) return STATE.supabasePromise;
+
+    STATE.supabasePromise = new Promise(function (resolve) {
+      loadEnv().then(function () {
+        var url = (W.SUPABASE_URL || "").trim();
+        var key = (W.SUPABASE_ANON_KEY || "").trim();
+        if (!url || !key) {
+          console.warn("HayloAuth: missing SUPABASE_URL or SUPABASE_ANON_KEY");
+          return resolve(false);
+        }
+
+        function createClientIfPossible() {
+          try {
+            if (g.supabase && typeof g.supabase.createClient === "function") {
+              STATE.supa = g.supabase.createClient(url, key);
+              return resolve(true);
+            }
+          } catch (err) {
+            console.error("HayloAuth: supabase.createClient failed", err);
+          }
+          resolve(false);
+        }
+
+        // If supabase already loaded globally
+        if (g.supabase && typeof g.supabase.createClient === "function") {
+          return createClientIfPossible();
+        }
+
+        if (typeof document === "undefined") {
+          return resolve(false);
+        }
+
+        var existing = document.querySelector("script[data-haylo-supabase]");
+        if (existing) {
+          existing.addEventListener("load", function () {
+            createClientIfPossible();
+          }, { once: true });
+          existing.addEventListener("error", function () {
+            resolve(false);
+          }, { once: true });
+          return;
+        }
+
+        var s = document.createElement("script");
+        s.src = "https://unpkg.com/@supabase/supabase-js@2";
+        s.async = true;
+        s.dataset.hayloSupabase = "true";
+        s.addEventListener("load", function () {
+          createClientIfPossible();
+        }, { once: true });
+        s.addEventListener("error", function () {
+          console.error("HayloAuth: failed to load supabase-js");
+          resolve(false);
+        }, { once: true });
+        document.head.appendChild(s);
+      });
+    });
+
+    return STATE.supabasePromise;
+  }
+
+  function getClient() {
+    return STATE.supa || null;
+  }
+
+  // -------- Helpers --------
+  function currentOrigin() {
+    try {
+      if (typeof location !== "undefined" && location.origin) return location.origin;
+    } catch (_) {}
+    return "https://www.haylofriend.com";
+  }
+
+  function abs(path) {
+    try {
+      return new URL(path, currentOrigin()).toString();
+    } catch (_) {
+      if (!path) return currentOrigin() + "/";
+      if (path.charAt(0) === "/") return currentOrigin() + path;
+      return currentOrigin() + "/" + path;
     }
-  });
-}
+  }
+
+  function dash() {
+    return (W.HF_DASHBOARD_URL || "/your-impact");
+  }
+
+  function getLoginPath() {
+    return (W.LOGIN_PATH || "/auth/google");
+  }
+
+  function normalizeRedirect(raw, fallbackPath) {
+    var fallback = fallbackPath || dash();
+    if (!raw) return fallback;
+    try {
+      var base = currentOrigin();
+      var u = new URL(raw, base);
+      if (u.origin !== base) return fallback;
+      return u.pathname + (u.search || "") + (u.hash || "");
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  // -------- Public methods --------
+  async function whoami() {
+    await loadEnv();
+    var ok = await loadSupabase();
+    if (!ok) return { user: null, session: null, ready: false };
+    var supa = getClient();
+    if (!supa) return { user: null, session: null, ready: false };
+    try {
+      var result = await supa.auth.getSession();
+      var session = result && result.data && result.data.session || null;
+      return { user: session ? session.user : null, session: session, ready: true };
+    } catch (err) {
+      console.error("HayloAuth.whoami error", err);
+      return { user: null, session: null, ready: false };
+    }
+  }
+
+  async function login(redirectPath) {
+    await loadEnv();
+
+    var fallback = dash();
+    var targetPath = normalizeRedirect(redirectPath || fallback, fallback);
+    var loginPath = getLoginPath();
+
+    try {
+      var info = await whoami();
+      if (info && info.session && info.user) {
+        // already logged in, go straight to target
+        location.replace(abs(targetPath));
+        return;
+      }
+    } catch (err) {
+      console.warn("HayloAuth.login: whoami failed, falling back to login redirect", err);
+    }
+
+    try {
+      var url = new URL(loginPath, currentOrigin());
+      url.searchParams.set("redirect", targetPath);
+      location.replace(url.toString());
+    } catch (err2) {
+      console.error("HayloAuth.login redirect error", err2);
+      location.replace(loginPath + "?redirect=" + encodeURIComponent(targetPath));
+    }
+  }
+
+  async function logout(redirectPath) {
+    await loadEnv();
+    var ok = await loadSupabase();
+    if (ok) {
+      try {
+        var supa = getClient();
+        if (supa) await supa.auth.signOut();
+      } catch (err) {
+        console.warn("HayloAuth.logout signOut failed", err);
+      }
+    }
+    var target = normalizeRedirect(redirectPath || "/", "/");
+    location.replace(abs(target));
+  }
+
+  async function gate(targetPath) {
+    await loadEnv();
+    var fallback = dash();
+    var path = targetPath || (typeof location !== "undefined"
+      ? (location.pathname + (location.search || "") + (location.hash || ""))
+      : fallback);
+    var normalized = normalizeRedirect(path, fallback);
+    var loginPath = getLoginPath();
+    var ok = await loadSupabase();
+
+    if (!ok) {
+      // no Supabase client, send to login
+      try {
+        var u = new URL(loginPath, currentOrigin());
+        u.searchParams.set("redirect", normalized);
+        location.replace(u.toString());
+      } catch (_) {
+        location.replace(loginPath + "?redirect=" + encodeURIComponent(normalized));
+      }
+      return;
+    }
+
+    try {
+      var supa = getClient();
+      if (!supa) throw new Error("no supabase client");
+      var result = await supa.auth.getSession();
+      var session = result && result.data && result.data.session || null;
+      if (!session || !session.user) {
+        var url = new URL(loginPath, currentOrigin());
+        url.searchParams.set("redirect", normalized);
+        location.replace(url.toString());
+        return;
+      }
+      return session.user;
+    } catch (err) {
+      console.error("HayloAuth.gate error", err);
+      try {
+        var u2 = new URL(loginPath, currentOrigin());
+        u2.searchParams.set("redirect", normalized);
+        location.replace(u2.toString());
+      } catch (_) {
+        location.replace(loginPath + "?redirect=" + encodeURIComponent(normalized));
+      }
+    }
+  }
+
+  function buildAuthorizeUrl(redirectPath) {
+    // In unified mode, this just builds the /auth/google?redirect=... URL
+    var fallback = dash();
+    var target = normalizeRedirect(redirectPath || fallback, fallback);
+    var loginPath = getLoginPath();
+    try {
+      var u = new URL(loginPath, currentOrigin());
+      u.searchParams.set("redirect", target);
+      return u.toString();
+    } catch (_) {
+      return loginPath + "?redirect=" + encodeURIComponent(target);
+    }
+  }
+
+  // -------- Export public API --------
+  var api = {
+    ensureEnv: loadEnv,
+    ensureSupabase: loadSupabase,
+    getClient: getClient,
+    whoami: whoami,
+    getUser: async function () {
+      var info = await whoami();
+      return info.user;
+    },
+    login: login,
+    logout: logout,
+    gate: gate,
+    buildAuthorizeUrl: buildAuthorizeUrl,
+    LOGIN_PATH: function () { return getLoginPath(); },
+    DASHBOARD_PATH: function () { return dash(); }
+  };
+
+  g.HayloAuth = api;
+
+  // Fire a ready event for anyone listening
+  function emitReady(target) {
+    if (!target || !target.dispatchEvent) return;
+    var evt;
+    try {
+      evt = new CustomEvent("hayloauth:ready", { detail: api });
+    } catch (_) {
+      if (typeof document !== "undefined" && typeof document.createEvent === "function") {
+        evt = document.createEvent("Event");
+        evt.initEvent("hayloauth:ready", false, false);
+        evt.detail = api;
+      }
+    }
+    if (evt) target.dispatchEvent(evt);
+  }
+
+  try {
+    emitReady(typeof window !== "undefined" ? window : null);
+    emitReady(typeof document !== "undefined" ? document : null);
+  } catch (_) {}
+
+})(window);
