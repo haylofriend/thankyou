@@ -3,7 +3,6 @@
   const W = (typeof window !== 'undefined') ? window : {};
   const STATE = { supa: null, envLoaded: false, envPromise: null, supabasePromise: null };
   const GET_STARTED = { url: null, redirect: null, observer: null };
-  const DEFAULT_GET_STARTED_URL = '/auth/google?redirect=/your-impact';
   const DEFAULT_GET_STARTED_REDIRECT = '/your-impact';
 
   // -------- Env Loader (reads your /env.js rewrite) --------
@@ -102,12 +101,39 @@
     return (W.LOGIN_PATH || '/auth/google');
   }
   function buildAuthorizeUrl(redirectPath) {
-    const proj = (W.NEXT_PUBLIC_SUPABASE_URL || W.SUPABASE_URL || '').replace(/\/+$/, '');
+    const project = (W.NEXT_PUBLIC_SUPABASE_URL || W.SUPABASE_URL || '').trim().replace(/\/+$/, '');
     const target = abs(redirectPath || dash());
-    const u = new URL('/auth/v1/authorize', proj);
-    u.searchParams.set('provider', 'google');
-    u.searchParams.set('redirect_to', target);
-    return u.toString();
+
+    if (project) {
+      try {
+        const u = new URL('/auth/v1/authorize', project);
+        u.searchParams.set('provider', 'google');
+        u.searchParams.set('redirect_to', target);
+        return u.toString();
+      } catch (err) {
+        console.warn('HayloAuth: failed to build Supabase authorize URL, falling back to login path.', err);
+      }
+    }
+
+    const origin = (typeof location !== 'undefined' && location.origin)
+      ? location.origin
+      : 'https://www.haylofriend.com';
+
+    let localTarget = redirectPath || dash();
+    try {
+      const parsedTarget = new URL(target);
+      if (parsedTarget.origin === origin) {
+        localTarget = parsedTarget.pathname + (parsedTarget.search || '') + (parsedTarget.hash || '');
+      }
+    } catch (_) {}
+
+    try {
+      const loginUrl = new URL(loginPath(), origin);
+      loginUrl.searchParams.set('redirect', localTarget);
+      return loginUrl.toString();
+    } catch (_) {
+      return `/auth/google?redirect=${encodeURIComponent(localTarget)}`;
+    }
   }
 
   // -------- Public API --------
@@ -202,8 +228,11 @@
       return { url: GET_STARTED.url, redirect: GET_STARTED.redirect };
     }
 
-    const rawUrl = (W.HF_GET_STARTED_URL || DEFAULT_GET_STARTED_URL);
     const fallbackRedirect = (W.HF_GET_STARTED_REDIRECT || DEFAULT_GET_STARTED_REDIRECT);
+    const envUrl = (typeof W.HF_GET_STARTED_URL === 'string' && W.HF_GET_STARTED_URL.trim())
+      ? W.HF_GET_STARTED_URL.trim()
+      : null;
+    const rawUrl = envUrl || buildAuthorizeUrl(fallbackRedirect);
     let resolvedUrl = rawUrl;
     let redirectPath = fallbackRedirect;
 
@@ -211,7 +240,18 @@
       const base = (typeof location !== 'undefined' && location.origin) ? location.origin : 'https://example.com';
       const parsed = new URL(rawUrl, base);
       resolvedUrl = parsed.toString();
-      redirectPath = parsed.searchParams.get('redirect') || fallbackRedirect;
+      const redirectParam = parsed.searchParams.get('redirect') || parsed.searchParams.get('redirect_to');
+      if (redirectParam) {
+        redirectPath = redirectParam;
+        try {
+          const redirectUrl = new URL(redirectParam, base);
+          if (redirectUrl.origin === base) {
+            redirectPath = redirectUrl.pathname + (redirectUrl.search || '') + (redirectUrl.hash || '');
+          } else {
+            redirectPath = redirectUrl.toString();
+          }
+        } catch (_) {}
+      }
     } catch (err) {
       console.warn('HayloAuth: unable to parse HF_GET_STARTED_URL, falling back to defaults.', err);
     }
