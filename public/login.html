@@ -25,10 +25,18 @@
         var params = new URLSearchParams(location.search);
         var fallback = window.HF_DASHBOARD_URL || '/your-impact';
         var redirectPath = normalizeRedirect(params.get('redirect') || '', fallback);
+        // Canonical login path fallback: /auth/google
+        var loginPath = normalizeRedirect(window.LOGIN_PATH || '', '/auth/google');
 
-        // Canonical login path: /auth/google
-        var target = '/auth/google?redirect=' + encodeURIComponent(redirectPath);
-        location.replace(target);
+        try {
+          var target = loginPath + (loginPath.indexOf('?') === -1 ? '?' : '&') + 'redirect=' + encodeURIComponent(redirectPath);
+          location.replace(target);
+        } catch (error) {
+          var fallbackUrl = '/auth/google?redirect=' + encodeURIComponent(redirectPath);
+          document.write('<meta http-equiv="refresh" content="0;url=' + fallbackUrl + '">');
+          location.replace(fallbackUrl);
+          return;
+        }
       }
 
       if (document.readyState === 'loading') {
