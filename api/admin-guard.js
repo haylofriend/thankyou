@@ -1,67 +1,89 @@
-export const config = { runtime: 'edge' };
+// admin-guard.js
+//
+// Ensures only admins access this page.
+// If the user is not logged in OR not an admin,
+// they are redirected through the ONE canonical login path.
+//
+// Canonical login path = window.LOGIN_PATH || "/auth/google"
 
-// helpers
-const ADMIN_HOST = 'grateful.haylofriend.com';
-const PUBLIC_HOST = 'www.haylofriend.com';
-const ADMIN_PATH = '/mission-control.html';               // public URL we guard
-const REAL_FILE = '/mission-control (1).html';            // the actual static file we serve when allowed
+(function () {
+  /**
+   * Safely extracts a same-origin redirect target.
+   * Prevents open-redirect vulnerabilities.
+   */
+  function safeRedirectTarget(defaultPath) {
+    try {
+      var params = new URLSearchParams(location.search);
+      var raw = params.get("redirect") || "";
 
-function getJwt(req) {
-  const auth = req.headers.get('authorization');
-  if (auth && /^Bearer\s+/i.test(auth)) return auth.replace(/^Bearer\s+/i, '');
-  const cookie = req.headers.get('cookie') || '';
-  // common Supabase cookies (v2 and older)
-  const m =
-    cookie.match(/(?:^|;\s*)sb-access-token=([^;]+)/) ||
-    cookie.match(/(?:^|;\s*)supabase.auth.token=([^;]+)/) ||
-    cookie.match(/(?:^|;\s*)sb:token=([^;]+)/);
-  return m ? decodeURIComponent(m[1]) : null;
-}
+      if (!raw) return defaultPath;
 
-function decodeEmail(jwt) {
-  try {
-    const [, payloadB64] = jwt.split('.');
-    const json = atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/'));
-    const obj = JSON.parse(json);
-    return (obj.email || '').toLowerCase();
-  } catch {
-    return '';
-  }
-}
+      var url = new URL(raw, location.origin);
+      if (url.origin !== location.origin) return defaultPath;
 
-export default async function handler(req) {
-  const url = new URL(req.url);
-  const host = (req.headers.get('host') || '').toLowerCase();
-
-  // Only guard on the admin host; if someone hits this on www, bounce to www home.
-  if (host !== ADMIN_HOST) {
-    return Response.redirect(`https://${PUBLIC_HOST}/`, 302);
+      return url.pathname + (url.search || "") + (url.hash || "");
+    } catch (err) {
+      return defaultPath;
+    }
   }
 
-  const jwt = getJwt(req);
-  if (!jwt) {
-    // Not signed in → send to Google on admin host, then come back to /mission-control.html
-    const login = new URL(`https://${ADMIN_HOST}/auth/google`);
-    login.searchParams.set('redirect', ADMIN_PATH);
-    return Response.redirect(login.toString(), 302);
+  /**
+   * Redirects to the canonical login path.
+   */
+  function sendToLogin(target) {
+    var login = window.LOGIN_PATH || "/auth/google";
+    var url = login + "?redirect=" + encodeURIComponent(target);
+    location.replace(url);
   }
 
-  const email = decodeEmail(jwt);
-  const allowed = (email && process.env.ADMIN_EMAIL && email === process.env.ADMIN_EMAIL.toLowerCase());
-  if (!allowed) {
-    // Signed in but not admin → send to public site
-    return Response.redirect(`https://${PUBLIC_HOST}/`, 302);
+  /**
+   * Runs the admin enforcement logic.
+   */
+  async function enforceAdmin() {
+    // Get dashboard fallback from env, or use the default.
+    var fallbackTarget = (window.HF_DASHBOARD_URL || "/your-impact");
+    var redirectTarget = safeRedirectTarget(fallbackTarget);
+
+    // If HayloAuth is not loaded yet, redirect through login.
+    if (!window.HayloAuth || typeof window.HayloAuth.getUser !== "function") {
+      sendToLogin(redirectTarget);
+      return;
+    }
+
+    try {
+      // Query current user session
+      var user = await window.HayloAuth.getUser();
+
+      // No user? → Login
+      if (!user) {
+        sendToLogin(redirectTarget);
+        return;
+      }
+
+      // Expect an admin marker (role, custom claim, or metadata)
+      var role = user.role || user.app_role || user.user_role || user?.user_metadata?.role;
+
+      // Not admin? → No access
+      if (role !== "admin") {
+        // Could send to dashboard or logout → here we send to dashboard
+        location.replace(fallbackTarget);
+        return;
+      }
+
+      // Admin confirmed → allow page to load
+      console.log("ADMIN GUARD: Access granted.");
+
+    } catch (err) {
+      console.error("ADMIN GUARD ERROR:", err);
+      sendToLogin(redirectTarget);
+    }
   }
 
-  // Admin OK → fetch and return the real static file
-  const assetURL = new URL(REAL_FILE, url);
-  // IMPORTANT: REAL_FILE differs from ADMIN_PATH to avoid rewrite loop
-  const res = await fetch(assetURL.toString(), {
-    headers: { cookie: req.headers.get('cookie') || '' },
-  });
-  // If the asset is missing, fail closed
-  if (!res.ok) return new Response('Not Found', { status: 404 });
-  // Pass-through contents and headers
-  const hdrs = new Headers(res.headers);
-  return new Response(await res.arrayBuffer(), { status: 200, headers: hdrs });
-}
+  // Execute guard on load
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", enforceAdmin, { once: true });
+  } else {
+    enforceAdmin();
+  }
+
+})();
