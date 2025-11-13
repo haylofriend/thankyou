@@ -1,9 +1,14 @@
 {
+  "functions": {
+    "api/admin-guard.js": {
+      "runtime": "nodejs22.x"
+    }
+  },
   "cleanUrls": true,
   "rewrites": [
     {
       "source": "/env.js",
-      "destination": "/api/env.js"
+      "destination": "/api/env"
     }
   ]
 }
