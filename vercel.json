@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
   "rewrites": [
     {
       "source": "/env.js",
@@ -9,23 +14,23 @@
   "redirects": [
     {
       "source": "/get-started",
-      "destination": "/auth/google",
+      "destination": "/login?redirect=/your-impact",
       "permanent": true
     },
     {
       "source": "/get-started.html",
-      "destination": "/auth/google",
+      "destination": "/login?redirect=/your-impact",
       "permanent": true
     },
     {
       "source": "/create",
-      "destination": "/auth/google",
+      "destination": "/login?redirect=/your-impact",
       "permanent": true
     },
     {
-      "source": "/login",
-      "destination": "/auth/google",
-      "permanent": true
+      "source": "/auth/google",
+      "destination": "/login",
+      "permanent": false
     },
     {
       "source": "/dashboard",

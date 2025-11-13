@@ -155,6 +155,49 @@
     /* Optional (dashboard builds public links with this host)
        window.THANK_HOST = window.THANK_HOST || "https://grateful.haylofriend.com"; */
   </script>
+  <script>
+    (function () {
+      var getStartedUrl = window.HF_GET_STARTED_URL || '/auth/google?redirect=/your-impact';
+      var getStartedRedirect = window.HF_DASHBOARD_URL || '/your-impact';
+
+      function startGetStartedFlow(event) {
+        if (event && typeof event.preventDefault === 'function') {
+          event.preventDefault();
+        }
+
+        var hayloAuth = window.HayloAuth;
+        if (hayloAuth && typeof hayloAuth.login === 'function') {
+          try {
+            hayloAuth.login(getStartedRedirect);
+            return false;
+          } catch (err) {
+            console.warn('HayloAuth login failed', err);
+          }
+        }
+
+        window.location.href = getStartedUrl;
+        return false;
+      }
+
+      function wireGetStarted() {
+        var links = document.querySelectorAll('[data-get-started]');
+        links.forEach(function (el) {
+          el.setAttribute('href', getStartedUrl);
+          if (el.dataset.getStartedWired === 'true') return;
+          el.dataset.getStartedWired = 'true';
+          el.addEventListener('click', startGetStartedFlow);
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', wireGetStarted);
+      } else {
+        wireGetStarted();
+      }
+
+      window.addEventListener('hayloauth:ready', wireGetStarted, { once: true });
+    })();
+  </script>
 </head>
 <body>
   <div id="app" class="max-w-[1120px] mx-auto px-6 py-8 pb-36">
@@ -171,7 +214,7 @@
           <a href="#connect" class="hover:text-[var(--acc)] transition-colors">Connect</a>
           <a href="#cashout" class="hover:text-[var(--acc)] transition-colors">Your Impact</a>
         </div>
-        <a href="/auth/google?redirect=/your-impact" data-get-started class="px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] hover:bg-[var(--acc)]/10 transition-all text-sm font-medium">Get Started</a>
+        <a href="#" data-get-started class="px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] hover:bg-[var(--acc)]/10 transition-all text-sm font-medium">Get Started</a>
       </div>
     </nav>
 
@@ -428,7 +471,7 @@
           </div>
           <span class="text-sm text-white/70">+2,438 creators this month</span>
         </div>
-        <a href="/auth/google?redirect=/your-impact" data-get-started class="mt-6 glass px-6 py-3 rounded-xl text-sm font-medium hover:animate-pulse-glow transition-all inline-block">
+        <a href="#" data-get-started class="mt-6 glass px-6 py-3 rounded-xl text-sm font-medium hover:animate-pulse-glow transition-all inline-block">
           Join Them Now
         </a>
       </div>
@@ -443,7 +486,7 @@
     <div v-show="!showPay && !showReflex" id="stickyCta" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60]" data-noprint>
       <div class="glass rounded-full px-5 py-3 flex items-center gap-4 shadow-xl animate-pulse-glow">
         <span class="text-sm text-white/90 font-medium">Ready to create value with gratitude?</span>
-        <a href="/auth/google?redirect=/your-impact" data-get-started class="px-4 py-2 rounded-full bg-[var(--acc)] text-white text-sm font-medium hover:bg-[#3a94e0] transition-colors">Get Started</a>
+        <a href="#" data-get-started class="px-4 py-2 rounded-full bg-[var(--acc)] text-white text-sm font-medium hover:bg-[#3a94e0] transition-colors">Get Started</a>
       </div>
     </div>
 
@@ -508,7 +551,7 @@
         </div>
         <h3 class="text-xl font-medium">Thank You Sent!</h3>
         <p class="text-white/80 text-sm mt-2">You've just created value with gratitude. Now imagine receiving these thank-yous yourself.</p>
-        <a href="/auth/google?redirect=/your-impact" data-get-started class="mt-4 glass px-5 py-3 rounded-xl text-sm font-medium w-full hover:animate-pulse-glow transition-all inline-block">
+        <a href="#" data-get-started class="mt-4 glass px-5 py-3 rounded-xl text-sm font-medium w-full hover:animate-pulse-glow transition-all inline-block">
           Create My Thank-You Link
         </a>
         <button class="mt-2 px-5 py-3 rounded-xl border border-white/20 text-sm font-medium w-full hover:border-white/40 transition-colors" @click="showReflex=false">
