@@ -2,7 +2,40 @@
 <script src="/haylo-auth.js"></script>
 <script>
   (function () {
-    var targetPath = window.HF_DASHBOARD_URL || '/your-impact';
+    var DEFAULT_REDIRECT = '/your-impact';
+
+    function sanitizeRedirect(raw, fallback) {
+      var fallbackValue = (typeof fallback === 'string' && fallback.trim().charAt(0) === '/')
+        ? fallback.trim() || DEFAULT_REDIRECT
+        : DEFAULT_REDIRECT;
+      if (typeof raw !== 'string') return fallbackValue;
+      var value = raw.trim();
+      if (!value) return fallbackValue;
+      try {
+        var url = new URL(value, location.origin);
+        if (url.origin !== location.origin) return fallbackValue;
+        return url.pathname + (url.search || '') + (url.hash || '');
+      } catch (_) {
+        return fallbackValue;
+      }
+    }
+
+    function preferredRedirect() {
+      var fallback = DEFAULT_REDIRECT;
+      var candidate = '';
+
+      if (typeof window.HF_GET_STARTED_REDIRECT === 'string') {
+        candidate = window.HF_GET_STARTED_REDIRECT.trim();
+      } else if (typeof window.HF_DASHBOARD_URL === 'string') {
+        candidate = window.HF_DASHBOARD_URL.trim();
+      } else if (typeof window.__HF_DEFAULT_REDIRECT_PATH === 'string') {
+        candidate = window.__HF_DEFAULT_REDIRECT_PATH.trim();
+      }
+
+      return sanitizeRedirect(candidate || fallback, fallback);
+    }
+
+    var targetPath = preferredRedirect();
     var loginPath = (window.LOGIN_PATH || '/auth/google');
     var attempted = false;
     var fallbackTimer = setTimeout(runGate, 4000);
