@@ -5,7 +5,7 @@
   <title>Redirecting to login…</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
 
-  <!-- Runtime env (gives us HF_DASHBOARD_URL for safe fallback) -->
+  <!-- Runtime env (gives us HF_DASHBOARD_URL for safe fallback + LOGIN_PATH) -->
   <script src="/env.js"></script>
 
   <script>
@@ -25,18 +25,11 @@
         var params = new URLSearchParams(location.search);
         var fallback = window.HF_DASHBOARD_URL || '/your-impact';
         var redirectPath = normalizeRedirect(params.get('redirect') || '', fallback);
-        // Canonical login path fallback: /auth/google
-        var loginPath = normalizeRedirect(window.LOGIN_PATH || '', '/auth/google');
 
-        try {
-          var target = loginPath + (loginPath.indexOf('?') === -1 ? '?' : '&') + 'redirect=' + encodeURIComponent(redirectPath);
-          location.replace(target);
-        } catch (error) {
-          var fallbackUrl = '/auth/google?redirect=' + encodeURIComponent(redirectPath);
-          document.write('<meta http-equiv="refresh" content="0;url=' + fallbackUrl + '">');
-          location.replace(fallbackUrl);
-          return;
-        }
+        // Canonical login path: window.LOGIN_PATH || /auth/google
+        var loginPath = window.LOGIN_PATH || '/auth/google';
+        var target = loginPath + '?redirect=' + encodeURIComponent(redirectPath);
+        location.replace(target);
       }
 
       if (document.readyState === 'loading') {
