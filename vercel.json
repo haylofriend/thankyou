@@ -1,21 +1,9 @@
 {
-  "functions": {
-    "api/*.js": {
-      "runtime": "nodejs18.x"
-    }
-  },
+  "cleanUrls": true,
   "rewrites": [
     {
       "source": "/env.js",
       "destination": "/api/env.js"
-    }
-  ],
-  "cleanUrls": true,
-  "redirects": [
-    {
-      "source": "/get-started",
-      "destination": "/",
-      "permanent": true
     }
   ]
 }
