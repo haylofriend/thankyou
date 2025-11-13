@@ -17,6 +17,23 @@ export default async function handler(req) {
     return fallback;
   }
 
+  function canonicalRedirectPath(raw, fallback = "/your-impact") {
+    const safeFallback =
+      typeof fallback === "string" && fallback.trim().startsWith("/")
+        ? fallback.trim()
+        : "/your-impact";
+
+    if (!raw || typeof raw !== "string") return safeFallback;
+
+    const value = raw.trim();
+    if (!value) return safeFallback;
+    if (value.startsWith("/")) return value;
+
+    // Same reasoning as canonicalLoginPath: without a trusted origin we only
+    // accept relative paths. This prevents open-redirect configuration bugs.
+    return safeFallback;
+  }
+
   const cfg = {
     // Core Supabase project (for auth + data)
     SUPABASE_URL:
@@ -33,7 +50,10 @@ export default async function handler(req) {
 
     // Marketing / get-started link overrides
     HF_GET_STARTED_URL:       process.env.NEXT_PUBLIC_HF_GET_STARTED_URL       || "",
-    HF_GET_STARTED_REDIRECT:  process.env.NEXT_PUBLIC_HF_GET_STARTED_REDIRECT  || "/your-impact",
+    HF_GET_STARTED_REDIRECT: canonicalRedirectPath(
+      process.env.NEXT_PUBLIC_HF_GET_STARTED_REDIRECT,
+      "/your-impact"
+    ),
 
     // 🔑 Canonical login path on your domain
     // Everything should go through this (HayloAuth.login / gate / admin-guard / /login forwarder).

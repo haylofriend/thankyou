@@ -8,6 +8,8 @@
     supa: null
   };
 
+  var DEFAULT_REDIRECT_PATH = "/your-impact";
+
   // -------- Env Loader (reads /env.js which sets window.LOGIN_PATH, SUPABASE_URL, etc.) --------
   function loadEnv() {
     if (STATE.envPromise) return STATE.envPromise;
@@ -135,8 +137,27 @@
     }
   }
 
+  function preferredRedirectPath() {
+    var fallback = DEFAULT_REDIRECT_PATH;
+    var candidate = "";
+
+    if (typeof W.HF_GET_STARTED_REDIRECT === "string") {
+      candidate = W.HF_GET_STARTED_REDIRECT.trim();
+    }
+
+    if (!candidate && typeof W.__HF_DEFAULT_REDIRECT_PATH === "string") {
+      candidate = W.__HF_DEFAULT_REDIRECT_PATH.trim();
+    }
+
+    if (!candidate && typeof W.HF_DASHBOARD_URL === "string") {
+      candidate = W.HF_DASHBOARD_URL.trim();
+    }
+
+    return normalizeRedirect(candidate || fallback, fallback);
+  }
+
   function dash() {
-    return (W.HF_DASHBOARD_URL || "/your-impact");
+    return preferredRedirectPath();
   }
 
   function canonicalLoginPath(raw) {

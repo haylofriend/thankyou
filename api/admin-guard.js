@@ -7,6 +7,46 @@
 // Canonical login path = window.LOGIN_PATH || "/auth/google"
 
 (function () {
+  var DEFAULT_REDIRECT = "/your-impact";
+
+  function sanitizeRedirect(raw, fallback) {
+    var safeFallback = (typeof fallback === "string" && fallback.trim()) ? fallback.trim() : DEFAULT_REDIRECT;
+    var candidate = (typeof raw === "string") ? raw.trim() : "";
+    if (!candidate) return safeFallback;
+
+    if (candidate.startsWith("http://") || candidate.startsWith("https://")) {
+      try {
+        var origin = typeof location !== "undefined" && location.origin ? location.origin : "";
+        var url = new URL(candidate, origin || "https://www.haylofriend.com");
+        if (origin && url.origin !== origin) return safeFallback;
+        return url.pathname + (url.search || "") + (url.hash || "");
+      } catch (_) {
+        return safeFallback;
+      }
+    }
+
+    if (candidate.charAt(0) !== "/") return safeFallback;
+    return candidate;
+  }
+
+  function defaultRedirectPath() {
+    if (typeof window.HF_GET_STARTED_REDIRECT === "string") {
+      var override = sanitizeRedirect(window.HF_GET_STARTED_REDIRECT, DEFAULT_REDIRECT);
+      if (override) return override;
+    }
+
+    if (typeof window.HF_DASHBOARD_URL === "string") {
+      var legacy = sanitizeRedirect(window.HF_DASHBOARD_URL, DEFAULT_REDIRECT);
+      if (legacy) return legacy;
+    }
+
+    if (typeof window.__HF_DEFAULT_REDIRECT_PATH === "string" && window.__HF_DEFAULT_REDIRECT_PATH) {
+      return sanitizeRedirect(window.__HF_DEFAULT_REDIRECT_PATH, DEFAULT_REDIRECT);
+    }
+
+    return DEFAULT_REDIRECT;
+  }
+
   /**
    * Safely extracts a same-origin redirect target.
    * Prevents open-redirect vulnerabilities.
@@ -68,7 +108,7 @@
    */
   async function enforceAdmin() {
     // Get dashboard fallback from env, or use the default.
-    var fallbackTarget = (window.HF_DASHBOARD_URL || "/your-impact");
+    var fallbackTarget = defaultRedirectPath();
     var redirectTarget = safeRedirectTarget(fallbackTarget);
 
     // If HayloAuth is not loaded yet, redirect through login.
