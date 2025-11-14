@@ -7,43 +7,69 @@
   <script src="/env.js"></script>
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
-    // Minimal, dependency-free launcher for Supabase Google auth.
-    (function () {
-      function q(name){ return new URL(location.href).searchParams.get(name) }
-      function toAbs(path){ try{ return new URL(path, location.origin).toString() }catch(_){ return location.origin + (path||'/' ) } }
+    (async function () {
+      const params = new URLSearchParams(location.search);
+      const redirectParam = params.get('redirect') || '/your-impact';
 
-      var SUPABASE_URL = (window.NEXT_PUBLIC_SUPABASE_URL||'').trim();
-      var ANON = (window.NEXT_PUBLIC_SUPABASE_ANON_KEY||'').trim();
+      const redirectPath =
+        redirectParam.startsWith('/') ? redirectParam : '/your-impact';
 
-      // Pick redirect target:
-      // 1) explicit ?redirect=… wins
-      // 2) legacy ?autostart=1 falls back to /your-impact
-      // 3) final fallback: /your-impact
-      var redirectParam = q('redirect');
-      var autostart = q('autostart');
-      var redirectPath = redirectParam || (autostart ? '/your-impact' : '/your-impact');
+      const SUPABASE_URL = window.SUPABASE_URL || '';
+      const SUPABASE_KEY = window.SUPABASE_ANON_KEY || '';
 
-      // If already signed in, just go to the redirect target.
-      try {
-        var hasSb = document.cookie.match(/(?:^|;\s*)sb-access-token=/) ||
-                    document.cookie.match(/(?:^|;\s*)supabase.auth.token=/);
-        if (hasSb) { location.replace(toAbs(redirectPath)); return; }
-      } catch(_){}
-
-      if(!SUPABASE_URL || !ANON){
-        // Fail safe: bounce to public site if env missing
-        location.replace(toAbs(redirectPath)); return;
+      if (!SUPABASE_URL || !SUPABASE_KEY || !window.supabase) {
+        console.error('Supabase env not configured on /auth/google');
+        // If we can’t read Supabase here, send them back to /login to try again.
+        location.replace(
+          '/login?redirect=' + encodeURIComponent(redirectPath)
+        );
+        return;
       }
 
-      // Build Supabase authorize URL for Google
-      var authorize = new URL('/auth/v1/authorize', SUPABASE_URL);
-      authorize.searchParams.set('provider', 'google');
-      authorize.searchParams.set('redirect_to', toAbs(redirectPath));
+      const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-      // Optional UX: carry through any state you want (nonce, etc.)
-      // authorize.searchParams.set('scopes','');
+      // 1) If we already have a session, just go to the target page.
+      try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) {
+          location.replace(redirectPath);
+          return;
+        }
+      } catch (e) {
+        console.warn('getSession failed on /auth/google', e);
+      }
 
-      location.replace(authorize.toString());
+      // 2) If this URL contains tokens in the hash, we just returned from Supabase/Google.
+      const hash = location.hash || '';
+      if (hash.includes('access_token=')) {
+        const hashParams = new URLSearchParams(hash.slice(1));
+
+        const access_token = hashParams.get('access_token');
+        const refresh_token = hashParams.get('refresh_token');
+
+        if (access_token && refresh_token) {
+          try {
+            await supabaseClient.auth.setSession({
+              access_token,
+              refresh_token
+            });
+          } catch (e) {
+            console.error('Error setting Supabase session from hash', e);
+          }
+        }
+
+        // Clear hash so we don’t reprocess it
+        history.replaceState(null, '', location.pathname + location.search);
+
+        // Now go to target page
+        location.replace(redirectPath);
+        return;
+      }
+
+      // 3) No session and no tokens? We probably hit this URL directly → send back to /login.
+      location.replace(
+        '/login?redirect=' + encodeURIComponent(redirectPath)
+      );
     })();
   </script>
   <style>

@@ -7,53 +7,62 @@
 
   <!-- Runtime env (gives us HF_DASHBOARD_URL for safe fallback + LOGIN_PATH) -->
   <script src="/env.js"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
   <script>
-    (function () {
-      function normalizeRedirect(value, fallback) {
-        if (!value) return fallback;
-        try {
-          var url = new URL(value, location.origin);
-          if (url.origin !== location.origin) return fallback;
-          return url.pathname + (url.search || '') + (url.hash || '');
-        } catch (_) {
-          return fallback;
-        }
+    (async function () {
+      const params = new URLSearchParams(location.search);
+      const redirectParam = params.get('redirect') || '/your-impact';
+
+      const redirectPath =
+        redirectParam.startsWith('/') ? redirectParam : '/your-impact';
+
+      const SUPABASE_URL = window.SUPABASE_URL || '';
+      const SUPABASE_KEY = window.SUPABASE_ANON_KEY || '';
+
+      if (!SUPABASE_URL || !SUPABASE_KEY || !window.supabase) {
+        console.error('Supabase env not configured on /login');
+        // In worst case, go straight to dashboard and let that page handle auth.
+        location.replace(redirectPath);
+        return;
       }
 
-      function canonicalLoginPath(raw) {
-        var fallback = '/auth/google';
-        if (typeof raw !== 'string') return fallback;
-        var value = raw.trim();
-        if (!value) return fallback;
-        if (value.startsWith('http://') || value.startsWith('https://')) {
-          try {
-            var url = new URL(value, location.origin);
-            if (url.origin !== location.origin) return fallback;
-            return url.pathname + (url.search || '') + (url.hash || '');
-          } catch (_) {
-            return fallback;
+      const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+      // 1) If already signed in, just go to the target page.
+      try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) {
+          location.replace(redirectPath);
+          return;
+        }
+      } catch (e) {
+        console.warn('getSession failed on /login, continuing to OAuth', e);
+      }
+
+      // 2) Prevent multiple OAuth starts
+      if (window.__hayloLoginStarted) return;
+      window.__hayloLoginStarted = true;
+
+      // 3) Start Google OAuth and send user back to /auth/google as callback
+      try {
+        const { error } = await supabaseClient.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo:
+              location.origin +
+              '/auth/google?redirect=' +
+              encodeURIComponent(redirectPath)
           }
+        });
+
+        if (error) {
+          console.error('Google OAuth error on /login', error);
+          alert('Unable to start Google sign-in. Please try again.');
         }
-        if (value.charAt(0) !== '/') return fallback;
-        return value;
-      }
-
-      function go() {
-        var params = new URLSearchParams(location.search);
-        var fallback = window.HF_DASHBOARD_URL || '/your-impact';
-        var redirectPath = normalizeRedirect(params.get('redirect') || '', fallback);
-
-        // Canonical login path: window.LOGIN_PATH || /auth/google
-        var loginPath = canonicalLoginPath(window.LOGIN_PATH);
-        var target = loginPath + '?redirect=' + encodeURIComponent(redirectPath);
-        location.replace(target);
-      }
-
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', go, { once: true });
-      } else {
-        go();
+      } catch (e) {
+        console.error('Unexpected error starting sign-in from /login', e);
+        alert('Something went wrong starting sign-in.');
       }
     })();
   </script>
