@@ -9,6 +9,7 @@
 
   <!-- Runtime env (Supabase URL, backend endpoints, etc.) -->
   <script src="/env.js"></script>
+  <script defer src="/haylo-auth.js"></script>
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
   <script src="https://cdn.tailwindcss.com"></script>
@@ -47,7 +48,10 @@
         <div class="w-8 h-8 rounded-md animate-pulse-glow" style="background:linear-gradient(135deg,var(--acc),#8acbff)"></div>
         <div class="text-sm tracking-[.14em] uppercase text-white/80">Thank‑You</div>
       </div>
-      <a id="ctaSignInTop" href="#signup" class="text-xs text-white/70 hover:text-white">Get your link</a>
+      <a id="ctaSignInTop"
+         href="#signup"
+         data-get-started
+         class="text-xs text-white/70 hover:text-white">Get your link</a>
     </header>
 
     <!-- GREETING -->
@@ -129,7 +133,10 @@
     </section>
 
     <!-- STICKY SIGNUP NUDGE -->
-    <a id="stickySignup" href="#signup" class="fixed left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:right-auto max-w-[520px] bottom-6 tap glass rounded-2xl px-4 py-3 flex items-center justify-between border border-white/10">
+    <a id="stickySignup"
+       href="#signup"
+       data-get-started
+       class="fixed left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:right-auto max-w-[520px] bottom-6 tap glass rounded-2xl px-4 py-3 flex items-center justify-between border border-white/10">
       <div class="text-sm">Love this flow? <span class="text-white/80">Get your own link</span></div>
       <div class="text-xs px-3 py-1 rounded-full border border-white/20">Free to start</div>
     </a>
@@ -145,7 +152,11 @@
         <p class="text-white/80 mt-2">That felt good, right? Keep the ripple going.</p>
         <div class="grid grid-cols-2 gap-2 mt-4">
           <a id="ctaShare" href="#" class="tap block py-3 rounded-xl bg-white/10 hover:bg-white/20">Share this moment</a>
-          <a id="ctaSignup" href="#signup" class="tap block py-3 rounded-xl" style="background:linear-gradient(135deg,var(--acc),#8acbff)">Get your link</a>
+          <a id="ctaSignup"
+             href="#signup"
+             data-get-started
+             class="tap block py-3 rounded-xl"
+             style="background:linear-gradient(135deg,var(--acc),#8acbff)">Get your link</a>
         </div>
         <button id="closeWow" class="mt-4 text-white/60 text-sm">Close</button>
       </div>
@@ -157,7 +168,7 @@
     <div class="mt-12 text-center">
       <h3 class="text-2xl font-semibold">Start receiving thank‑you tips</h3>
       <p class="text-white/70 mt-2">Create a free link in 30 seconds. Works with Apple Pay & Google Pay.</p>
-      <a href="/auth/google?redirect=/your-impact" class="inline-flex items-center gap-2 mt-4 px-5 py-3 rounded-2xl" style="background:linear-gradient(135deg,var(--acc),#8acbff)">
+      <a href="#signup" data-get-started class="inline-flex items-center gap-2 mt-4 px-5 py-3 rounded-2xl" style="background:linear-gradient(135deg,var(--acc),#8acbff)">
         <span>Claim your link</span>
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
       </a>
