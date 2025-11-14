@@ -112,6 +112,25 @@
 <body>
 <div id="app" class="max-w-[1160px] mx-auto px-6 py-8 pb-28" v-cloak>
 
+  <!-- WELCOME TOAST -->
+  <div v-if="welcomeToast" class="fixed top-4 right-4 z-50">
+    <div class="glass rounded-2xl px-4 py-3 text-sm flex items-center gap-3 shadow-xl border border-white/10">
+      <div class="text-2xl">👋</div>
+      <div class="flex-1">
+        <div class="font-semibold">{{ welcomeToast.title }}</div>
+        <div class="text-xs text-white/70 mt-0.5">
+          {{ welcomeToast.body }}
+        </div>
+      </div>
+      <button
+        type="button"
+        class="text-xs text-white/60 hover:text-white"
+        @click="welcomeToast = null">
+        Dismiss
+      </button>
+    </div>
+  </div>
+
   <!-- AUTH-GATE OVERLAY -->
   <div v-if="auth.loading" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
     <div class="glass rounded-2xl p-6 w-[420px]">
@@ -364,6 +383,7 @@ createApp({
     const events = ref([]);
     const openCopilot = ref(false);
     const showBurst = ref(false);
+    const welcomeToast = ref(null);
 
     // Projections
     const sharesPerDay = ref(10);
@@ -468,6 +488,29 @@ createApp({
       payoutNextAmount.value = Math.max(kpi.value.approved - (sums?.paid||0), 0);
       payoutNextLabel.value = 'Friday';
       payoutPct.value = Math.min(100, Math.round((payoutNextAmount.value/100)*100));
+
+      // --- Welcome toast (first-time per user) ---
+      try {
+        const session = auth.value.session;
+        const userId = session && session.user && session.user.id;
+        if (userId && window.localStorage) {
+          const key = "hf_welcomed_" + userId;
+          if (!localStorage.getItem(key)) {
+            welcomeToast.value = {
+              title: "Welcome, " + (displayName.value || "friend") + " 👋",
+              body: "You’re all set. This is your live Thank-You Link dashboard."
+            };
+            localStorage.setItem(key, "1");
+            setTimeout(() => {
+              if (welcomeToast.value) {
+                welcomeToast.value = null;
+              }
+            }, 6000);
+          }
+        }
+      } catch (err) {
+        console.warn("Welcome toast error", err);
+      }
     }
 
     // little helper on ref
@@ -557,7 +600,9 @@ createApp({
       payoutNextAmount, payoutNextLabel, payoutPct,
       aiScripts, affiliates, openCopilot, tasks, showBurst,
       // actions
-      shareUrl, eventColor, copyLink, downloadQR, share, copyDM, genScripts, genAffiliates, maybeCelebrate, openPublic
+      shareUrl, eventColor, copyLink, downloadQR, share, copyDM, genScripts, genAffiliates, maybeCelebrate, openPublic,
+      // NEW
+      welcomeToast
     };
   }
 }).mount('#app');
