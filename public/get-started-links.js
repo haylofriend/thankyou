@@ -11,17 +11,34 @@
     if (typeof raw !== "string") return fallback;
     var value = raw.trim();
     if (!value) return fallback;
+
+    // Prevent accidental self-loop: /login should never be the loginPath
+    if (value === "/login") return fallback;
+
+    var origin = "";
+    try {
+      if (typeof location !== "undefined" && location.origin) {
+        origin = location.origin;
+      }
+    } catch (_) {}
+
     if (value.startsWith("http://") || value.startsWith("https://")) {
       try {
-        var origin = typeof location !== "undefined" && location.origin ? location.origin : "";
         var url = new URL(value, origin || "https://www.haylofriend.com");
         if (origin && url.origin !== origin) return fallback;
-        return url.pathname + (url.search || "") + (url.hash || "");
+
+        // Also guard against absolute URL that resolves to /login
+        var path = url.pathname + (url.search || "") + (url.hash || "");
+        if (path === "/login" || path.startsWith("/login?")) return fallback;
+
+        return path;
       } catch (_) {
         return fallback;
       }
     }
+
     if (value.charAt(0) !== "/") return fallback;
+    if (value === "/login" || value.startsWith("/login?")) return fallback;
     return value;
   }
 

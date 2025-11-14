@@ -5,11 +5,34 @@ export const config = {
 export default async function handler(req) {
   function canonicalLoginPath(raw) {
     const fallback = "/auth/google";
-    if (!raw || typeof raw !== "string") return fallback;
+    if (typeof raw !== "string") return fallback;
     const value = raw.trim();
     if (!value) return fallback;
-    if (value.startsWith("/")) return value;
-    return fallback;
+
+    if (value === "/login") return fallback;
+
+    const origin =
+      process.env.NEXT_PUBLIC_SITE_ORIGIN ||
+      process.env.SITE_ORIGIN ||
+      "";
+
+    if (value.startsWith("http://") || value.startsWith("https://")) {
+      try {
+        const url = new URL(value, origin || "https://www.haylofriend.com");
+        if (origin && url.origin !== origin) return fallback;
+
+        const path = url.pathname + (url.search || "") + (url.hash || "");
+        if (path === "/login" || path.startsWith("/login?")) return fallback;
+
+        return path;
+      } catch (_) {
+        return fallback;
+      }
+    }
+
+    if (value.charAt(0) !== "/") return fallback;
+    if (value === "/login" || value.startsWith("/login?")) return fallback;
+    return value;
   }
 
   const cfg = {
