@@ -12,8 +12,9 @@
       function q(name){ return new URL(location.href).searchParams.get(name) }
       function toAbs(path){ try{ return new URL(path, location.origin).toString() }catch(_){ return location.origin + (path||'/' ) } }
 
-      var SUPABASE_URL = (window.NEXT_PUBLIC_SUPABASE_URL||'').trim();
-      var ANON = (window.NEXT_PUBLIC_SUPABASE_ANON_KEY||'').trim();
+var SUPABASE_URL = (window.SUPABASE_URL || '').trim();
+var ANON = (window.SUPABASE_ANON_KEY || '').trim();
+
 
       // Pick redirect target:
       // 1) explicit ?redirect=… wins
