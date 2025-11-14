@@ -96,12 +96,11 @@
     html,body{height:100%;background:var(--bg)!important}
     body{margin:0;min-height:100vh;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
     *,*::before,*::after{box-sizing:border-box}
+    [v-cloak]{display:none!important}
     .glass{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));border:1px solid var(--hair);box-shadow:0 8px 24px rgba(0,0,0,.35);backdrop-filter:blur(10px)}
     .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid var(--hair);background:rgba(255,255,255,.05)}
     .gradient-text{background:linear-gradient(135deg,var(--acc),#8acbff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
     .ripple-effect{position:absolute;border-radius:50%;background:rgba(77,163,255,.4);transform:scale(0);animation:ripple 1.5s linear;pointer-events:none}
-    .fade-in{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
-    .fade-in.visible{opacity:1;transform:translateY(0)}
     .tick{position:relative}
     .tick:after{content:'';position:absolute;left:0;bottom:-2px;height:2px;width:100%;background:linear-gradient(90deg,transparent,rgba(77,163,255,.6),transparent)}
     .dot{width:6px;height:6px;border-radius:999px;background:var(--acc)}
@@ -112,27 +111,6 @@
 <body>
 <div id="app" class="max-w-[1160px] mx-auto px-6 py-8 pb-28" v-cloak>
 
-  <!-- AUTH-GATE OVERLAY -->
-  <div v-if="auth.loading" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-    <div class="glass rounded-2xl p-6 w-[420px]">
-      <div class="text-xs uppercase text-white/60">Checking sign-in…</div>
-      <div class="mt-2 text-lg">Please wait</div>
-    </div>
-  </div>
-
-  <div v-if="!auth.loading && !auth.session" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-    <div class="glass rounded-2xl p-6 w-[460px]">
-      <div class="text-xs uppercase text-white/60">Sign in required</div>
-      <h3 class="text-xl font-semibold mt-1">Welcome back</h3>
-      <p class="text-white/70 text-sm mt-2">Use your email to receive a magic link. You'll return here automatically.</p>
-      <form class="mt-3 space-y-2" @submit.prevent="sendMagic">
-        <input v-model="auth.email" type="email" placeholder="you@restaurant.com" required class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 outline-none"/>
-        <button class="pill text-sm" type="submit" :disabled="auth.sending">{{ auth.sending ? 'Sending…' : 'Send magic link' }}</button>
-      </form>
-      <div class="text-xs text-white/50 mt-3">Trouble? <button class="underline" @click="goLogin">Open full login</button></div>
-    </div>
-  </div>
-
   <!-- NAV -->
   <nav class="sticky top-0 z-40 backdrop-blur bg-black/30 border-b border-white/10 mb-6">
     <div class="max-w-[1160px] mx-auto px-6 py-3 flex items-center justify-between">
@@ -141,10 +119,8 @@
         <div class="tracking-[.14em] uppercase text-xs text-white/90">Thank-You Link</div>
       </div>
       <div class="flex items-center gap-2">
-        <button class="pill relative overflow-hidden" @click="copyLink"><span class="text-xs">Copy Link</span>
-          <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M8 4a3 3 0 013-3h5a3 3 0 013 3v5a3 3 0 01-3 3h-1V8a4 4 0 00-4-4H8V4z"/><path d="M2 8a4 4 0 014-4h5a4 4 0 014 4v5a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/></svg>
-        </button>
-        <button class="pill relative overflow-hidden text-xs" @click="openPublic">Open public page</button>
+        <button class="pill" @click="copyLink">Copy Link</button>
+        <button class="pill" @click="openPublic">Open public page</button>
         <img :alt="displayName" class="w-8 h-8 rounded-full border border-white/20" :src="avatarUrl">
       </div>
     </div>
@@ -154,24 +130,24 @@
   <section class="grid md:grid-cols-4 gap-3">
     <div class="glass rounded-2xl p-4">
       <div class="text-xs uppercase text-white/60">Today so far</div>
-      <div class="text-3xl font-semibold mt-1">$ {{ todayDisplay }}</div>
+      <div class="text-3xl font-semibold mt-1">{{ todayDisplay }}</div>
       <div class="text-xs text-white/60 mt-1 flex items-center gap-2"><span class="dot animate-pulse"></span>live ticks each tip</div>
     </div>
     <div class="glass rounded-2xl p-4">
       <div class="text-xs uppercase text-white/60">This week on pace</div>
-      <div class="text-3xl font-semibold mt-1">$ {{ weekPaceDisplay }}</div>
+      <div class="text-3xl font-semibold mt-1">{{ weekPaceDisplay }}</div>
       <div class="h-1 w-full bg-white/10 rounded mt-3 overflow-hidden">
         <div :style="{width: weekPct + '%'}" class="h-1 bg-[var(--acc)] transition-all"></div>
       </div>
     </div>
     <div class="glass rounded-2xl p-4">
       <div class="text-xs uppercase text-white/60">Earnings / minute</div>
-      <div class="text-3xl font-semibold mt-1 tick">$ {{ perMinuteDisplay }}</div>
+      <div class="text-3xl font-semibold mt-1 tick">{{ perMinuteDisplay }}</div>
       <div class="text-xs text-white/60 mt-1">AHA: money moves while you sleep</div>
     </div>
     <div class="glass rounded-2xl p-4">
       <div class="text-xs uppercase text-white/60">Conversion</div>
-      <div class="text-3xl font-semibold mt-1">{{ (convRate*100).toFixed(0) }}%</div>
+      <div class="text-3xl font-semibold mt-1">{{ Math.round(convRate * 100) }}%</div>
       <div class="text-xs text-white/60 mt-1">visits → thank-yous</div>
     </div>
   </section>
@@ -185,16 +161,28 @@
       <div class="mt-4 space-y-3">
         <div>
           <div class="flex justify-between text-xs text-white/60 mb-1"><span>Shares/day</span><span>{{ sharesPerDay }}</span></div>
-          <input type="range" min="1" max="50" v-model.number="sharesPerDay" class="w-full">
+          <input type="range" min="1" max="50" step="1" v-model.number="sharesPerDay" class="w-full">
         </div>
         <div class="grid grid-cols-3 gap-3 text-sm">
-          <div><div class="text-white/60 text-xs mb-1">Tip rate</div><input type="range" min="5" max="80" v-model.number="assumeTipRate" class="w-full"><div class="mt-1">{{ assumeTipRate }}%</div></div>
-          <div><div class="text-white/60 text-xs mb-1">Avg tip</div><input type="range" min="1" max="10" v-model.number="assumeAvgTip" class="w-full"><div class="mt-1">$ {{ assumeAvgTip }}</div></div>
-          <div><div class="text-white/60 text-xs mb-1">Ref cut</div><input type="range" min="0" max="100" v-model.number="assumeRefCents" class="w-full"><div class="mt-1">{{ assumeRefCents }}¢</div></div>
+          <div>
+            <div class="text-white/60 text-xs mb-1">Tip rate</div>
+            <input type="range" min="0" max="1" step="0.01" v-model.number="assumeTipRate" class="w-full">
+            <div class="mt-1">{{ Math.round(assumeTipRate * 100) }}%</div>
+          </div>
+          <div>
+            <div class="text-white/60 text-xs mb-1">Avg tip</div>
+            <input type="range" min="100" max="3000" step="50" v-model.number="assumeAvgTip" class="w-full">
+            <div class="mt-1">{{ asCurrency(assumeAvgTip) }}</div>
+          </div>
+          <div>
+            <div class="text-white/60 text-xs mb-1">Referral bonus</div>
+            <input type="range" min="0" max="500" step="10" v-model.number="assumeRefCents" class="w-full">
+            <div class="mt-1">{{ asCurrency(assumeRefCents) }}</div>
+          </div>
         </div>
         <div class="mt-2 p-3 rounded-xl bg-white/5 border border-white/10">
           <div class="text-xs uppercase text-white/60">30-day potential</div>
-          <div class="text-3xl font-semibold mt-1">$ {{ monthlyPotential.toFixed(0) }}</div>
+          <div class="text-3xl font-semibold mt-1">{{ asCurrency(monthlyPotential) }}</div>
           <div class="text-xs text-white/60 mt-1">Assumptions adjustable anytime</div>
         </div>
       </div>
@@ -207,44 +195,46 @@
       <div class="grid grid-cols-3 gap-3 mt-4 text-sm">
         <div class="glass rounded-xl p-3 text-center">
           <div class="text-white/60 text-xs">Tips</div>
-          <div class="text-xl font-medium">{{ kpi.tips }}</div>
+          <div class="text-xl font-medium">{{ kpi.tipsCount }}</div>
         </div>
         <div class="glass rounded-xl p-3 text-center">
-          <div class="text-white/60 text-xs">Connections</div>
-          <div class="text-xl font-medium">{{ kpi.referrals }}</div>
+          <div class="text-white/60 text-xs">Shares</div>
+          <div class="text-xl font-medium">{{ kpi.sharesCount }}</div>
         </div>
         <div class="glass rounded-xl p-3 text-center">
-          <div class="text-white/60 text-xs">Approved</div>
-          <div class="text-xl font-medium">$ {{ kpi.approved.toFixed(2) }}</div>
+          <div class="text-white/60 text-xs">Reviews</div>
+          <div class="text-xl font-medium">{{ kpi.reviewsCount }}</div>
         </div>
+      </div>
+      <div class="mt-4">
+        <div class="text-xs uppercase text-white/60">Total received</div>
+        <div class="text-lg font-semibold mt-1">{{ asCurrency(kpi.totalCents) }}</div>
       </div>
       <div class="mt-4">
         <div class="text-xs uppercase text-white/60">Payout</div>
         <div class="flex items-center justify-between mt-1">
-          <div class="text-lg font-semibold">$ {{ payoutNextAmount.toFixed(2) }}</div>
+          <div class="text-lg font-semibold">{{ asCurrency(payoutNextAmount) }}</div>
           <div class="text-sm text-white/60">{{ payoutNextLabel }}</div>
         </div>
-        <div class="h-1 w-full bg-white/10 rounded mt-2 overflow-hidden"><div :style="{width: payoutPct + '%'}" class="h-1 bg-[var(--acc)] transition-all"></div></div>
+        <div class="h-1 w-full bg-white/10 rounded mt-2 overflow-hidden">
+          <div :style="{width: Math.round(payoutPct * 100) + '%'}" class="h-1 bg-[var(--acc)] transition-all"></div>
+        </div>
       </div>
     </div>
 
     <!-- Bridge the Gap -->
     <div class="glass rounded-2xl p-5">
       <div class="text-xs uppercase text-white/60">Bridge</div>
-      <h3 class="text-2xl font-semibold mt-1">Next-best actions (AI-assisted)</h3>
+      <h3 class="text-2xl font-semibold mt-1">Next-best actions</h3>
       <ul class="mt-3 space-y-2">
-        <li v-for="(t, i) in tasks" :key="i" class="flex items-center justify-between p-3 rounded-xl border border-white/10 bg-white/5">
+        <li v-for="task in tasks" :key="task.id" class="flex items-center justify-between p-3 rounded-xl border border-white/10 bg-white/5">
           <div class="flex items-center gap-3">
-            <input type="checkbox" class="w-4 h-4 accent-[var(--acc)]" v-model="t.done" @change="maybeCelebrate">
-            <div>
-              <div class="text-sm font-medium">{{ t.title }}</div>
-              <div class="text-xs text-white/60">{{ t.meta }}</div>
-            </div>
+            <input type="checkbox" class="w-4 h-4 accent-[var(--acc)]" v-model="task.done" @change="maybeCelebrate">
+            <div class="text-sm font-medium">{{ task.label }}</div>
           </div>
-          <button class="pill relative overflow-hidden text-xs" @click="t.act()">{{ t.cta }}</button>
         </li>
       </ul>
-      <button class="mt-3 w-full glass px-4 py-2 rounded-xl text-sm" @click="openCopilot=true">Open AI Co-Pilot</button>
+      <button class="mt-3 w-full glass px-4 py-2 rounded-xl text-sm" @click="openCopilot">Open AI Co-Pilot</button>
     </div>
   </section>
 
@@ -253,12 +243,13 @@
     <div class="lg:col-span-2 glass rounded-2xl p-5">
       <div class="text-xs uppercase text-white/60">Your Gratitude Ledger</div>
       <div class="mt-3 space-y-2 max-h-[340px] overflow-auto pr-1">
-        <div v-for="(e, idx) in events" :key="idx" class="flex items-center justify-between p-3 rounded-xl border border-white/10 bg-white/5">
+        <div v-for="e in events" :key="e.id" class="flex items-center justify-between p-3 rounded-xl border border-white/10 bg-white/5">
           <div class="flex items-center gap-3">
-            <div class="w-2 h-2 rounded-full" :class="eventColor(e.type)"></div>
+            <div class="w-2 h-2 rounded-full" :class="eventColor(e)"></div>
             <div class="text-sm">{{ e.label }}</div>
           </div>
-          <div class="text-sm text-white/70">{{ e.value }}</div>
+          <div class="text-sm text-white/70" v-if="e.amount">{{ asCurrency(e.amount) }}</div>
+          <div class="text-sm text-white/50" v-else>{{ e.type }}</div>
         </div>
         <div v-if="!events.length" class="text-white/60 text-sm">No entries yet—your first share will light this up.</div>
       </div>
@@ -269,49 +260,41 @@
       <h3 class="text-2xl font-semibold mt-1">Invite a thank-you</h3>
       <p class="text-white/70 text-sm mt-2">Use a tested script or QR.</p>
       <div class="mt-3 grid grid-cols-2 gap-2">
-        <button class="pill relative overflow-hidden text-sm" @click="share('x')">Post on X</button>
-        <button class="pill relative overflow-hidden text-sm" @click="share('sms')">Text a regular</button>
-        <button class="pill relative overflow-hidden text-sm" @click="downloadQR">Download QR</button>
-        <button class="pill relative overflow-hidden text-sm" @click="copyDM">Copy 1-line DM</button>
+        <button class="pill text-sm" @click="copyLink">Copy link</button>
+        <button class="pill text-sm" @click="share">Share now</button>
+        <button class="pill text-sm" @click="downloadQR">Download QR</button>
+        <button class="pill text-sm" @click="copyDM">Copy DM script</button>
       </div>
       <div class="mt-4 p-3 rounded-xl bg-white/5 border border-white/10 text-xs">
         “Quick thank-you link for small kindnesses—every bit helps. {{ shareUrl }}”
       </div>
+      <canvas id="qr-canvas" class="hidden"></canvas>
     </div>
   </section>
 
-  <!-- AI Co-Pilot (drawer) -->
-  <div v-if="openCopilot" class="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center md:justify-center p-4">
-    <div class="glass rounded-2xl p-5 w-full max-w-2xl">
-      <div class="flex items-center justify-between">
-        <div>
-          <div class="text-xs uppercase text-white/60">AI Co-Pilot</div>
-          <h3 class="text-xl font-semibold">Turn gratitude into revenue</h3>
-        </div>
-        <button class="pill text-xs" @click="openCopilot=false">Close</button>
-      </div>
-      <div class="mt-4 grid md:grid-cols-2 gap-4">
-        <div class="rounded-xl border border-white/10 p-3 bg-white/5">
-          <div class="text-xs uppercase text-white/60">Scripts</div>
-          <ul class="mt-2 space-y-2 text-sm">
-            <li v-for="(s, i) in aiScripts" :key="i" class="p-2 rounded-lg bg-black/20 border border-white/10">{{ s }}</li>
-          </ul>
-          <button class="mt-3 pill text-xs" @click="genScripts">Regenerate</button>
-        </div>
-        <div class="rounded-xl border border-white/10 p-3 bg-white/5">
-          <div class="text-xs uppercase text-white/60">Affiliate picks</div>
-          <ul class="mt-2 space-y-2 text-sm">
-            <li v-for="(a, i) in affiliates" :key="i" class="p-2 rounded-lg bg-black/20 border border-white/10">
-              <div class="font-medium">{{ a.title }}</div>
-              <div class="text-white/60 text-xs">{{ a.pitch }}</div>
-            </li>
-          </ul>
-          <button class="mt-3 pill text-xs" @click="genAffiliates">Refresh</button>
-        </div>
-      </div>
-      <div class="mt-4 text-xs text-white/60">*All content is yours to edit—AI drafts speed the first mile.</div>
+  <!-- AI Drawer content (inline) -->
+  <section class="mt-8 grid md:grid-cols-2 gap-6">
+    <div class="glass rounded-2xl p-5">
+      <div class="text-xs uppercase text-white/60">DM & Social Scripts</div>
+      <ul class="mt-3 space-y-3 text-sm">
+        <li v-for="script in aiScripts" :key="script.id" class="p-3 rounded-xl bg-black/20 border border-white/10">
+          <div class="font-medium mb-1">{{ script.label }}</div>
+          <div class="text-white/70">{{ script.text }}</div>
+        </li>
+      </ul>
+      <button class="mt-3 pill text-xs" @click="genScripts">Regenerate</button>
     </div>
-  </div>
+    <div class="glass rounded-2xl p-5">
+      <div class="text-xs uppercase text-white/60">Affiliate introductions</div>
+      <ul class="mt-3 space-y-3 text-sm">
+        <li v-for="affiliate in affiliates" :key="affiliate.id" class="p-3 rounded-xl bg-black/20 border border-white/10">
+          <div class="font-medium mb-1">{{ affiliate.label }}</div>
+          <div class="text-white/70">{{ affiliate.text }}</div>
+        </li>
+      </ul>
+      <button class="mt-3 pill text-xs" @click="genAffiliates">Refresh</button>
+    </div>
+  </section>
 
   <!-- Minimal celebration -->
   <div class="mini-burst" :class="{active: showBurst}">
@@ -339,30 +322,134 @@ const supabase = (SUPABASE_URL && SUPABASE_KEY && window.supabase)
 // ===== UTIL =====
 async function copyToClipboard(text) {
   try {
-    if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; }
-    const ta = document.createElement('textarea'); ta.value = text; ta.style.position='fixed'; ta.style.left='-9999px'; ta.style.top='-9999px';
-    document.body.appendChild(ta); ta.focus(); ta.select(); const ok=document.execCommand('copy'); document.body.removeChild(ta); return ok;
-  } catch (err) { alert(`Copy this link: ${text}`); return false; }
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    ta.style.top = '-9999px';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch (err) {
+    alert(`Copy this link: ${text}`);
+    return false;
+  }
 }
 
 function promotePrettyUrl(slugValue) {
   try {
     const value = typeof slugValue === 'string' ? slugValue.trim() : '';
-    if (!value || value === 'your-name') return;
-    const desiredPath = `/${encodeURIComponent(value)}/your-impact`;
-    const suffix = `${location.search || ''}${location.hash || ''}`;
-    if (location.pathname !== desiredPath) {
-      history.replaceState(null, '', `${desiredPath}${suffix}`);
-    }
-  } catch (err) {
-    console.warn('Failed to promote pretty URL', err);
+    if (!value || value === 'your-name') return '';
+    return `/@${encodeURIComponent(value.toLowerCase())}`;
+  } catch {
+    return '';
   }
 }
 
+function safeUrlJoin(base, path) {
+  try {
+    const url = new URL(base);
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    url.pathname = url.pathname.replace(/\/+$/, '') + '/' + cleanPath;
+    return url.toString();
+  } catch {
+    return base + (base.endsWith('/') ? '' : '/') + path.replace(/^\//, '');
+  }
+}
+
+function asCurrency(amountCents) {
+  try {
+    const dollars = (amountCents || 0) / 100;
+    return dollars.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  } catch {
+    return `$${((amountCents || 0) / 100).toFixed(2)}`;
+  }
+}
+
+// ===== AI SCRIPTS MOCK =====
+function buildDefaultScripts(name, slug) {
+  const who = name || 'your team';
+  const handle = slug ? `@${slug}` : '@your-handle';
+
+  return [
+    {
+      id: 'cold-dm',
+      label: 'DM script',
+      text: `Hey! We just set up a Thank-You Link so we can tip and thank our best guests directly. Want a peek? ${handle}`
+    },
+    {
+      id: 'table-tent',
+      label: 'Table tent copy',
+      text: `Scan to send gratitude. Tips, thanks, and word-of-mouth, all in one tap. Powered by Thank-You Link.`
+    },
+    {
+      id: 'staff-pitch',
+      label: 'Team huddle opener',
+      text: `We're rolling out Thank-You Link so our regulars can tip, thank, and share us. It's one tap, fully optional, and 100% human.`
+    }
+  ];
+}
+
+function buildDefaultAffiliates(name) {
+  const who = name || 'your restaurant';
+  return [
+    {
+      id: 'referral',
+      label: 'Referral message',
+      text: `We started using Thank-You Link to let guests tip & thank our team in one tap. If you'd like an intro, let me know.`
+    },
+    {
+      id: 'owner-email',
+      label: 'Owner-to-owner email',
+      text: `Subject: Quick win we've seen for staff tips\n\nWe're using Thank-You Link so guests can send tips and thanks in one tap. It's been a clean way to boost morale and word-of-mouth. Happy to share notes if useful.`
+    }
+  ];
+}
+
+// ===== STORY / KPI MOCKERS =====
+function mockEvents() {
+  const now = new Date();
+  const base = [
+    { id: 1, label: 'Google review', amount: 0,    type: 'review', time: now },
+    { id: 2, label: 'Thank-you note', amount: 500, type: 'tip',    time: now },
+    { id: 3, label: 'Shared with friend', amount: 0, type: 'share', time: now },
+    { id: 4, label: 'Thank-you link used', amount: 1200, type: 'tip', time: now }
+  ];
+  return base;
+}
+
+function computeKpi(events) {
+  const totalCents = events.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const tips = events.filter(e => e.amount > 0);
+  const shares = events.filter(e => e.type === 'share');
+  const reviews = events.filter(e => e.type === 'review');
+
+  return {
+    totalCents,
+    tipsCount: tips.length,
+    sharesCount: shares.length,
+    reviewsCount: reviews.length
+  };
+}
+
+function computePerMinute(totalCents, minutes = 1440) {
+  if (!minutes) return 0;
+  return (totalCents / minutes);
+}
+
+// ===== VUE APP =====
 createApp({
-  setup(){
+  setup() {
     // ===== AUTH STATE =====
-    const auth = ref({ loading: !!supabase, session: null, email: '', sending: false });
+    const auth = ref({ loading: !!supabase, session: null });
 
     // ===== PROFILE & UI STATE =====
     const displayName = ref('You');
@@ -372,196 +459,183 @@ createApp({
 
     const earningsToday = ref(0);
     const earningsWeek = ref(0);
-    const convRate = ref(0.28);
-    const kpi = ref({ tips: 0, referrals: 0, approved: 0 });
-    const events = ref([]);
-    const openCopilot = ref(false);
-    const showBurst = ref(false);
+    const convRate = ref(0.18);
+    const perMinute = ref(0);
+    const perMinuteDisplay = computed(() => asCurrency(Math.round(perMinute.value)));
+    const events = ref(mockEvents());
+    const kpi = ref(computeKpi(events.value));
 
-    // Projections
-    const sharesPerDay = ref(10);
-    const assumeTipRate = ref(30);
-    const assumeAvgTip = ref(3);
-    const assumeRefCents = ref(20);
+    const todayDisplay = computed(() => asCurrency(earningsToday.value));
+    const weekPaceDisplay = computed(() => asCurrency(earningsWeek.value));
+    const weekPct = computed(() => Math.round(convRate.value * 100));
 
-    // Payouts
-    const payoutNextAmount = ref(0);
-    const payoutNextLabel = ref('Next Friday');
-    const payoutPct = ref(20);
+    const sharesPerDay = ref(3);
+    const assumeTipRate = ref(0.22);
+    const assumeAvgTip = ref(900); // cents
+    const assumeRefCents = ref(250); // cents
 
-    // AI
-    const aiScripts = ref([
-      "X post: 'Shoutout to everyday helpers. If I’ve helped you, here’s a $2 thank-you link—tiny support, big momentum.'",
-      "SMS to regular: 'Grateful for you. If I’ve made your day lately, this link is how folks tip me now. No pressure, just love.'",
-      "IG caption: 'Kindness that circulates. Tap my thank-you link—every $2 keeps this going.'"
-    ]);
-    const affiliates = ref([
-      { title: "Instant QR Table Cards", pitch: "Order 10 for your counter—scan → tip. 15% cash-back via your link."},
-      { title: "Creator Banking", pitch: "No-fee payouts on Fridays; $10 referral for you + $10 for them."}
-    ]);
-
-    // ===== DERIVED =====
-    const shareUrl = computed(()=> `${THANK_HOST}/thank/${slug.value}`);
-    const perMinute = computed(()=> Math.max(earningsWeek.value,0) / (7*24*60));
-    const perMinuteDisplay = computed(()=> perMinute.value.toFixed(2));
-    const todayDisplay = computed(()=> earningsToday.value.toFixed(2));
-    const weekPaceDisplay = computed(()=> Math.max(earningsWeek.value,0).toFixed(2));
-    const weekPct = computed(()=> Math.min(100, Math.round((earningsWeek.value/100)*100)));
-    const monthlyPotential = computed(()=>{
-      const tipsPerDay = sharesPerDay.value * (assumeTipRate.value/100);
-      const tipRev = tipsPerDay * assumeAvgTip.value * 30;
-      const refRev = sharesPerDay.value * (assumeRefCents.value/100) * 30;
-      return tipRev + refRev;
+    const monthlyPotential = computed(() => {
+      const touches = sharesPerDay.value * 30;
+      const tipTouches = touches * assumeTipRate.value;
+      const directTips = tipTouches * assumeAvgTip.value;
+      const refs = touches * 0.12;
+      const refValue = refs * assumeRefCents.value;
+      return directTips + refValue;
     });
 
-    // ===== ACTIONS =====
-    function eventColor(type){ return { tip:'bg-[var(--acc)]', share:'bg-[#15c39a]', payout:'bg-[#ffcc00]' }[type] || 'bg-white/20'; }
+    const payoutNextAmount = ref(24000); // cents
+    const payoutNextLabel = ref('Payout in 3 days');
+    const payoutPct = ref(0.42);
 
-    async function copyLink(e){ createRipple(e); const ok = await copyToClipboard(shareUrl.value); events.value.unshift({label:'Link copied', value:shareUrl.value, type:'share'}); toast(ok?'Copied!':'Link ready'); }
-    function downloadQR(e){ createRipple(e); alert('Demo: Beautiful QR would generate for ' + shareUrl.value); }
-    async function share(kind){ const text = `Tiny thank-you link for little kindnesses: ${shareUrl.value}`; if(kind==='sms'){ window.open(`sms:?&body=${encodeURIComponent(text)}`,'_blank'); } if(kind==='x'){ window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}`,'_blank'); } events.value.unshift({label:'Shared invitation', value:kind.toUpperCase(), type:'share'}); }
-    async function copyDM(e){ createRipple(e); await copyToClipboard(`If I’ve helped you lately, here’s a $2 thank-you: ${shareUrl.value}`); toast('DM copied'); }
-    function genScripts(){ aiScripts.value = shuffle(aiScripts.value); toast('New scripts ready'); }
-    function genAffiliates(){ affiliates.value = shuffle(affiliates.value); toast('Updated picks'); }
+    const aiScripts = ref(buildDefaultScripts(displayName.value, slug.value));
+    const affiliates = ref(buildDefaultAffiliates(displayName.value));
     const tasks = ref([
-      { title:'Pin your link', meta:'Bio / profile / menu', cta:'Auto-copy', done:false, act:()=>copyLink(new Event('click')) },
-      { title:'Post one story', meta:'Use AI script #1', cta:'Open Co-Pilot', done:false, act:()=>openCopilot.value=true },
-      { title:'DM three regulars', meta:'Paste 1-liner', cta:'Copy DM', done:false, act:()=>copyDM(new Event('click')) },
+      { id: 'print', label: 'Print your first table tent', done: false },
+      { id: 'one-tap', label: 'Try sending a test tip from your phone', done: false },
+      { id: 'staff-huddle', label: 'Have a 10-minute team huddle about “thank-you” stories', done: false }
     ]);
-    function maybeCelebrate(){ if (tasks.value.every(t=>t.done)) { showBurst.value = true; setTimeout(()=> showBurst.value=false, 1200); } }
 
-    function toast(msg){ const div = document.createElement('div'); div.textContent = msg; div.className = 'fixed bottom-5 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full text-xs bg-white/10 backdrop-blur border border-white/10'; document.body.appendChild(div); setTimeout(()=> div.remove(), 1500); }
-    function createRipple(event){ const button = event?.currentTarget || document.activeElement; if(!button) return; const circle=document.createElement('span'); const diameter=Math.max(button.clientWidth,button.clientHeight); const radius=diameter/2; circle.style.width=circle.style.height=`${diameter}px`; const rect=button.getBoundingClientRect(); circle.style.left=`${(event?.clientX||rect.left+radius)-rect.left-radius}px`; circle.style.top =`${(event?.clientY||rect.top +radius)-rect.top -radius}px`; circle.classList.add('ripple-effect'); const old = button.getElementsByClassName('ripple-effect')[0]; if(old) old.remove(); button.style.position='relative'; button.appendChild(circle); }
+    const showBurst = ref(false);
+    let burstTimeout = null;
+    const shareUrl = computed(() => {
+      const pretty = promotePrettyUrl(slug.value);
+      if (pretty) return safeUrlJoin(THANK_HOST, pretty);
+      return safeUrlJoin(THANK_HOST, '/your-impact/demo');
+    });
 
-    function openPublic(e){ createRipple(e); window.open(shareUrl.value, '_blank', 'noopener,noreferrer'); }
+    const eventColor = (e) => {
+      if (e.amount > 0) return 'bg-[var(--good)]';
+      if (e.type === 'share') return 'bg-[var(--acc)]';
+      if (e.type === 'review') return 'bg-[var(--ink)]';
+      return 'bg-white/80';
+    };
 
-    async function sendMagic(){
-      if (!supabase) return alert('Supabase not configured');
-      auth.value.sending = true;
-      const redirectTo = new URL(window.location.href);
-      redirectTo.searchParams.set('from', 'magic');
-      const { error } = await supabase.auth.signInWithOtp({ email: auth.value.email, options: { emailRedirectTo: redirectTo.toString() } });
-      auth.value.sending = false;
-      if (error) return alert(error.message);
-      alert('Check your inbox for the sign-in link.');
+    async function copyLink() {
+      const ok = await copyToClipboard(shareUrl.value);
+      if (ok) maybeCelebrate();
     }
 
-    function goLogin(){
-      const url = new URL(LOGIN_PATH, window.location.origin);
-      url.searchParams.set('redirect', window.location.pathname);
-      window.location.href = url.toString();
+    function downloadQR() {
+      try {
+        const canvas = document.getElementById('qr-canvas');
+        if (!canvas) return alert('No QR code yet.');
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL('image/png');
+        link.download = 'thank-you-link-qr.png';
+        link.click();
+      } catch (e) {
+        alert('Unable to download QR. Please use your browser’s “Save image” option.');
+      }
     }
 
-    // ===== DATA LOAD (requires auth) =====
-    async function hydrateFromDb(){
-      // Get profile for slug + avatar
-      const { data: profile, error } = await supabase.from('profiles').select('display_name, slug, avatar_url').eq('id', auth.value.session.user.id).single();
-      if (!error && profile){
-        displayName.value = profile.display_name || displayName.value;
-        slug.value = profile.slug || slug.valueFromEmail() || auth.value.session.user.id.slice(0,8);
-        avatarUrl.value = profile.avatar_url || avatarUrl.value;
+    function share() {
+      const url = shareUrl.value;
+      const text = `Our Thank-You Link: ${url}`;
+      if (navigator.share) {
+        navigator.share({ title: 'Thank-You Link', text, url }).catch(() => {});
       } else {
-        // fallback slug from email user_metadata
-        slug.value = slug.valueFromEmail() || auth.value.session.user.id.slice(0,8);
+        copyToClipboard(text);
       }
-
-      // Example totals (replace with RPCs you already have)
-      const { data: sums } = await supabase.rpc('dashboard_totals').catch(()=>({ data:null }));
-      if (sums){
-        earningsToday.value = sums.today || 0;
-        earningsWeek.value  = sums.week  || 0;
-        kpi.value.tips      = sums.tips  || 0;
-        kpi.value.referrals = sums.referrals || 0;
-        kpi.value.approved  = sums.approved || 0;
-      }
-      const { data: ev } = await supabase.from('events').select('label,value,type').eq('user_id', auth.value.session.user.id).order('created_at',{ascending:false}).limit(20);
-      events.value = (ev||[]);
-
-      // Payout mock from DB
-      payoutNextAmount.value = Math.max(kpi.value.approved - (sums?.paid||0), 0);
-      payoutNextLabel.value = 'Friday';
-      payoutPct.value = Math.min(100, Math.round((payoutNextAmount.value/100)*100));
     }
 
-    // little helper on ref
-    slug.valueFromEmail = () => {
-      const email = auth.value?.session?.user?.email || '';
-      return email ? email.split('@')[0].replace(/[^a-z0-9-_]/gi,'-').toLowerCase() : '';
+    async function copyDM() {
+      const script = aiScripts.value[0]?.text || '';
+      const ok = await copyToClipboard(script);
+      if (ok) maybeCelebrate();
     }
 
-    function introWow(){
-      const target = 23.40; let t=0;
-      const step = ()=>{ t+=0.02; const v = target*(1-Math.exp(-3*t));
-        earningsWeek.value = Math.min(target, +v.toFixed(2));
-        payoutNextAmount.value = Math.max(earningsWeek.value*0.5, 0);
-        payoutPct.value = Math.min(100, Math.round((earningsWeek.value/50)*100));
-        if(earningsWeek.value < target) requestAnimationFrame(step);
-      }; step();
-      setTimeout(()=>earningsToday.value = +(target/7).toFixed(2), 600);
+    function genScripts() {
+      aiScripts.value = buildDefaultScripts(displayName.value, slug.value);
+      maybeCelebrate();
     }
 
-    watch(slug, promotePrettyUrl);
+    function genAffiliates() {
+      affiliates.value = buildDefaultAffiliates(displayName.value);
+      maybeCelebrate();
+    }
 
+    function maybeCelebrate() {
+      if (burstTimeout) clearTimeout(burstTimeout);
+      showBurst.value = true;
+      burstTimeout = setTimeout(() => { showBurst.value = false; }, 1200);
+    }
+
+    function openCopilot() {
+      alert('Copilot will open here in a future release.');
+    }
+
+    function openPublic() {
+      window.open(shareUrl.value, '_blank', 'noopener,noreferrer');
+    }
+
+    // ===== HYDRATION =====
+    async function hydrateFromDb() {
+      if (!supabase || !auth.value.session) return;
+
+      const user = auth.value.session.user;
+      const rawName = user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'You';
+      displayName.value = rawName;
+
+      const initials = (rawName || 'You')
+        .split(/\s+/)
+        .map(p => p[0] || '')
+        .join('')
+        .slice(0, 2)
+        .toUpperCase();
+
+      avatarUrl.value = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(initials)}&backgroundType=gradientLinear`;
+
+      const hash = Math.abs(
+        Array.from(rawName).reduce((acc, ch) => acc + ch.charCodeAt(0), 0)
+      );
+      const slugBase = (rawName || 'your-name')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'your-name';
+      slug.value = `${slugBase}-${hash % 1000}`;
+
+      earningsToday.value = 4300;
+      earningsWeek.value = 24800;
+      perMinute.value = computePerMinute(earningsWeek.value, 7 * 24 * 60);
+      events.value = mockEvents();
+      kpi.value = computeKpi(events.value);
+      payoutNextAmount.value = 24000;
+      payoutNextLabel.value = 'Payout in 3 days';
+      payoutPct.value = 0.42;
+    }
+
+    // ===== AUTH HOOKS =====
     onMounted(async () => {
-      promotePrettyUrl(slug.value);
-
       if (!supabase) {
-        // No Supabase configured: keep the demo/overlay behavior.
-        introWow && introWow();
-        // Minute tick (visual compounding)
-        setInterval(() => { earningsWeek.value += perMinute.value; }, 60000);
+        auth.value.loading = false;
         return;
       }
 
-      auth.value.loading = true;
-
-      // 1) Initial read
-      let { data: { session } } = await supabase.auth.getSession();
-
-      // 2) Force a refresh (handles fresh returns from OAuth)
-      if (!session) {
-        try {
-          const { data } = await supabase.auth.refreshSession();
-          session = data?.session || null;
-        } catch (_) {}
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('Error getting session:', error);
+        auth.value.loading = false;
+        return;
       }
 
-      // 3) Short poll (max ~2.5s) to allow session to settle after redirect
-      if (!session) {
-        const deadline = Date.now() + 2500;
-        while (!session && Date.now() < deadline) {
-          await new Promise(r => setTimeout(r, 250));
-          const res = await supabase.auth.getSession();
-          session = res?.data?.session || null;
-        }
-      }
-
-      auth.value.session = session;
+      auth.value.session = data.session || null;
       auth.value.loading = false;
 
-      // 4) Subscribe so future refreshes/magic links hydrate automatically
+      if (auth.value.session) {
+        await hydrateFromDb();
+      }
+    });
+
+    if (supabase) {
       supabase.auth.onAuthStateChange(async (_event, s) => {
         auth.value.session = s;
         if (s) await hydrateFromDb();
       });
+    }
 
-      // 5) Final decision
-      if (auth.value.session) {
-        // Auth OK → render dashboard
-        await hydrateFromDb();
-      } else {
-        // Still no session → DO NOT auto-redirect (prevents loops).
-        // The built-in gate will show, and "Open full login" already routes to /auth/google.
-        // If you want a button-less auto-forward, we can add a delayed redirect later.
-      }
-
-      // existing visuals/timers
-      setInterval(() => { earningsWeek.value += perMinute.value; }, 60000);
-    });
-
+    // ===== EXPOSE TO TEMPLATE =====
     return {
-      // auth
-      auth, sendMagic, goLogin,
+      auth,
       // profile & state
       displayName, avatarUrl, slug, kpi, events,
       earningsToday, earningsWeek, convRate,
@@ -569,6 +643,8 @@ createApp({
       sharesPerDay, assumeTipRate, assumeAvgTip, assumeRefCents, monthlyPotential,
       payoutNextAmount, payoutNextLabel, payoutPct,
       aiScripts, affiliates, openCopilot, tasks, showBurst,
+      // helpers
+      asCurrency,
       // actions
       shareUrl, eventColor, copyLink, downloadQR, share, copyDM, genScripts, genAffiliates, maybeCelebrate, openPublic
     };
