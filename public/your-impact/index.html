@@ -318,6 +318,7 @@ const SUPABASE_URL = window.SUPABASE_URL || '';
 const SUPABASE_KEY = window.SUPABASE_ANON_KEY || '';
 const THANK_HOST   = window.THANK_HOST || 'https://grateful.haylofriend.com';
 const LOGIN_PATH   = window.LOGIN_PATH || '/auth/google'; // your dedicated login page (optional)
+const BACKEND_URL  = window.BACKEND_URL || '/api';
 
 const supabase = (SUPABASE_URL && SUPABASE_KEY && window.supabase)
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
