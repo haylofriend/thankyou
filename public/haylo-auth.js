@@ -244,6 +244,16 @@
     var loginPath = getLoginPath();
     var ok = await loadSupabase();
 
+    // If we're on a Supabase callback URL (tokens in the hash),
+    // let Supabase JS consume the hash and create the session.
+    // Don't redirect to login again or we'll loop forever.
+    if (typeof location !== "undefined" &&
+        location.hash &&
+        location.hash.indexOf("access_token=") !== -1) {
+      // Supabase JS will clear the hash via history.replaceState once it’s done.
+      return;
+    }
+
     if (!ok) {
       // no Supabase client, send to login
       try {
