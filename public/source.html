@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Replenish — Bring Your Goodness Home</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Tailwind (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: '#020617'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background: radial-gradient(circle at top, #020617, #020617 40%, #020617 100%);
+      color: #e5e7eb;
+    }
+
+    /* --- Replenish / Halo styles --- */
+
+    .halo-card {
+      position: relative;
+      border-radius: 18px;
+      padding: 16px 18px;
+      background: radial-gradient(circle at top, rgba(255,255,255,0.12), rgba(0,0,0,0.6));
+      border: 1px solid rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+
+    .halo-ring {
+      position: absolute;
+      inset: -40%;
+      background: conic-gradient(
+        from 180deg,
+        rgba(255,255,255,0.06),
+        rgba(255,215,128,0.25),
+        rgba(148,209,255,0.2),
+        rgba(255,255,255,0.06)
+      );
+      opacity: 0.7;
+      mix-blend-mode: screen;
+      filter: blur(18px);
+      animation: halo-spin 18s linear infinite, halo-breathe 3.4s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .halo-core {
+      position: relative;
+      z-index: 1;
+    }
+
+    .halo-amount {
+      font-size: 1.9rem;
+      font-weight: 650;
+      letter-spacing: 0.02em;
+    }
+
+    .halo-subline {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      opacity: 0.7;
+    }
+
+    .replenish-pill {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1.15rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: radial-gradient(circle at top left, rgba(255,255,255,0.22), rgba(0,0,0,0.7));
+      font-size: 0.75rem;
+      cursor: pointer;
+      overflow: hidden;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    }
+
+    .replenish-pill::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(circle at center, rgba(255,255,255,0.25), transparent 60%);
+      opacity: 0;
+      transform: scale(0.8);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .replenish-pill:hover::before {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .replenish-pill:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 24px rgba(255,215,128,0.35);
+      border-color: rgba(255,255,255,0.4);
+    }
+
+    .replenish-pill:active {
+      transform: scale(0.97);
+      box-shadow: 0 0 10px rgba(255,215,128,0.4);
+    }
+
+    .replenish-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: radial-gradient(circle at top left, #ffe089, #ff9f5a);
+      box-shadow: 0 0 12px rgba(255,215,128,0.9);
+    }
+
+    .replenish-pill span.small {
+      font-size: 0.68rem;
+      opacity: 0.9;
+    }
+
+    /* Modal / sheet */
+
+    .replenish-sheet {
+      position: relative;
+      width: 100%;
+      max-width: 420px;
+      border-radius: 24px;
+      padding: 22px 20px 18px;
+      background: radial-gradient(circle at top left, rgba(255,255,255,0.18), rgba(15,23,42,0.96));
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: 0 24px 80px rgba(15,23,42,0.9);
+      color: #f9fafb;
+      overflow: hidden;
+    }
+
+    .replenish-sheet::before {
+      content: "";
+      position: absolute;
+      inset: -30%;
+      background: radial-gradient(circle at top, rgba(255,255,255,0.08), transparent 70%);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .replenish-sheet-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .replenish-title {
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      opacity: 0.85;
+    }
+
+    .replenish-emoji {
+      font-size: 1.9rem;
+      margin-right: 0.1rem;
+    }
+
+    .replenish-lede {
+      margin-top: 0.35rem;
+      font-size: 0.86rem;
+      opacity: 0.8;
+    }
+
+    .replenish-amount-row {
+      margin-top: 1.2rem;
+      padding: 0.8rem 0.85rem;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(15,23,42,0.6), rgba(15,23,42,0.2));
+      border: 1px solid rgba(148,163,184,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .replenish-amount-label {
+      font-size: 0.75rem;
+      opacity: 0.75;
+    }
+
+    .replenish-amount-value {
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+
+    .replenish-options {
+      margin-top: 0.9rem;
+      display: grid;
+      gap: 0.55rem;
+    }
+
+    .replenish-option {
+      border-radius: 14px;
+      padding: 0.7rem 0.85rem;
+      border: 1px solid rgba(148,163,184,0.5);
+      background: rgba(15,23,42,0.6);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: border-color 0.18s ease, background 0.18s ease, transform 0.14s ease;
+    }
+
+    .replenish-option.active {
+      border-color: rgba(251,191,36,0.95);
+      background: radial-gradient(circle at top left, rgba(251,191,36,0.25), rgba(15,23,42,0.9));
+      transform: translateY(-1px);
+    }
+
+    .replenish-option-title {
+      font-weight: 500;
+    }
+
+    .replenish-option-sub {
+      font-size: 0.7rem;
+      opacity: 0.75;
+      margin-top: 0.15rem;
+    }
+
+    .replenish-fee-pill {
+      font-size: 0.7rem;
+      padding: 0.16rem 0.55rem;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.9);
+      border: 1px solid rgba(148,163,184,0.7);
+      opacity: 0.85;
+    }
+
+    .replenish-footer {
+      margin-top: 1.1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .replenish-caption {
+      font-size: 0.7rem;
+      opacity: 0.7;
+    }
+
+    .replenish-primary {
+      border-radius: 999px;
+      padding: 0.55rem 1.2rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      background: linear-gradient(135deg, #fbbf24, #f97316);
+      color: #111827;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      box-shadow: 0 12px 30px rgba(248,181,42,0.55);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    }
+
+    .replenish-primary:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+      box-shadow: 0 16px 40px rgba(248,181,42,0.7);
+    }
+
+    .replenish-primary:active {
+      transform: translateY(1px) scale(0.97);
+      box-shadow: 0 6px 18px rgba(248,181,42,0.55);
+    }
+
+    .replenish-primary[disabled] {
+      opacity: 0.6;
+      cursor: default;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .replenish-success-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      background: radial-gradient(circle at top, #bef264, #22c55e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 28px rgba(22,163,74,0.9);
+    }
+
+    .replenish-success-copy {
+      margin-top: 0.8rem;
+      font-size: 0.9rem;
+    }
+
+    .replenish-success-sub {
+      margin-top: 0.25rem;
+      font-size: 0.78rem;
+      opacity: 0.8;
+    }
+
+    /* Ripple overlay */
+
+    .replenish-ripple {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .replenish-ripple-circle {
+      width: 80px;
+      height: 80px;
+      border-radius: 999px;
+      border: 2px solid rgba(248,250,252,0.9);
+      box-shadow: 0 0 30px rgba(248,250,252,0.9);
+      animation: ripple-send 0.9s ease-out forwards;
+    }
+
+    @keyframes halo-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes halo-breathe {
+      0%, 100% { opacity: 0.65; }
+      50% { opacity: 0.95; }
+    }
+
+    @keyframes ripple-send {
+      0% {
+        transform: scale(0.8);
+        opacity: 0.95;
+      }
+      80% {
+        transform: scale(4.2);
+        opacity: 0.25;
+      }
+      100% {
+        transform: scale(5);
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center px-4">
+  <div id="app" class="w-full max-w-xl mx-auto">
+    <!-- Back to dashboard -->
+    <div class="flex items-center justify-between mb-4 text-xs text-slate-400">
+      <button
+        type="button"
+        class="inline-flex items-center gap-1 hover:text-slate-100 transition"
+        onclick="location.href='/your-impact'"
+      >
+        ← Back to your impact
+      </button>
+      <div class="opacity-70">
+        Replenish · Weekly goodness
+      </div>
+    </div>
+
+    <!-- Halo card -->
+    <div class="halo-card">
+      <div class="halo-ring"></div>
+      <div class="halo-core flex items-center justify-between gap-3">
+        <div>
+          <div class="halo-subline">This week’s gratitude earnings</div>
+          <div class="flex items-baseline gap-2 mt-1">
+            <div class="halo-amount" id="amountDisplay">
+              $0.00
+            </div>
+          </div>
+          <div class="text-[0.7rem] text-slate-300 mt-0.5">
+            Your kindness turned into real-world support.
+          </div>
+        </div>
+
+        <div class="flex flex-col items-end gap-1">
+          <button
+            id="replenishButton"
+            class="replenish-pill"
+            type="button"
+          >
+            <div class="replenish-dot"></div>
+            <div class="flex flex-col items-start">
+              <span>Replenish</span>
+              <span class="small">Send to your bank</span>
+            </div>
+          </button>
+          <div class="text-[0.65rem] text-slate-300">
+            Stripe payouts: <span class="text-emerald-300">Ready ✅</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sheet -->
+    <div id="sheet" class="mt-6 hidden">
+      <div class="replenish-sheet mx-auto">
+        <div id="sheetInner" class="replenish-sheet-inner">
+          <div class="flex items-center gap-2">
+            <span class="replenish-emoji">💫</span>
+            <div>
+              <div class="replenish-title">Replenish your goodness</div>
+              <div class="replenish-lede">
+                You’ve brightened other people’s week. Now let that goodness refill your own life.
+              </div>
+            </div>
+          </div>
+
+          <div class="replenish-amount-row">
+            <div>
+              <div class="replenish-amount-label">Available to replenish</div>
+              <div class="replenish-amount-value" id="sheetAmount">
+                $0.00
+              </div>
+            </div>
+            <div class="text-xs text-slate-300 text-right">
+              After recent tips clear
+            </div>
+          </div>
+
+          <div class="replenish-options mt-3">
+            <button
+              type="button"
+              class="replenish-option"
+              id="optInstant"
+            >
+              <div>
+                <div class="replenish-option-title">Instant transfer</div>
+                <div class="replenish-option-sub">Arrives in minutes</div>
+              </div>
+              <div class="flex flex-col items-end gap-1">
+                <span class="replenish-fee-pill">Small fee applies</span>
+                <span class="text-xs opacity-80" id="instantAmount">
+                  ~ $0.00
+                </span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="replenish-option active"
+              id="optStandard"
+            >
+              <div>
+                <div class="replenish-option-title">Standard transfer</div>
+                <div class="replenish-option-sub">1–2 business days</div>
+              </div>
+              <div class="flex flex-col items-end gap-1">
+                <span class="replenish-fee-pill">No fee</span>
+                <span class="text-xs opacity-80" id="standardAmount">
+                  $0.00
+                </span>
+              </div>
+            </button>
+          </div>
+
+          <div class="replenish-footer mt-4">
+            <div class="replenish-caption">
+              Your earnings stay safe with Stripe. We never see your full card or bank details.
+            </div>
+            <button
+              class="replenish-primary"
+              id="confirmButton"
+              type="button"
+            >
+              <span>Bring it home</span>
+              <span>↗</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Success state -->
+        <div id="sheetSuccess" class="replenish-sheet-inner text-center hidden">
+          <div class="flex flex-col items-center">
+            <div class="replenish-success-circle">
+              <span>✨</span>
+            </div>
+            <div class="replenish-success-copy">
+              Your goodness is on its way 💛
+            </div>
+            <div class="replenish-success-sub">
+              Your payout is heading to your bank. Thank you for showing up for others this week.
+            </div>
+            <button
+              class="replenish-primary mt-4"
+              type="button"
+              onclick="location.href='/your-impact'"
+            >
+              Keep making people feel seen
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ripple overlay -->
+    <div id="ripple" class="replenish-ripple hidden">
+      <div class="replenish-ripple-circle"></div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const params = new URLSearchParams(location.search);
+      const amount = parseFloat(params.get('amount') || '0');
+      const safeAmount = isNaN(amount) ? 0 : Math.max(0, amount);
+
+      const amountDisplay = document.getElementById('amountDisplay');
+      const sheetAmount = document.getElementById('sheetAmount');
+      const instantAmount = document.getElementById('instantAmount');
+      const standardAmount = document.getElementById('standardAmount');
+      const sheet = document.getElementById('sheet');
+      const sheetInner = document.getElementById('sheetInner');
+      const sheetSuccess = document.getElementById('sheetSuccess');
+      const ripple = document.getElementById('ripple');
+
+      const btnReplenish = document.getElementById('replenishButton');
+      const btnConfirm = document.getElementById('confirmButton');
+      const optInstant = document.getElementById('optInstant');
+      const optStandard = document.getElementById('optStandard');
+
+      let speed = 'standard'; // 'instant' | 'standard'
+      let busy = false;
+
+      function formatAmount(v) {
+        return '$' + v.toFixed(2);
+      }
+
+      function updateAmounts() {
+        amountDisplay.textContent = formatAmount(safeAmount);
+        sheetAmount.textContent = formatAmount(safeAmount);
+        standardAmount.textContent = formatAmount(safeAmount);
+        instantAmount.textContent = formatAmount(safeAmount * 0.97);
+      }
+
+      function setSpeed(next) {
+        speed = next;
+        if (!optInstant || !optStandard) return;
+        optInstant.classList.toggle('active', speed === 'instant');
+        optStandard.classList.toggle('active', speed === 'standard');
+      }
+
+      function openSheet() {
+        if (safeAmount <= 0) {
+          alert('No available earnings to replenish yet. Keep spreading goodness ✨');
+          return;
+        }
+        sheet.classList.remove('hidden');
+        sheetInner.classList.remove('hidden');
+        sheetSuccess.classList.add('hidden');
+        setSpeed('standard');
+      }
+
+      function showSuccess() {
+        sheetInner.classList.add('hidden');
+        sheetSuccess.classList.remove('hidden');
+      }
+
+      function triggerRipple() {
+        ripple.classList.remove('hidden');
+        setTimeout(() => {
+          ripple.classList.add('hidden');
+        }, 900);
+      }
+
+      // Wire events
+      if (btnReplenish) {
+        btnReplenish.addEventListener('click', openSheet);
+      }
+
+      if (optInstant) {
+        optInstant.addEventListener('click', () => setSpeed('instant'));
+      }
+      if (optStandard) {
+        optStandard.addEventListener('click', () => setSpeed('standard'));
+      }
+
+      if (btnConfirm) {
+        btnConfirm.addEventListener('click', async () => {
+          if (busy || safeAmount <= 0) return;
+          busy = true;
+          btnConfirm.disabled = true;
+          btnConfirm.firstChild.textContent = 'Sending…';
+
+          try {
+            // TODO: call your real backend payout endpoint here.
+            // For now: just animate.
+            triggerRipple();
+            setTimeout(() => {
+              showSuccess();
+            }, 900);
+          } catch (e) {
+            console.error(e);
+            alert('We had trouble starting your payout. Please try again in a moment.');
+          } finally {
+            busy = false;
+            btnConfirm.disabled = false;
+            btnConfirm.firstChild.textContent = 'Bring it home';
+          }
+        });
+      }
+
+      updateAmounts();
+    })();
+  </script>
+</body>
+</html>
