@@ -1,31 +1,11 @@
 // public/get-started-links.js
-// Sets all [data-get-started] links to the ONE canonical login path
-// LOGIN_PATH (default: /auth/google) + ?redirect=<dashboard>
+// Sets all [data-get-started] links to the ONE login entry point (/login)
+// Includes a safe ?redirect= param so the edge handler can send users
+// through the canonical provider flow configured in env.js.
 
 (function () {
-  // Canonical dashboard & login path
+  // Canonical dashboard (where creators land after signing in)
   var dash = window.HF_DASHBOARD_URL || "/your-impact";
-
-  function canonicalLoginPath(raw) {
-    var fallback = "/auth/google";
-    if (typeof raw !== "string") return fallback;
-    var value = raw.trim();
-    if (!value) return fallback;
-    if (value.startsWith("http://") || value.startsWith("https://")) {
-      try {
-        var origin = typeof location !== "undefined" && location.origin ? location.origin : "";
-        var url = new URL(value, origin || "https://www.haylofriend.com");
-        if (origin && url.origin !== origin) return fallback;
-        return url.pathname + (url.search || "") + (url.hash || "");
-      } catch (_) {
-        return fallback;
-      }
-    }
-    if (value.charAt(0) !== "/") return fallback;
-    return value;
-  }
-
-  var loginPath = canonicalLoginPath(window.LOGIN_PATH);
 
   // Optional: full override for Get Started URL
   var envUrl = (typeof window.HF_GET_STARTED_URL === "string" && window.HF_GET_STARTED_URL.trim())
@@ -55,11 +35,11 @@
   function buildLoginUrl(targetPath) {
     var normalized = normalizeRedirect(targetPath || dash, dash);
     try {
-      var url = new URL(loginPath, currentOrigin());
+      var url = new URL("/login", currentOrigin());
       url.searchParams.set("redirect", normalized);
       return url.toString();
     } catch (err) {
-      return loginPath + "?redirect=" + encodeURIComponent(normalized);
+      return "/login?redirect=" + encodeURIComponent(normalized);
     }
   }
 

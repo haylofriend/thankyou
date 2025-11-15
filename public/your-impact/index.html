@@ -317,7 +317,29 @@ const { createApp, ref, computed, onMounted, watch } = Vue;
 const SUPABASE_URL = window.SUPABASE_URL || '';
 const SUPABASE_KEY = window.SUPABASE_ANON_KEY || '';
 const THANK_HOST   = window.THANK_HOST || 'https://grateful.haylofriend.com';
-const LOGIN_PATH   = window.LOGIN_PATH || '/auth/google'; // your dedicated login page (optional)
+
+function canonicalLoginPath(raw) {
+  const fallback = '/auth/google';
+  if (typeof raw !== 'string') return fallback;
+  const value = raw.trim();
+  if (!value) return fallback;
+  if (value.startsWith('http://') || value.startsWith('https://')) {
+    try {
+      const origin = (typeof location !== 'undefined' && location.origin) ? location.origin : '';
+      const url = new URL(value, origin || 'https://www.haylofriend.com');
+      if (origin && url.origin !== origin) return fallback;
+      return url.pathname + (url.search || '') + (url.hash || '');
+    } catch (_) {
+      return fallback;
+    }
+  }
+  if (value.charAt(0) !== '/') return fallback;
+  return value;
+}
+
+const LOGIN_PATH = (window.HayloAuth && typeof window.HayloAuth.LOGIN_PATH === 'function')
+  ? window.HayloAuth.LOGIN_PATH()
+  : canonicalLoginPath(window.LOGIN_PATH);
 
 const supabase = (SUPABASE_URL && SUPABASE_KEY && window.supabase)
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
@@ -538,7 +560,7 @@ createApp({
         await hydrateFromDb();
       } else {
         // Still no session → DO NOT auto-redirect (prevents loops).
-        // The built-in gate will show, and "Open full login" already routes to /auth/google.
+        // The built-in gate will show, and "Open full login" already routes to LOGIN_PATH.
         // If you want a button-less auto-forward, we can add a delayed redirect later.
       }
 
