@@ -174,6 +174,22 @@
     }
   }
 
+  function samePath(a, b) {
+    try {
+      var base = window.location.origin;
+      var ua = new URL(a, base);
+      var ub = new URL(b, base);
+
+      var normalize = function (p) {
+        return p.replace(/\/+$/, "") || "/";
+      };
+      return normalize(ua.pathname) === normalize(ub.pathname);
+    } catch (e) {
+      // Fallback: plain string compare if URL parsing fails
+      return a === b;
+    }
+  }
+
   // -------- Public methods --------
   async function whoami() {
     await loadEnv();
@@ -244,8 +260,34 @@
     var loginPath = getLoginPath();
     var ok = await loadSupabase();
 
-    if (!ok) {
-      // no Supabase client, send to login
+    function redirectToLogin() {
+      var currentUrl = (typeof window !== "undefined" && window.location && window.location.href)
+        ? window.location.href
+        : "";
+
+      if (currentUrl && samePath(currentUrl, loginPath)) {
+        console.warn("[HayloAuth] Not redirecting: already on LOGIN_PATH, showing logged-out view instead.");
+        return;
+      }
+
+      var LOOP_KEY = "hayloauth:lastRedirect";
+      var now = Date.now();
+      var last = 0;
+      try {
+        last = parseInt(sessionStorage.getItem(LOOP_KEY) || "0", 10) || 0;
+      } catch (_) {
+        last = 0;
+      }
+
+      if (now - last < 3000) {
+        console.warn("[HayloAuth] Possible redirect loop detected. Not redirecting again.");
+        return;
+      }
+
+      try {
+        sessionStorage.setItem(LOOP_KEY, String(now));
+      } catch (_) {}
+
       try {
         var u = new URL(loginPath, currentOrigin());
         u.searchParams.set("redirect", normalized);
@@ -253,6 +295,11 @@
       } catch (_) {
         location.replace(loginPath + "?redirect=" + encodeURIComponent(normalized));
       }
+    }
+
+    if (!ok) {
+      // no Supabase client, send to login
+      redirectToLogin();
       return;
     }
 
@@ -262,21 +309,16 @@
       var result = await supa.auth.getSession();
       var session = result && result.data && result.data.session || null;
       if (!session || !session.user) {
-        var url = new URL(loginPath, currentOrigin());
-        url.searchParams.set("redirect", normalized);
-        location.replace(url.toString());
+        redirectToLogin();
         return;
       }
+      try {
+        sessionStorage.removeItem("hayloauth:lastRedirect");
+      } catch (_) {}
       return session.user;
     } catch (err) {
       console.error("HayloAuth.gate error", err);
-      try {
-        var u2 = new URL(loginPath, currentOrigin());
-        u2.searchParams.set("redirect", normalized);
-        location.replace(u2.toString());
-      } catch (_) {
-        location.replace(loginPath + "?redirect=" + encodeURIComponent(normalized));
-      }
+      redirectToLogin();
     }
   }
 
