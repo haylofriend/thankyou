@@ -144,16 +144,28 @@
     if (typeof raw !== "string") return fallback;
     var value = raw.trim();
     if (!value) return fallback;
+
+    // Prevent accidental self-loop: /login should never be the loginPath
+    if (value === "/login") return fallback;
+
     if (value.startsWith("http://") || value.startsWith("https://")) {
       try {
-        var url = new URL(value, currentOrigin());
-        if (url.origin !== currentOrigin()) return fallback;
-        return url.pathname + (url.search || "") + (url.hash || "");
+        var origin = currentOrigin();
+        var url = new URL(value, origin || "https://www.haylofriend.com");
+        if (origin && url.origin !== origin) return fallback;
+
+        // Also guard against absolute URL that resolves to /login
+        var path = url.pathname + (url.search || "") + (url.hash || "");
+        if (path === "/login" || path.startsWith("/login?")) return fallback;
+
+        return path;
       } catch (_) {
         return fallback;
       }
     }
+
     if (value.charAt(0) !== "/") return fallback;
+    if (value === "/login" || value.startsWith("/login?")) return fallback;
     return value;
   }
 
