@@ -80,6 +80,48 @@
     .ringed{box-shadow:0 0 0 1px rgba(231,231,234,.12) inset, 0 10px 30px rgba(0,0,0,.45)}
     .pill{display:inline-flex;align-items:center;gap:.5rem;padding:.4rem .75rem;border-radius:999px;border:1px solid var(--hair);background:rgba(255,255,255,.05)}
     canvas{display:block}
+    .halo-card{position:relative;border-radius:18px;padding:16px 18px;background:radial-gradient(circle at top,rgba(255,255,255,.12),rgba(0,0,0,.4));border:1px solid rgba(255,255,255,.08);overflow:hidden}
+    .halo-ring{position:absolute;inset:-40%;background:conic-gradient(from 180deg,rgba(255,255,255,.06),rgba(255,215,128,.25),rgba(148,209,255,.2),rgba(255,255,255,.06));opacity:.7;mix-blend-mode:screen;filter:blur(18px);animation:halo-spin 18s linear infinite,halo-breathe 3.4s ease-in-out infinite;pointer-events:none}
+    .halo-core{position:relative;z-index:1}
+    .halo-amount{font-size:1.6rem;font-weight:650;letter-spacing:.02em}
+    .halo-subline{font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;opacity:.7}
+    .replenish-pill{position:relative;display:inline-flex;align-items:center;gap:.4rem;padding:.55rem 1.15rem;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:radial-gradient(circle at top left,rgba(255,255,255,.22),rgba(0,0,0,.7));font-size:.75rem;cursor:pointer;overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,background .18s ease}
+    .replenish-pill::before{content:"";position:absolute;inset:-40%;background:radial-gradient(circle at center,rgba(255,255,255,.25),transparent 60%);opacity:0;transform:scale(.8);transition:opacity .25s ease,transform .25s ease}
+    .replenish-pill:hover::before{opacity:1;transform:scale(1)}
+    .replenish-pill:hover{transform:translateY(-1px);box-shadow:0 0 24px rgba(255,215,128,.35);border-color:rgba(255,255,255,.4)}
+    .replenish-pill:active{transform:scale(.97);box-shadow:0 0 10px rgba(255,215,128,.4)}
+    .replenish-dot{width:10px;height:10px;border-radius:999px;background:radial-gradient(circle at top left,#ffe089,#ff9f5a);box-shadow:0 0 12px rgba(255,215,128,.9)}
+    .replenish-pill span.small{font-size:.68rem;opacity:.9}
+    .replenish-backdrop{position:fixed;inset:0;background:radial-gradient(circle at top,rgba(15,23,42,.65),rgba(15,23,42,.92));backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);display:flex;align-items:center;justify-content:center;z-index:40}
+    .replenish-sheet{position:relative;width:100%;max-width:420px;border-radius:24px;padding:22px 20px 18px;background:radial-gradient(circle at top left,rgba(255,255,255,.18),rgba(15,23,42,.96));border:1px solid rgba(255,255,255,.18);box-shadow:0 24px 80px rgba(15,23,42,.9);color:#f9fafb;overflow:hidden}
+    .replenish-sheet::before{content:"";position:absolute;inset:-30%;background:radial-gradient(circle at top,rgba(255,255,255,.08),transparent 70%);opacity:.9;pointer-events:none}
+    .replenish-sheet-inner{position:relative;z-index:1}
+    .replenish-title{font-size:1rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;opacity:.85}
+    .replenish-emoji{font-size:1.9rem;margin-right:.1rem}
+    .replenish-lede{margin-top:.35rem;font-size:.86rem;opacity:.8}
+    .replenish-amount-row{margin-top:1.2rem;padding:.8rem .85rem;border-radius:16px;background:linear-gradient(135deg,rgba(15,23,42,.6),rgba(15,23,42,.2));border:1px solid rgba(148,163,184,.4);display:flex;align-items:center;justify-content:space-between}
+    .replenish-amount-label{font-size:.75rem;opacity:.75}
+    .replenish-amount-value{font-size:1.2rem;font-weight:600}
+    .replenish-options{margin-top:.9rem;display:grid;gap:.55rem}
+    .replenish-option{border-radius:14px;padding:.7rem .85rem;border:1px solid rgba(148,163,184,.5);background:rgba(15,23,42,.6);display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:.8rem;transition:border-color .18s ease,background .18s ease,transform .14s ease}
+    .replenish-option.active{border-color:rgba(251,191,36,.95);background:radial-gradient(circle at top left,rgba(251,191,36,.25),rgba(15,23,42,.9));transform:translateY(-1px)}
+    .replenish-option-title{font-weight:500}
+    .replenish-option-sub{font-size:.7rem;opacity:.75;margin-top:.15rem}
+    .replenish-fee-pill{font-size:.7rem;padding:.16rem .55rem;border-radius:999px;background:rgba(15,23,42,.9);border:1px solid rgba(148,163,184,.7);opacity:.85}
+    .replenish-footer{margin-top:1.1rem;display:flex;justify-content:space-between;align-items:center;gap:.6rem}
+    .replenish-caption{font-size:.7rem;opacity:.7}
+    .replenish-primary{border-radius:999px;padding:.55rem 1.2rem;font-size:.8rem;font-weight:500;background:linear-gradient(135deg,#fbbf24,#f97316);color:#111827;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;box-shadow:0 12px 30px rgba(248,181,42,.55);transition:transform .15s ease,box-shadow .15s ease,filter .15s ease}
+    .replenish-primary:hover{transform:translateY(-1px);filter:brightness(1.05);box-shadow:0 16px 40px rgba(248,181,42,.7)}
+    .replenish-primary:active{transform:translateY(1px) scale(.97);box-shadow:0 6px 18px rgba(248,181,42,.55)}
+    .replenish-primary[disabled]{opacity:.6;cursor:default;transform:none;box-shadow:none}
+    .replenish-success-circle{width:44px;height:44px;border-radius:999px;background:radial-gradient(circle at top,#bef264,#22c55e);display:flex;align-items:center;justify-content:center;box-shadow:0 0 28px rgba(22,163,74,.9)}
+    .replenish-success-copy{margin-top:.8rem;font-size:.9rem}
+    .replenish-success-sub{margin-top:.25rem;font-size:.78rem;opacity:.8}
+    .replenish-ripple{position:fixed;inset:0;pointer-events:none;z-index:39;display:flex;align-items:center;justify-content:center}
+    .replenish-ripple-circle{width:80px;height:80px;border-radius:999px;border:2px solid rgba(248,250,252,.9);box-shadow:0 0 30px rgba(248,250,252,.9);animation:ripple-send .9s ease-out forwards}
+    @keyframes halo-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+    @keyframes halo-breathe{0%,100%{opacity:.65}50%{opacity:.95}}
+    @keyframes ripple-send{0%{transform:scale(.8);opacity:.95}80%{transform:scale(4.2);opacity:.25}100%{transform:scale(5);opacity:0}}
   </style>
 </head>
 <body>
@@ -101,6 +143,29 @@
         </button>
       </nav>
     </header>
+
+    <!-- Treasury halo card -->
+    <section class="mt-6">
+      <div class="halo-card text-sm">
+        <div class="halo-ring"></div>
+        <div class="halo-core">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <div class="halo-subline">Treasury float</div>
+              <div class="halo-amount">{{ fmtCurrency(treasury.balance) }}</div>
+              <div class="text-[13px] text-white/70 mt-1">Auto top-up at {{ fmtCurrency(treasury.threshold) }} • Next review {{ treasury.review }}</div>
+            </div>
+            <div class="flex flex-col items-start sm:items-end gap-2">
+              <button class="replenish-pill" @click="openReplenish">
+                <span class="replenish-dot"></span>
+                <span>Replenish float</span>
+              </button>
+              <div class="text-[11px] text-white/60">Weekend forecast: {{ treasury.forecast }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <!-- KPIs -->
     <section class="grid md:grid-cols-4 gap-4 mt-6">
@@ -232,6 +297,76 @@
         <div class="text-xs text-white/50 mt-1">Last error: <span :class="status.lastError? 'text-warn':'text-white/50'">{{ status.lastError || '—' }}</span></div>
       </div>
     </section>
+
+    <!-- Replenish modal -->
+    <transition name="fade">
+      <div v-if="replenish.open" class="replenish-backdrop" @click.self="closeReplenish">
+        <div class="replenish-sheet">
+          <div class="replenish-sheet-inner" v-if="!replenish.success">
+            <div class="flex items-center">
+              <div class="replenish-emoji">🌊</div>
+              <div>
+                <div class="replenish-title">Replenish float</div>
+                <p class="replenish-lede">Top off treasury so instant payouts stay instant.</p>
+              </div>
+            </div>
+
+            <div class="replenish-amount-row">
+              <div>
+                <div class="replenish-amount-label">Current balance</div>
+                <div class="replenish-amount-value">{{ fmtCurrency(treasury.balance) }}</div>
+              </div>
+              <div class="text-right">
+                <div class="replenish-amount-label">Target float</div>
+                <div class="replenish-amount-value">{{ fmtCurrency(treasury.target) }}</div>
+              </div>
+            </div>
+
+            <div class="replenish-options">
+              <button
+                v-for="option in replenishOptions"
+                :key="option.amount"
+                type="button"
+                class="replenish-option"
+                :class="{ active: option.amount === replenish.selected }"
+                @click="selectReplenish(option.amount)"
+              >
+                <div>
+                  <div class="replenish-option-title">{{ fmtCurrency(option.amount) }}</div>
+                  <div class="replenish-option-sub">{{ option.sub }}</div>
+                </div>
+                <span class="replenish-fee-pill">{{ option.fee }}</span>
+              </button>
+            </div>
+
+            <div class="replenish-footer">
+              <div class="replenish-caption">Funds move instantly over our treasury rails.</div>
+              <button class="replenish-primary" type="button" @click="submitReplenish" :disabled="replenish.processing">
+                <span v-if="!replenish.processing">Send {{ fmtCurrency(replenish.selected) }}</span>
+                <span v-else>Sending…</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="replenish-sheet-inner text-center" v-else>
+            <div class="mx-auto replenish-success-circle">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-6 h-6 text-black/70">
+                <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <div class="replenish-success-copy">Float replenished</div>
+            <p class="replenish-success-sub">We moved {{ fmtCurrency(replenish.amount) }} into treasury. Balance is now {{ fmtCurrency(treasury.balance) }}.</p>
+            <div class="replenish-footer justify-center mt-4">
+              <button class="replenish-primary" type="button" @click="closeReplenish">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <div v-if="replenish.ripple" class="replenish-ripple">
+      <div class="replenish-ripple-circle"></div>
+    </div>
   </div>
 
   <!-- Vue -->
@@ -246,6 +381,68 @@
     setup(){
       // ---- Live state ----
       const live = ref(true);
+
+      const treasury = reactive({
+        balance: 482500,
+        threshold: 350000,
+        target: 750000,
+        review: 'Mar 18',
+        forecast: 'High traffic expected',
+      });
+
+      const replenishOptions = [
+        { amount: 25000, sub: 'Covers a light night of instant payouts', fee: '$1.40 fee' },
+        { amount: 50000, sub: 'Ideal for the dinner rush momentum', fee: '$2.10 fee' },
+        { amount: 100000, sub: 'Prime the weekend float and buffers', fee: '$3.80 fee' },
+      ];
+
+      const replenish = reactive({
+        open: false,
+        success: false,
+        ripple: false,
+        processing: false,
+        selected: replenishOptions[1].amount,
+        amount: 0,
+      });
+
+      function fmtCurrency(cents){
+        return '$' + (cents/100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+
+      function openReplenish(){
+        replenish.open = true;
+        replenish.success = false;
+        replenish.processing = false;
+        replenish.amount = 0;
+      }
+
+      function closeReplenish(){
+        replenish.open = false;
+        replenish.processing = false;
+        if(replenish.ripple){
+          replenish.ripple = false;
+        }
+        if(replenish.success){
+          replenish.success = false;
+        }
+      }
+
+      function selectReplenish(amount){
+        replenish.selected = amount;
+      }
+
+      function submitReplenish(){
+        if(replenish.processing || !replenish.selected) return;
+        replenish.processing = true;
+        setTimeout(()=>{
+          replenish.processing = false;
+          replenish.success = true;
+          replenish.amount = replenish.selected;
+          treasury.balance += replenish.selected;
+          replenish.ripple = true;
+          setTimeout(()=>{ replenish.ripple = false; }, 900);
+        }, 650);
+      }
 
       const kpi = reactive({
         activeUsers: 0,
@@ -426,6 +623,8 @@
 
       return {
         live, toggleLive, kpi, status,
+        treasury, replenish, replenishOptions,
+        fmtCurrency, openReplenish, closeReplenish, selectReplenish, submitReplenish,
         users, events, pulses, search, filteredUsers,
         verify, pause, override, refresh,
         eventDot, timeAgo
