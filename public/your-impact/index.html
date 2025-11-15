@@ -107,6 +107,48 @@
     .dot{width:6px;height:6px;border-radius:999px;background:var(--acc)}
     .mini-burst{pointer-events:none;position:fixed;inset:0;display:none}
     .mini-burst.active{display:block}
+    .halo-card{position:relative;border-radius:18px;padding:16px 18px;background:radial-gradient(circle at top,rgba(255,255,255,0.12),rgba(0,0,0,0.4));border:1px solid rgba(255,255,255,0.08);overflow:hidden}
+    .halo-ring{position:absolute;inset:-40%;background:conic-gradient(from 180deg,rgba(255,255,255,0.06),rgba(255,215,128,0.25),rgba(148,209,255,0.2),rgba(255,255,255,0.06));opacity:.7;mix-blend-mode:screen;filter:blur(18px);animation:halo-spin 18s linear infinite,halo-breathe 3.4s ease-in-out infinite;pointer-events:none}
+    .halo-core{position:relative;z-index:1}
+    .halo-amount{font-size:1.6rem;font-weight:650;letter-spacing:.02em}
+    .halo-subline{font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;opacity:.7}
+    .replenish-pill{position:relative;display:inline-flex;align-items:center;gap:.4rem;padding:.55rem 1.15rem;border-radius:999px;border:1px solid rgba(255,255,255,0.18);background:radial-gradient(circle at top left,rgba(255,255,255,0.22),rgba(0,0,0,0.7));font-size:.75rem;cursor:pointer;overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,background .18s ease}
+    .replenish-pill::before{content:"";position:absolute;inset:-40%;background:radial-gradient(circle at center,rgba(255,255,255,0.25),transparent 60%);opacity:0;transform:scale(.8);transition:opacity .25s ease,transform .25s ease}
+    .replenish-pill:hover::before{opacity:1;transform:scale(1)}
+    .replenish-pill:hover{transform:translateY(-1px);box-shadow:0 0 24px rgba(255,215,128,0.35);border-color:rgba(255,255,255,0.4)}
+    .replenish-pill:active{transform:scale(.97);box-shadow:0 0 10px rgba(255,215,128,0.4)}
+    .replenish-dot{width:10px;height:10px;border-radius:999px;background:radial-gradient(circle at top left,#ffe089,#ff9f5a);box-shadow:0 0 12px rgba(255,215,128,0.9)}
+    .replenish-pill span.small{font-size:.68rem;opacity:.9}
+    .replenish-backdrop{position:fixed;inset:0;background:radial-gradient(circle at top,rgba(15,23,42,0.65),rgba(15,23,42,0.92));backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);display:flex;align-items:center;justify-content:center;z-index:40}
+    .replenish-sheet{position:relative;width:100%;max-width:420px;border-radius:24px;padding:22px 20px 18px;background:radial-gradient(circle at top left,rgba(255,255,255,0.18),rgba(15,23,42,0.96));border:1px solid rgba(255,255,255,0.18);box-shadow:0 24px 80px rgba(15,23,42,0.9);color:#f9fafb;overflow:hidden}
+    .replenish-sheet::before{content:"";position:absolute;inset:-30%;background:radial-gradient(circle at top,rgba(255,255,255,0.08),transparent 70%);opacity:.9;pointer-events:none}
+    .replenish-sheet-inner{position:relative;z-index:1}
+    .replenish-title{font-size:1rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;opacity:.85}
+    .replenish-emoji{font-size:1.9rem;margin-right:.1rem}
+    .replenish-lede{margin-top:.35rem;font-size:.86rem;opacity:.8}
+    .replenish-amount-row{margin-top:1.2rem;padding:.8rem .85rem;border-radius:16px;background:linear-gradient(135deg,rgba(15,23,42,0.6),rgba(15,23,42,0.2));border:1px solid rgba(148,163,184,0.4);display:flex;align-items:center;justify-content:space-between}
+    .replenish-amount-label{font-size:.75rem;opacity:.75}
+    .replenish-amount-value{font-size:1.2rem;font-weight:600}
+    .replenish-options{margin-top:.9rem;display:grid;gap:.55rem}
+    .replenish-option{border-radius:14px;padding:.7rem .85rem;border:1px solid rgba(148,163,184,0.5);background:rgba(15,23,42,0.6);display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:.8rem;transition:border-color .18s ease,background .18s ease,transform .14s ease}
+    .replenish-option.active{border-color:rgba(251,191,36,0.95);background:radial-gradient(circle at top left,rgba(251,191,36,0.25),rgba(15,23,42,0.9));transform:translateY(-1px)}
+    .replenish-option-title{font-weight:500}
+    .replenish-option-sub{font-size:.7rem;opacity:.75;margin-top:.15rem}
+    .replenish-fee-pill{font-size:.7rem;padding:.16rem .55rem;border-radius:999px;background:rgba(15,23,42,0.9);border:1px solid rgba(148,163,184,0.7);opacity:.85}
+    .replenish-footer{margin-top:1.1rem;display:flex;justify-content:space-between;align-items:center;gap:.6rem}
+    .replenish-caption{font-size:.7rem;opacity:.7}
+    .replenish-primary{border-radius:999px;padding:.55rem 1.2rem;font-size:.8rem;font-weight:500;background:linear-gradient(135deg,#fbbf24,#f97316);color:#111827;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;box-shadow:0 12px 30px rgba(248,181,42,0.55);transition:transform .15s ease,box-shadow .15s ease,filter .15s ease}
+    .replenish-primary:hover{transform:translateY(-1px);filter:brightness(1.05);box-shadow:0 16px 40px rgba(248,181,42,0.7)}
+    .replenish-primary:active{transform:translateY(1px) scale(0.97);box-shadow:0 6px 18px rgba(248,181,42,0.55)}
+    .replenish-primary[disabled]{opacity:.6;cursor:default;transform:none;box-shadow:none}
+    .replenish-success-circle{width:44px;height:44px;border-radius:999px;background:radial-gradient(circle at top,#bef264,#22c55e);display:flex;align-items:center;justify-content:center;box-shadow:0 0 28px rgba(22,163,74,0.9)}
+    .replenish-success-copy{margin-top:.8rem;font-size:.9rem}
+    .replenish-success-sub{margin-top:.25rem;font-size:.78rem;opacity:.8}
+    .replenish-ripple{position:fixed;inset:0;pointer-events:none;z-index:39;display:flex;align-items:center;justify-content:center}
+    .replenish-ripple-circle{width:80px;height:80px;border-radius:999px;border:2px solid rgba(248,250,252,0.9);box-shadow:0 0 30px rgba(248,250,252,0.9);animation:ripple-send .9s ease-out forwards}
+    @keyframes halo-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+    @keyframes halo-breathe{0%,100%{opacity:.65}50%{opacity:.95}}
+    @keyframes ripple-send{0%{transform:scale(.8);opacity:.95}80%{transform:scale(4.2);opacity:.25}100%{transform:scale(5);opacity:0}}
   </style>
 </head>
 <body>
@@ -136,6 +178,28 @@
       </div>
     </div>
   </nav>
+
+  <!-- Balance Halo Card -->
+  <section class="mt-4">
+    <div class="halo-card">
+      <div class="halo-ring"></div>
+      <div class="halo-core flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <div class="halo-subline">Current thank-you balance</div>
+          <div class="halo-amount mt-1">$ {{ balanceDisplay }}</div>
+          <div class="text-xs text-white/70 mt-1">Buffer target: $ {{ bufferTarget.toFixed(0) }} • Gap $ {{ balanceGapDisplay }}</div>
+        </div>
+        <div class="flex flex-col sm:items-end gap-2">
+          <div class="text-xs text-white/60">Auto-withdraw Fridays. Keep a cushion for daily surprises.</div>
+          <button class="replenish-pill" @click="openReplenishSheet">
+            <span class="replenish-dot"></span>
+            Replenish buffer
+            <span class="small">Instant</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- WOW STRIP -->
   <section class="grid md:grid-cols-4 gap-3">
@@ -305,6 +369,64 @@
     <div class="pointer-events-none fixed inset-0 flex items-center justify-center text-4xl">🎉</div>
   </div>
 
+  <!-- Replenish ripple -->
+  <div v-if="showReplenishRipple" class="replenish-ripple">
+    <div class="replenish-ripple-circle"></div>
+  </div>
+
+  <!-- Replenish modal -->
+  <div v-if="showReplenishSheet" class="replenish-backdrop" @click.self="closeReplenishSheet">
+    <div class="replenish-sheet">
+      <div class="replenish-sheet-inner" v-if="replenishStep==='form'">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="replenish-title flex items-center"><span class="replenish-emoji">💫</span>Replenish Buffer</div>
+            <p class="replenish-lede">Top up your reserve so instant thank-yous keep landing without delay.</p>
+          </div>
+          <button class="pill text-xs" @click="closeReplenishSheet">Close</button>
+        </div>
+
+        <div class="replenish-amount-row">
+          <div>
+            <div class="replenish-amount-label">Projected buffer after top-up</div>
+            <div class="replenish-amount-value">$ {{ projectedBufferDisplay }}</div>
+          </div>
+          <div class="text-xs text-white/60">Gap now $ {{ projectedGapDisplay }}</div>
+        </div>
+
+        <div class="replenish-options">
+          <div v-for="opt in replenishOptions" :key="opt.id" :class="['replenish-option', { active: opt.id === selectedReplenishId }]" @click="selectReplenish(opt.id)">
+            <div>
+              <div class="replenish-option-title">{{ opt.title }}</div>
+              <div class="replenish-option-sub">{{ opt.sub }}</div>
+            </div>
+            <div class="text-right">
+              <div class="font-semibold">$ {{ opt.amount.toFixed(0) }}</div>
+              <div class="replenish-fee-pill mt-1">{{ opt.fee }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="replenish-footer">
+          <div class="replenish-caption">Powered by instant ACH • arrives in ~60 seconds.</div>
+          <button class="replenish-primary" @click="confirmReplenish" :disabled="replenishProcessing">
+            <span v-if="replenishProcessing">Sending…</span>
+            <span v-else>Send $ {{ activeReplenishAmount }}</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="replenish-sheet-inner text-center" v-else>
+        <div class="flex flex-col items-center gap-2">
+          <div class="replenish-success-circle text-black text-xl">✓</div>
+          <div class="replenish-success-copy font-semibold">Buffer refueled</div>
+          <div class="replenish-success-sub">$ {{ activeReplenishAmount }} is en route. Balance now $ {{ balanceDisplay }}.</div>
+          <button class="replenish-primary mt-4" @click="closeReplenishSheet">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- Vue (CDN) -->
@@ -376,6 +498,20 @@ createApp({
     const payoutNextLabel = ref('Next Friday');
     const payoutPct = ref(20);
 
+    // Buffer & replenish
+    const bufferTarget = ref(250);
+    const balance = ref(186.25);
+    const showReplenishSheet = ref(false);
+    const replenishStep = ref('form');
+    const replenishProcessing = ref(false);
+    const showReplenishRipple = ref(false);
+    const replenishOptions = ref([
+      { id: 'weekend', title: 'Weekend surge', sub: 'Covers 3 busy nights + QR cards', amount: 75, fee: 'No fee' },
+      { id: 'momentum', title: 'Momentum maker', sub: 'Match last week’s thank-yous', amount: 120, fee: 'No fee' },
+      { id: 'stretch', title: 'Stretch goal', sub: 'Push buffer near $250', amount: 180, fee: '$1 instant fee' }
+    ]);
+    const selectedReplenishId = ref(replenishOptions.value[0].id);
+
     // AI
     const aiScripts = ref([
       "X post: 'Shoutout to everyday helpers. If I’ve helped you, here’s a $2 thank-you link—tiny support, big momentum.'",
@@ -400,6 +536,15 @@ createApp({
       const refRev = sharesPerDay.value * (assumeRefCents.value/100) * 30;
       return tipRev + refRev;
     });
+    const activeReplenish = computed(() => replenishOptions.value.find(opt => opt.id === selectedReplenishId.value) || replenishOptions.value[0]);
+    const activeReplenishAmountValue = computed(() => activeReplenish.value ? activeReplenish.value.amount : 0);
+    const activeReplenishAmount = computed(() => activeReplenishAmountValue.value.toFixed(0));
+    const balanceDisplay = computed(() => balance.value.toFixed(2));
+    const balanceGap = computed(() => Math.max(bufferTarget.value - balance.value, 0));
+    const balanceGapDisplay = computed(() => balanceGap.value.toFixed(2));
+    const projectedBuffer = computed(() => balance.value + activeReplenishAmountValue.value);
+    const projectedBufferDisplay = computed(() => projectedBuffer.value.toFixed(2));
+    const projectedGapDisplay = computed(() => Math.max(bufferTarget.value - projectedBuffer.value, 0).toFixed(2));
 
     // ===== ACTIONS =====
     function eventColor(type){ return { tip:'bg-[var(--acc)]', share:'bg-[#15c39a]', payout:'bg-[#ffcc00]' }[type] || 'bg-white/20'; }
@@ -421,6 +566,36 @@ createApp({
     function createRipple(event){ const button = event?.currentTarget || document.activeElement; if(!button) return; const circle=document.createElement('span'); const diameter=Math.max(button.clientWidth,button.clientHeight); const radius=diameter/2; circle.style.width=circle.style.height=`${diameter}px`; const rect=button.getBoundingClientRect(); circle.style.left=`${(event?.clientX||rect.left+radius)-rect.left-radius}px`; circle.style.top =`${(event?.clientY||rect.top +radius)-rect.top -radius}px`; circle.classList.add('ripple-effect'); const old = button.getElementsByClassName('ripple-effect')[0]; if(old) old.remove(); button.style.position='relative'; button.appendChild(circle); }
 
     function openPublic(e){ createRipple(e); window.open(shareUrl.value, '_blank', 'noopener,noreferrer'); }
+
+    function openReplenishSheet(){
+      replenishStep.value = 'form';
+      replenishProcessing.value = false;
+      showReplenishRipple.value = false;
+      showReplenishSheet.value = true;
+    }
+
+    function closeReplenishSheet(){
+      if (replenishProcessing.value) return;
+      showReplenishSheet.value = false;
+      setTimeout(() => { replenishStep.value = 'form'; }, 200);
+    }
+
+    function selectReplenish(id){
+      selectedReplenishId.value = id;
+    }
+
+    function confirmReplenish(){
+      if (replenishProcessing.value) return;
+      replenishProcessing.value = true;
+      showReplenishRipple.value = true;
+      setTimeout(() => {
+        showReplenishRipple.value = false;
+        balance.value = +(balance.value + activeReplenishAmountValue.value).toFixed(2);
+        replenishProcessing.value = false;
+        replenishStep.value = 'success';
+        toast('Buffer replenished');
+      }, 900);
+    }
 
     async function sendMagic(){
       if (!supabase) return alert('Supabase not configured');
@@ -556,6 +731,12 @@ createApp({
       sharesPerDay, assumeTipRate, assumeAvgTip, assumeRefCents, monthlyPotential,
       payoutNextAmount, payoutNextLabel, payoutPct,
       aiScripts, affiliates, openCopilot, tasks, showBurst,
+      bufferTarget, balanceDisplay, balanceGapDisplay,
+      openReplenishSheet, closeReplenishSheet, showReplenishSheet,
+      replenishOptions, selectedReplenishId, selectReplenish,
+      confirmReplenish, replenishStep, replenishProcessing,
+      activeReplenishAmount, projectedBufferDisplay, projectedGapDisplay,
+      showReplenishRipple,
       // actions
       shareUrl, eventColor, copyLink, downloadQR, share, copyDM, genScripts, genAffiliates, maybeCelebrate, openPublic
     };
