@@ -634,6 +634,26 @@ window.app = app;
       document.body.style.overflow = '';
     }
 
+    function updateSourceTooltip() {
+      if (!sourceBtn) return;
+
+      const baseAmount = getNextPayoutAmountDollars();
+      const safeAmount = Number.isFinite(baseAmount)
+        ? Math.max(0, baseAmount)
+        : 0;
+
+      const instantAmount = safeAmount * 0.97; // same 3% fee as /source
+
+      const lines = [
+        `This week’s earnings ready to replenish: $${safeAmount.toFixed(2)}`,
+        `Standard payout: $${safeAmount.toFixed(2)} (no extra fee)`,
+        `Instant payout: $${instantAmount.toFixed(2)} (3% instant fee)`
+      ];
+
+      // Native browser tooltip (works everywhere)
+      sourceBtn.title = lines.join('\n');
+    }
+
     // Open overlay when user clicks the “Source” button
     sourceBtn.addEventListener('click', openSourceOverlay);
 
@@ -655,6 +675,9 @@ window.app = app;
         closeSourceOverlay();
       }
     });
+
+    // Initialize tooltip with current payout math
+    updateSourceTooltip();
   });
 </script>
 <!-- Replenish / Source overlay -->
