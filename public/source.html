@@ -18,6 +18,10 @@
     }
   </script>
 
+  <!-- Haylo env + auth helpers for Stripe payouts -->
+  <script src="/env.js"></script>
+  <script src="/haylo-auth.js"></script>
+
   <style>
     body {
       background: radial-gradient(circle at top, #020617, #020617 40%, #020617 100%);
@@ -539,6 +543,39 @@
       let speed = 'standard'; // 'instant' | 'standard'
       let busy = false;
 
+      async function getAuthHeaders() {
+        // Default: no extra headers
+        if (
+          !window.HayloAuth ||
+          !window.HayloAuth.ensureSupabase ||
+          !window.HayloAuth.whoami
+        ) {
+          console.warn(
+            'HayloAuth not ready; calling payout endpoint without auth header'
+          );
+          return {};
+        }
+
+        try {
+          await window.HayloAuth.ensureSupabase();
+          const info = await window.HayloAuth.whoami();
+          const session = info && info.session;
+          const token = session && session.access_token;
+
+          if (!token) {
+            console.warn('No Supabase session token found for payout call');
+            return {};
+          }
+
+          return {
+            Authorization: 'Bearer ' + token
+          };
+        } catch (e) {
+          console.error('Failed to build auth headers for payout', e);
+          return {};
+        }
+      }
+
       function formatAmount(v) {
         return '$' + v.toFixed(2);
       }
@@ -600,18 +637,29 @@
           btnConfirm.firstChild.textContent = 'Sending…';
 
           try {
+            // Attach Supabase JWT so the API knows which creator this is
+            const authHeaders = await getAuthHeaders();
+
             const res = await fetch('/api/creator/payout/start', {
               method: 'POST',
               headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                ...authHeaders
               },
-              credentials: 'include', // send cookies / session for auth
+              credentials: 'include', // keep cookies for anything else you need
               body: JSON.stringify({
                 speed
               })
             });
 
             const data = await res.json().catch(() => ({}));
+
+            // Friendly handling for "not logged in"
+            if (res.status === 401) {
+              alert('Please log in again to start your payout.');
+              // Optional: bounce back through the login flow
+              return;
+            }
 
             if (!res.ok || !data.ok) {
               const msg =
@@ -622,6 +670,7 @@
               return;
             }
 
+            // ✅ Stripe + Supabase say "all good" — show ripple + success
             triggerRipple();
             setTimeout(() => {
               showSuccess();
