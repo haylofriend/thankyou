@@ -574,5 +574,31 @@ createApp({
   }
 }).mount('#app');
 </script>
+<!-- Replenish / Source overlay -->
+<div
+  id="sourceOverlay"
+  class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden"
+>
+  <div class="w-full max-w-xl mx-auto h-[95vh] pt-6">
+    <div class="relative h-full">
+      <!-- Close hotspot (X in corner, optional) -->
+      <button
+        type="button"
+        id="sourceOverlayClose"
+        class="absolute -top-3 right-0 text-xs text-slate-300 hover:text-white"
+      >
+        ✕
+      </button>
+
+      <!-- The iframe that loads /source -->
+      <iframe
+        id="sourceFrame"
+        src=""
+        class="w-full h-full rounded-2xl border border-slate-700 bg-slate-950 overflow-hidden"
+        style="box-shadow: 0 24px 80px rgba(15,23,42,0.9);"
+      ></iframe>
+    </div>
+  </div>
+</div>
 </body>
 </html>
