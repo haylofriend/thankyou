@@ -595,8 +595,28 @@
           btnConfirm.firstChild.textContent = 'Sending…';
 
           try {
-            // TODO: call your real backend payout endpoint here.
-            // For now: just animate.
+            const res = await fetch('/api/creator/payout/start', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              credentials: 'include', // send cookies / session for auth
+              body: JSON.stringify({
+                speed
+              })
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok || !data.ok) {
+              const msg =
+                data && data.error
+                  ? data.error
+                  : 'We had trouble starting your payout. Please try again in a moment.';
+              alert(msg);
+              return;
+            }
+
             triggerRipple();
             setTimeout(() => {
               showSuccess();
