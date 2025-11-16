@@ -376,6 +376,10 @@ createApp({
     const payoutNextLabel = ref('Next Friday');
     const payoutPct = ref(20);
 
+    // expose payout ref for lightweight DOM integrations (e.g. Source overlay)
+    window.__THANKYOU_DASH = window.__THANKYOU_DASH || {};
+    window.__THANKYOU_DASH.payoutNextAmount = payoutNextAmount;
+
     // AI
     const aiScripts = ref([
       "X post: 'Shoutout to everyday helpers. If I’ve helped you, here’s a $2 thank-you link—tiny support, big momentum.'",
@@ -561,6 +565,58 @@ createApp({
     };
   }
 }).mount('#app');
+</script>
+
+<script>
+  (function () {
+    const sourceBtn = document.getElementById('sourceButton');
+    const overlay = document.getElementById('sourceOverlay');
+    const iframe = document.getElementById('sourceFrame');
+    const overlayClose = document.getElementById('sourceOverlayClose');
+
+    if (!sourceBtn || !overlay || !iframe) return;
+
+    function getNextPayoutAmountDollars() {
+      try {
+        const payoutRef = window.__THANKYOU_DASH?.payoutNextAmount;
+        const dollars = payoutRef ? Number(payoutRef.value) : 0;
+        return Number.isFinite(dollars) ? Math.max(0, dollars) : 0;
+      } catch (e) {
+        console.warn('Could not read next payout amount', e);
+        return 0;
+      }
+    }
+
+    function openSourceOverlay() {
+      const amount = getNextPayoutAmountDollars();
+      const params = new URLSearchParams({ amount: amount.toFixed(2) });
+      iframe.src = '/source?' + params.toString();
+      overlay.classList.remove('hidden');
+    }
+
+    function closeSourceOverlay() {
+      overlay.classList.add('hidden');
+      iframe.src = '';
+    }
+
+    sourceBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      openSourceOverlay();
+    });
+
+    if (overlayClose) {
+      overlayClose.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeSourceOverlay();
+      });
+    }
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        closeSourceOverlay();
+      }
+    });
+  })();
 </script>
 </body>
 </html>
