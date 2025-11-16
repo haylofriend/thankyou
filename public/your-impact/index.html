@@ -459,33 +459,77 @@ const app = createApp({
 
     // ===== DATA LOAD (requires auth) =====
     async function hydrateFromDb(){
-      // Get profile for slug + avatar
-      const { data: profile, error } = await supabase.from('profiles').select('display_name, slug, avatar_url').eq('id', auth.value.session.user.id).single();
-      if (!error && profile){
-        displayName.value = profile.display_name || displayName.value;
-        slug.value = profile.slug || slug.valueFromEmail() || auth.value.session.user.id.slice(0,8);
-        avatarUrl.value = profile.avatar_url || avatarUrl.value;
-      } else {
-        // fallback slug from email user_metadata
-        slug.value = slug.valueFromEmail() || auth.value.session.user.id.slice(0,8);
-      }
+      try {
+        if (!supabase) {
+          console.warn('Supabase client is not configured in hydrateFromDb');
+          return;
+        }
 
-      // Example totals (replace with RPCs you already have)
-      const { data: sums } = await supabase.rpc('dashboard_totals').catch(()=>({ data:null }));
-      if (sums){
-        earningsToday.value = sums.today || 0;
-        earningsWeek.value  = sums.week  || 0;
-        kpi.value.tips      = sums.tips  || 0;
-        kpi.value.referrals = sums.referrals || 0;
-        kpi.value.approved  = sums.approved || 0;
-      }
-      const { data: ev } = await supabase.from('events').select('label,value,type').eq('user_id', auth.value.session.user.id).order('created_at',{ascending:false}).limit(20);
-      events.value = (ev||[]);
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-      // Payout mock from DB
-      payoutNextAmount.value = Math.max(kpi.value.approved - (sums?.paid||0), 0);
-      payoutNextLabel.value = 'Friday';
-      payoutPct.value = Math.min(100, Math.round((payoutNextAmount.value/100)*100));
+        if (userError) {
+          console.error('Error getting user:', userError);
+          return;
+        }
+
+        if (!user) {
+          console.warn('No authenticated user found in hydrateFromDb');
+          return;
+        }
+
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('display_name, slug, avatar_url')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error('Error loading profile:', profileError);
+          slug.value = slug.valueFromEmail() || user.id.slice(0,8);
+        } else if (profile) {
+          displayName.value = profile.display_name || displayName.value;
+          slug.value = profile.slug || slug.valueFromEmail() || user.id.slice(0,8);
+          avatarUrl.value = profile.avatar_url || avatarUrl.value;
+        } else {
+          slug.value = slug.valueFromEmail() || user.id.slice(0,8);
+        }
+
+        const { data: totals, error: totalsError } = await supabase.rpc('dashboard_totals');
+
+        if (totalsError) {
+          console.error('Error loading dashboard_totals:', totalsError);
+        } else if (totals) {
+          earningsToday.value = totals.today || 0;
+          earningsWeek.value  = totals.week  || 0;
+          kpi.value.tips      = totals.tips  || 0;
+          kpi.value.referrals = totals.referrals || 0;
+          kpi.value.approved  = totals.approved || 0;
+        }
+
+        const { data: ev, error: eventsError } = await supabase
+          .from('events')
+          .select('label,value,type')
+          .eq('user_id', user.id)
+          .order('created_at',{ascending:false})
+          .limit(20);
+
+        if (eventsError) {
+          console.error('Error loading events:', eventsError);
+        }
+
+        events.value = ev || [];
+
+        payoutNextAmount.value = Math.max(kpi.value.approved - (totals?.paid||0), 0);
+        payoutNextLabel.value = 'Friday';
+        payoutPct.value = Math.min(100, Math.round((payoutNextAmount.value/100)*100));
+
+        console.log('hydrateFromDb complete');
+      } catch (err) {
+        console.error('Unexpected error in hydrateFromDb:', err);
+      }
     }
 
     // little helper on ref
