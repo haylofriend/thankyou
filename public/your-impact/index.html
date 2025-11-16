@@ -358,7 +358,7 @@ function promotePrettyUrl(slugValue) {
   }
 }
 
-createApp({
+const app = createApp({
   setup(){
     // ===== AUTH STATE =====
     const auth = ref({ loading: !!supabase, session: null, email: '', sending: false });
@@ -387,6 +387,10 @@ createApp({
     const payoutNextAmount = ref(0);
     const payoutNextLabel = ref('Next Friday');
     const payoutPct = ref(20);
+
+    window._THANKYOU_DASH = Object.assign(window._THANKYOU_DASH || {}, {
+      payoutNextAmount,
+    });
 
     // AI
     const aiScripts = ref([
@@ -572,7 +576,66 @@ createApp({
       shareUrl, eventColor, copyLink, downloadQR, share, copyDM, genScripts, genAffiliates, maybeCelebrate, openPublic
     };
   }
-}).mount('#app');
+});
+window.app = app;
+</script>
+<script>
+  app.mount('#app');
+</script>
+
+<script>
+  (function () {
+    const sourceBtn = document.getElementById('sourceButton');
+    const overlay = document.getElementById('sourceOverlay');
+    const iframe = document.getElementById('sourceFrame');
+    const overlayClose = document.getElementById('sourceOverlayClose');
+
+    // If elements aren’t present, quietly bail out
+    if (!sourceBtn || !overlay || !iframe) return;
+
+    function getNextPayoutAmountDollars() {
+      try {
+        const payoutRef = window._THANKYOU_DASH?.payoutNextAmount;
+        const dollars = payoutRef ? Number(payoutRef.value) : 0;
+
+        return Number.isFinite(dollars) ? Math.max(0, dollars) : 0;
+      } catch (e) {
+        console.warn('Could not read next payout amount', e);
+        return 0;
+      }
+    }
+
+    function openSourceOverlay() {
+      const amount = getNextPayoutAmountDollars();
+      const params = new URLSearchParams({
+        amount: amount.toFixed(2),
+      });
+
+      iframe.src = '/source?' + params.toString();
+      overlay.classList.remove('hidden');
+    }
+
+    function closeSourceOverlay() {
+      overlay.classList.add('hidden');
+      // Clear iframe to avoid stale content / extra network
+      iframe.src = '';
+    }
+
+    // Open overlay when user clicks the “Source” button
+    sourceBtn.addEventListener('click', openSourceOverlay);
+
+    // Close when clicking the close button
+    if (overlayClose) {
+      overlayClose.addEventListener('click', closeSourceOverlay);
+    }
+
+    // Optional: close when clicking outside the iframe but inside overlay
+    overlay.addEventListener('click', function (event) {
+      if (event.target === overlay) {
+        closeSourceOverlay();
+      }
+    });
+  })();
 </script>
 <!-- Replenish / Source overlay -->
 <div
