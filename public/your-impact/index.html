@@ -584,7 +584,7 @@ window.app = app;
 </script>
 
 <script>
-  (function () {
+  window.addEventListener('DOMContentLoaded', function () {
     const sourceBtn = document.getElementById('sourceButton');
     const overlay = document.getElementById('sourceOverlay');
     const iframe = document.getElementById('sourceFrame');
@@ -635,7 +635,7 @@ window.app = app;
         closeSourceOverlay();
       }
     });
-  })();
+  });
 </script>
 <!-- Replenish / Source overlay -->
 <div
