@@ -1,79 +1,57 @@
-// public/get-started-links.js
-// Sets all [data-get-started] links to the ONE canonical login path
-// LOGIN_PATH (default: /auth/google) + ?redirect=<dashboard>
+// /public/get-started-links.js
 
 (function () {
-  // Canonical dashboard & login path
-  var dash = window.HF_DASHBOARD_URL || "/your-impact";
+  function resolveRedirect(raw) {
+    const origin = window.location.origin;
+    const fallbackPath = window.HF_GET_STARTED_REDIRECT || '/your-impact';
 
-  function canonicalLoginPath(raw) {
-    var fallback = "/auth/google";
-    if (typeof raw !== "string") return fallback;
-    var value = raw.trim();
-    if (!value) return fallback;
-    if (value.startsWith("http://") || value.startsWith("https://")) {
-      try {
-        var origin = typeof location !== "undefined" && location.origin ? location.origin : "";
-        var url = new URL(value, origin || "https://www.haylofriend.com");
-        if (origin && url.origin !== origin) return fallback;
-        return url.pathname + (url.search || "") + (url.hash || "");
-      } catch (_) {
-        return fallback;
+    let redirectPath = raw || fallbackPath;
+
+    // If it’s a full URL, only allow same-origin; otherwise fall back
+    try {
+      const url = new URL(redirectPath, origin);
+      if (url.origin !== origin) {
+        return origin + fallbackPath;
       }
-    }
-    if (value.charAt(0) !== "/") return fallback;
-    return value;
-  }
-
-  var loginPath = canonicalLoginPath(window.LOGIN_PATH);
-
-  // Optional: full override for Get Started URL
-  var envUrl = (typeof window.HF_GET_STARTED_URL === "string" && window.HF_GET_STARTED_URL.trim())
-    ? window.HF_GET_STARTED_URL.trim()
-    : "";
-
-  function currentOrigin() {
-    try {
-      if (typeof location !== "undefined" && location.origin) return location.origin;
-    } catch (_) {}
-    return "https://www.haylofriend.com";
-  }
-
-  function normalizeRedirect(raw, fallbackPath) {
-    var fallback = fallbackPath || dash;
-    if (!raw) return fallback;
-    try {
-      var base = currentOrigin();
-      var u = new URL(raw, base);
-      if (u.origin !== base) return fallback;
-      return u.pathname + (u.search || "") + (u.hash || "");
-    } catch (_) {
-      return fallback;
-    }
-  }
-
-  function buildLoginUrl(targetPath) {
-    var normalized = normalizeRedirect(targetPath || dash, dash);
-    try {
-      var url = new URL(loginPath, currentOrigin());
-      url.searchParams.set("redirect", normalized);
       return url.toString();
-    } catch (err) {
-      return loginPath + "?redirect=" + encodeURIComponent(normalized);
+    } catch (e) {
+      // On any parsing error, just use the fallback
+      return origin + fallbackPath;
     }
   }
 
-  var redirectTarget = normalizeRedirect(
-    typeof window.HF_GET_STARTED_REDIRECT === "string"
-      ? window.HF_GET_STARTED_REDIRECT
-      : undefined,
-    dash
-  );
-  var href = envUrl || buildLoginUrl(redirectTarget);
+  function buildLoginHref(redirectUrl) {
+    const loginPath = window.HF_LOGIN_PATH || '/auth/google/';
+    const url = new URL(loginPath, window.location.origin);
+    url.searchParams.set('redirect', redirectUrl);
+    return url.pathname + url.search + url.hash; // keep it relative to origin
+  }
 
-  document.querySelectorAll("[data-get-started]").forEach(function (el) {
-    if (el && typeof el.setAttribute === "function") {
-      el.setAttribute("href", href);
-    }
-  });
+  function wireGetStartedLinks() {
+    const origin = window.location.origin;
+
+    const links = document.querySelectorAll('[data-get-started]');
+    if (!links.length) return;
+
+    links.forEach((link) => {
+      // optional: allow a custom redirect via data-redirect
+      const rawRedirect = link.getAttribute('data-redirect') || null;
+      const safeRedirect = resolveRedirect(rawRedirect);
+      const href = buildLoginHref(safeRedirect);
+
+      link.setAttribute('href', href);
+
+      // extra safety: enforce redirect on click
+      link.addEventListener('click', (event) => {
+        event.preventDefault();
+        window.location.href = href;
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wireGetStartedLinks);
+  } else {
+    wireGetStartedLinks();
+  }
 })();
