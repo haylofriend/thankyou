@@ -337,51 +337,6 @@ const supabase = (SUPABASE_URL && SUPABASE_KEY && window.supabase)
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
   : null;
 
-// ✅ HASH AUTH HANDLER
-async function useSupabaseHashAuth() {
-  if (!supabase) return;
-  if (typeof window === 'undefined') return;
-
-  const { hash } = window.location;
-  if (!hash || !hash.includes('access_token')) return;
-
-  const params = new URLSearchParams(
-    hash.startsWith('#') ? hash.substring(1) : hash
-  );
-
-  const access_token  = params.get('access_token');
-  const refresh_token = params.get('refresh_token');
-
-  if (!access_token) {
-    console.error('No access_token found in URL hash.');
-    return;
-  }
-
-  try {
-    // 🚀 Requires @supabase/supabase-js v2 on CDN
-    const { error } = await supabase.auth.setSession({
-      access_token,
-      refresh_token: refresh_token ?? undefined,
-    });
-
-    if (error) {
-      console.error('Error setting Supabase session from URL hash:', error);
-      return;
-    }
-
-    // 🧹 Clean URL so tokens aren’t visible
-    const cleanUrl = window.location.pathname + window.location.search;
-    window.history.replaceState({}, document.title, cleanUrl);
-
-    console.log('Supabase session successfully set from URL hash.');
-  } catch (err) {
-    console.error('Unexpected error in useSupabaseHashAuth:', err);
-  }
-}
-
-// 🔑 Run immediately on load
-useSupabaseHashAuth();
-
 // ===== UTIL =====
 async function copyToClipboard(text) {
   try {
@@ -405,27 +360,46 @@ function promotePrettyUrl(slugValue) {
   }
 }
 
-function readTokensFromUrl() {
+async function applySessionFromUrl() {
+  if (!supabase || typeof window === "undefined") return;
+
   try {
     // Prefer hash (#access_token=...) — Supabase default
     const hash = window.location.hash || "";
-    const hashParams = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
-    const accessToken = hashParams.get("access_token");
-    const refreshToken = hashParams.get("refresh_token");
+    const hashParams = new URLSearchParams(
+      hash.startsWith("#") ? hash.slice(1) : hash
+    );
+    const accessTokenHash  = hashParams.get("access_token");
+    const refreshTokenHash = hashParams.get("refresh_token");
 
     // Fallback: also support query (?access_token=...)
     const search = window.location.search || "";
     const searchParams = new URLSearchParams(search);
-    const accessTokenQ = searchParams.get("access_token");
+    const accessTokenQ  = searchParams.get("access_token");
     const refreshTokenQ = searchParams.get("refresh_token");
 
-    return {
-      accessToken: accessToken || accessTokenQ || null,
-      refreshToken: refreshToken || refreshTokenQ || null,
-    };
+    const accessToken  = accessTokenHash  || accessTokenQ  || null;
+    const refreshToken = refreshTokenHash || refreshTokenQ || null;
+
+    if (!accessToken) return;
+
+    const { error } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken ?? undefined,
+    });
+
+    if (error) {
+      console.error("Error applying session from URL tokens", error);
+      return;
+    }
+
+    // Clean the URL so tokens aren't left in the bar
+    const cleanUrl = window.location.pathname + window.location.search;
+    window.history.replaceState(null, "", cleanUrl);
+
+    console.log("Supabase session applied from URL.");
   } catch (e) {
-    console.warn("Failed to read tokens from URL", e);
-    return { accessToken: null, refreshToken: null };
+    console.warn("Failed to apply session from URL", e);
   }
 }
 
@@ -715,25 +689,8 @@ const app = createApp({
       auth.value.loading = true;
 
       // 0) If we just arrived from Supabase (OAuth / magic link),
-      // read tokens from URL and ask Supabase to store the session.
-      try {
-        const { accessToken, refreshToken } = readTokensFromUrl();
-        if (accessToken && refreshToken) {
-          const { error: setErr } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-          if (setErr) {
-            console.error("Error applying session from URL", setErr);
-          } else {
-            // Clean the URL so tokens aren't left in the bar
-            const cleanUrl = window.location.pathname + window.location.search;
-            window.history.replaceState(null, "", cleanUrl);
-          }
-        }
-      } catch (e) {
-        console.warn("Failed to set session from URL tokens", e);
-      }
+      // apply session from URL tokens (hash or query) once.
+      await applySessionFromUrl();
 
       // 1) Initial read
       let { data: { session } } = await supabase.auth.getSession();
