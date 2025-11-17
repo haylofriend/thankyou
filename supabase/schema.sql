@@ -513,3 +513,45 @@ as $$
 $$;
 
 grant execute on function public.dashboard_totals() to authenticated;
+
+-- ============================================================================
+-- creator_available_balance: compute withdrawable balance for a creator
+-- ============================================================================
+
+create or replace function public.creator_available_balance(
+  in_creator_id uuid
+)
+returns table (
+  available_cents integer,
+  currency text
+)
+language sql
+stable
+as $$
+  with credits as (
+    select
+      -- Creator's earnings = gross - platform fee
+      coalesce(sum(amount - coalesce(app_fee_amount, 0)), 0) as total_cents,
+      max(currency) as currency
+    from public.transactions
+    where creator_user_id = in_creator_id
+      -- Only count successful/settled transactions.
+      -- Adjust this status list if you use different values.
+      and (
+        status is null
+        or status in ('succeeded', 'paid')
+      )
+  ),
+  debits as (
+    select
+      coalesce(sum(net_amount_cents), 0) as total_cents
+    from public.payouts
+    where seller_id = in_creator_id
+      -- Treat pending/processing/paid as "already reserved"
+      and status in ('pending', 'processing', 'paid')
+  )
+  select
+    greatest(c.total_cents - d.total_cents, 0) as available_cents,
+    coalesce(c.currency, 'usd') as currency
+  from credits c, debits d;
+$$;
