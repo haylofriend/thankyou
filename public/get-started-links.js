@@ -62,10 +62,20 @@
   function resolveRedirect(raw) {
     const origin = window.location.origin;
     const fallbackPath = window.HF_GET_STARTED_REDIRECT || '/your-impact';
+    const rawValue = raw || fallbackPath;
 
-    let redirectPath = raw || fallbackPath;
+    // Prefer the shared helper
+    try {
+      if (window.HayloRedirect && typeof HayloRedirect.abs === 'function') {
+        return HayloRedirect.abs(rawValue, fallbackPath);
+      }
+    } catch (_) {
+      // ignore and fall back to local logic
+    }
 
-    // If it’s a full URL, only allow same-origin; otherwise fall back
+    let redirectPath = rawValue;
+
+    // Local same-origin-only fallback
     try {
       const url = new URL(redirectPath, origin);
       if (url.origin !== origin) {
@@ -73,7 +83,6 @@
       }
       return url.toString();
     } catch (e) {
-      // On any parsing error, just use the fallback
       return origin + fallbackPath;
     }
   }
