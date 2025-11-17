@@ -458,13 +458,14 @@ const app = createApp({
     }
 
     // ===== DATA LOAD (requires auth) =====
-    async function hydrateFromDb(){
+    async function hydrateFromDb() {
       try {
         if (!supabase) {
           console.warn('Supabase client is not configured in hydrateFromDb');
           return;
         }
 
+        // 1) Get current authenticated user
         const {
           data: { user },
           error: userError,
@@ -480,6 +481,7 @@ const app = createApp({
           return;
         }
 
+        // 2) Load profile (display_name, slug, avatar_url)
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('display_name, slug, avatar_url')
@@ -488,43 +490,78 @@ const app = createApp({
 
         if (profileError) {
           console.error('Error loading profile:', profileError);
-          slug.value = slug.valueFromEmail() || user.id.slice(0,8);
+          // fallback slug from email or user id
+          slug.value = slug.valueFromEmail() || user.id.slice(0, 8);
         } else if (profile) {
           displayName.value = profile.display_name || displayName.value;
-          slug.value = profile.slug || slug.valueFromEmail() || user.id.slice(0,8);
+          slug.value =
+            profile.slug || slug.valueFromEmail() || user.id.slice(0, 8);
           avatarUrl.value = profile.avatar_url || avatarUrl.value;
         } else {
-          slug.value = slug.valueFromEmail() || user.id.slice(0,8);
+          // no profile row; still derive a slug
+          slug.value = slug.valueFromEmail() || user.id.slice(0, 8);
         }
 
-        const { data: totals, error: totalsError } = await supabase.rpc('dashboard_totals');
+        // 3) Load dashboard totals via RPC
+        const { data: totals, error: totalsError } = await supabase.rpc(
+          'dashboard_totals'
+        );
+
+        // dashboard_totals returns an array; pick the first row if present
+        const totalsRow =
+          totals && Array.isArray(totals) && totals.length > 0
+            ? totals[0]
+            : null;
 
         if (totalsError) {
           console.error('Error loading dashboard_totals:', totalsError);
-        } else if (totals) {
-          earningsToday.value = totals.today || 0;
-          earningsWeek.value  = totals.week  || 0;
-          kpi.value.tips      = totals.tips  || 0;
-          kpi.value.referrals = totals.referrals || 0;
-          kpi.value.approved  = totals.approved || 0;
+          earningsToday.value = 0;
+          earningsWeek.value = 0;
+          kpi.value.tips = 0;
+          kpi.value.referrals = 0;
+          kpi.value.approved = 0;
+        } else if (totalsRow) {
+          earningsToday.value = totalsRow.today || 0;
+          earningsWeek.value = totalsRow.week || 0;
+          kpi.value.tips = totalsRow.tips || 0;
+          kpi.value.referrals = totalsRow.referrals || 0;
+          kpi.value.approved = totalsRow.approved || 0;
+        } else {
+          // no totals rows yet
+          earningsToday.value = 0;
+          earningsWeek.value = 0;
+          kpi.value.tips = 0;
+          kpi.value.referrals = 0;
+          kpi.value.approved = 0;
         }
 
+        // 4) Load recent events (gratitude ledger)
         const { data: ev, error: eventsError } = await supabase
           .from('events')
-          .select('label,value,type')
+          .select('label, value, type')
           .eq('user_id', user.id)
-          .order('created_at',{ascending:false})
+          .order('created_at', { ascending: false })
           .limit(20);
 
         if (eventsError) {
           console.error('Error loading events:', eventsError);
+          events.value = [];
+        } else {
+          events.value = ev || [];
         }
 
-        events.value = ev || [];
+        // 5) Compute payout info from totalsRow
+        const paid =
+          totalsRow && typeof totalsRow.paid === 'number'
+            ? totalsRow.paid
+            : 0;
 
-        payoutNextAmount.value = Math.max(kpi.value.approved - (totals?.paid||0), 0);
+        payoutNextAmount.value = Math.max(kpi.value.approved - paid, 0);
         payoutNextLabel.value = 'Friday';
-        payoutPct.value = Math.min(100, Math.round((payoutNextAmount.value/100)*100));
+        payoutPct.value = Math.min(
+          100,
+          Math.round((payoutNextAmount.value / 100) * 100)
+        );
 
         console.log('hydrateFromDb complete');
       } catch (err) {
