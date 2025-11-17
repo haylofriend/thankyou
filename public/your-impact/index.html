@@ -500,6 +500,38 @@ const app = createApp({
       window.location.href = url.toString();
     }
 
+    async function fetchBalance() {
+      try {
+        const res = await fetch('/api/creator/balance', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          },
+          credentials: 'include'
+        });
+
+        const out = await res.json();
+
+        if (!out?.ok) {
+          console.warn('Balance fetch failed:', out);
+          payoutNextAmount.value = 0;
+          payoutNextLabel.value = 'Balance unavailable';
+          return;
+        }
+
+        const cents = out.available_cents || 0;
+        const dollars = cents / 100;
+
+        payoutNextAmount.value = dollars;
+        payoutNextLabel.value = 'Available to withdraw';
+        payoutPct.value = 100;
+      } catch (err) {
+        console.error('fetchBalance error', err);
+        payoutNextAmount.value = 0;
+        payoutNextLabel.value = 'Balance unavailable';
+      }
+    }
+
     // ===== DATA LOAD (requires auth) =====
     async function hydrateFromDb() {
       try {
@@ -677,6 +709,7 @@ const app = createApp({
 
     onMounted(async () => {
       promotePrettyUrl(slug.value);
+      fetchBalance();
 
       if (!supabase) {
         // No Supabase configured: keep the demo/overlay behavior.
