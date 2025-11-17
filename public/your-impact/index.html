@@ -360,6 +360,30 @@ function promotePrettyUrl(slugValue) {
   }
 }
 
+function readTokensFromUrl() {
+  try {
+    // Prefer hash (#access_token=...) — Supabase default
+    const hash = window.location.hash || "";
+    const hashParams = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
+    const accessToken = hashParams.get("access_token");
+    const refreshToken = hashParams.get("refresh_token");
+
+    // Fallback: also support query (?access_token=...)
+    const search = window.location.search || "";
+    const searchParams = new URLSearchParams(search);
+    const accessTokenQ = searchParams.get("access_token");
+    const refreshTokenQ = searchParams.get("refresh_token");
+
+    return {
+      accessToken: accessToken || accessTokenQ || null,
+      refreshToken: refreshToken || refreshTokenQ || null,
+    };
+  } catch (e) {
+    console.warn("Failed to read tokens from URL", e);
+    return { accessToken: null, refreshToken: null };
+  }
+}
+
 const app = createApp({
   setup(){
     // ===== AUTH STATE =====
@@ -644,6 +668,27 @@ const app = createApp({
       }
 
       auth.value.loading = true;
+
+      // 0) If we just arrived from Supabase (OAuth / magic link),
+      // read tokens from URL and ask Supabase to store the session.
+      try {
+        const { accessToken, refreshToken } = readTokensFromUrl();
+        if (accessToken && refreshToken) {
+          const { error: setErr } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (setErr) {
+            console.error("Error applying session from URL", setErr);
+          } else {
+            // Clean the URL so tokens aren't left in the bar
+            const cleanUrl = window.location.pathname + window.location.search;
+            window.history.replaceState(null, "", cleanUrl);
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to set session from URL tokens", e);
+      }
 
       // 1) Initial read
       let { data: { session } } = await supabase.auth.getSession();
