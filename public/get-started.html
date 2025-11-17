@@ -59,6 +59,7 @@
 
   <!-- Runtime env (load from working API path) -->
   <script src="/env.js"></script>
+  <script src="/haylo-redirect.js"></script>
 
   <script>
     // Only-if-unset fallbacks (do not overwrite values that env.js sets)
@@ -67,17 +68,28 @@
   </script>
 
   <script>
-    window.resolveDashboardUrl = window.resolveDashboardUrl || function resolveDashboardUrl() {
-      const origin = window.location.origin
-      const raw = window.HF_DASHBOARD_URL || '/your-impact'
+    (function () {
+      var fallbackPath = '/your-impact'
 
-      try {
-        const url = new URL(raw, origin)
-        return url.toString()
-      } catch (e) {
-        return origin + '/your-impact'
+      function throughVault(raw) {
+        var target = raw || fallbackPath
+        try {
+          if (window.HayloRedirect && typeof HayloRedirect.abs === 'function') {
+            return HayloRedirect.abs(target, fallbackPath)
+          }
+        } catch (_) {}
+
+        try {
+          return new URL(target, location.origin).toString()
+        } catch (_) {
+          return location.origin + fallbackPath
+        }
       }
-    }
+
+      window.resolveDashboardUrl = window.resolveDashboardUrl || function resolveDashboardUrl() {
+        return throughVault(window.HF_DASHBOARD_URL)
+      }
+    })()
   </script>
 
   <!-- Third‑party SDKs (async to avoid blocking) -->
@@ -320,10 +332,22 @@
       }
 
       function resolveRedirect() {
+        var fallbackPath = '/your-impact'
+        var raw = DASHBOARD_URL || fallbackPath
+
         try {
-          return new URL(DASHBOARD_URL, location.origin).toString()
+          if (window.HayloRedirect && typeof HayloRedirect.abs === 'function') {
+            return HayloRedirect.abs(raw, fallbackPath)
+          }
         } catch (_) {
-          return location.origin + (DASHBOARD_URL || '/your-impact')
+          // fall through
+        }
+
+        // Local same-origin-only fallback
+        try {
+          return new URL(raw, location.origin).toString()
+        } catch (_) {
+          return location.origin + (fallbackPath || '/your-impact')
         }
       }
 
