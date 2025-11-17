@@ -504,6 +504,7 @@ const app = createApp({
       if (!supabase) return;
 
       try {
+        // 1) Get a Supabase access token
         const activeSession = currentSession || auth.value?.session || null;
         let token = activeSession?.access_token;
 
@@ -514,15 +515,18 @@ const app = createApp({
 
         if (!token) {
           console.warn('No Supabase session token available for fetchBalance');
+          payoutNextAmount.value = 0;
+          payoutNextLabel.value = 'Please log in again';
           return;
         }
 
+        // 2) Call the balance endpoint with Authorization: Bearer
         const res = await fetch('/api/creator/balance', {
           method: 'GET',
           headers: {
+            'Accept': 'application/json',
             Authorization: `Bearer ${token}`
-          },
-          credentials: 'include'
+          }
         });
 
         if (res.status === 401) {
@@ -536,18 +540,22 @@ const app = createApp({
 
         if (!res.ok || !payload?.ok) {
           console.warn('Failed to fetch creator balance', payload);
+          payoutNextAmount.value = 0;
+          payoutNextLabel.value = 'Balance unavailable';
           return;
         }
 
+        // 3) Update UI with real balance
         const cents = Number(payload.available_cents) || 0;
-        payoutNextAmount.value = Math.max(0, cents / 100);
-        payoutNextLabel.value = 'Ready to replenish';
-        payoutPct.value = Math.min(
-          100,
-          Math.round((payoutNextAmount.value / 100) * 100)
-        );
+        const dollars = cents / 100;
+
+        payoutNextAmount.value = Math.max(0, dollars);
+        payoutNextLabel.value = 'Available to withdraw';
+        payoutPct.value = 100; // placeholder for progress bar
       } catch (err) {
         console.error('fetchBalance unexpected error', err);
+        payoutNextAmount.value = 0;
+        payoutNextLabel.value = 'Balance unavailable';
       }
     }
 
