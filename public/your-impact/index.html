@@ -337,6 +337,43 @@ const supabase = (SUPABASE_URL && SUPABASE_KEY && window.supabase)
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
   : null;
 
+function useSupabaseHashAuth() {
+  if (!supabase) return;
+
+  onMounted(() => {
+    if (typeof window === 'undefined') return;
+
+    const { hash } = window.location;
+    if (!hash || !hash.includes('access_token')) {
+      return;
+    }
+
+    const params = new URLSearchParams(hash.startsWith('#') ? hash.substring(1) : hash);
+    const access_token = params.get('access_token');
+    const refresh_token = params.get('refresh_token');
+
+    if (!access_token) {
+      console.error('No access_token found in URL hash.');
+      return;
+    }
+
+    (async () => {
+      const { error } = await supabase.auth.setSession({
+        access_token,
+        refresh_token: refresh_token ?? undefined,
+      });
+
+      if (error) {
+        console.error('Error setting Supabase session from URL hash:', error);
+        return;
+      }
+
+      const cleanUrl = window.location.pathname + window.location.search;
+      window.history.replaceState({}, document.title, cleanUrl);
+    })();
+  });
+}
+
 // ===== UTIL =====
 async function copyToClipboard(text) {
   try {
@@ -386,6 +423,8 @@ function readTokensFromUrl() {
 
 const app = createApp({
   setup(){
+    useSupabaseHashAuth();
+
     // ===== AUTH STATE =====
     const auth = ref({ loading: !!supabase, session: null, email: '', sending: false });
 
