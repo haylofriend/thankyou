@@ -536,6 +536,49 @@ const app = createApp({
           kpi.value.approved = 0;
         }
 
+        // 3a) Seed conversion + sliders from real data
+        const tipsCount = totalsRow?.tips ?? 0;
+        const referralsCount = totalsRow?.referrals ?? 0;
+        const approvedDollars = Number(totalsRow?.approved ?? 0);
+        const paidDollars = Number(totalsRow?.paid ?? 0);
+
+        // Conversion card: visits -> thank-yous
+        if (referralsCount > 0) {
+          const convFraction = tipsCount / referralsCount;
+          convRate.value = Math.max(0, Math.min(1, convFraction));
+        } else {
+          convRate.value = 0.28;
+        }
+
+        // Average tip sliders follow recent performance
+        if (tipsCount > 0) {
+          const allDollars = approvedDollars + paidDollars;
+          const avgTip = allDollars / tipsCount;
+
+          if (avgTip > 0) {
+            assumeAvgTip.value = Number(
+              Math.min(500, Math.max(0.5, avgTip)).toFixed(2)
+            );
+          }
+
+          const tipRatePct = convRate.value * 100 || 30;
+          assumeTipRate.value = Math.max(
+            5,
+            Math.min(80, Math.round(tipRatePct))
+          );
+        }
+
+        if (referralsCount > 0) {
+          const estSharesPerDay = Math.max(
+            1,
+            Math.round(referralsCount / 30)
+          );
+          sharesPerDay.value = estSharesPerDay;
+        } else if (tipsCount > 0) {
+          const estSharesPerDay = Math.max(1, Math.round(tipsCount / 5));
+          sharesPerDay.value = estSharesPerDay;
+        }
+
         // 4) Load recent events (gratitude ledger)
         const { data: ev, error: eventsError } = await supabase
           .from('events')
