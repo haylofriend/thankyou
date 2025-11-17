@@ -4,13 +4,22 @@ export const config = {
 
 export default async function handler(req) {
   function canonicalLoginPath(raw) {
-    const fallback = "/auth/google";
+    const fallback = "/auth/google/";
     if (!raw || typeof raw !== "string") return fallback;
     const value = raw.trim();
     if (!value) return fallback;
     if (value.startsWith("/")) return value;
     return fallback;
   }
+
+  function normalizeGetStartedUrl(raw, fallback) {
+    if (!raw || typeof raw !== "string") return fallback;
+    const value = raw.trim();
+    if (!value) return fallback;
+    return value;
+  }
+
+  const loginPath = canonicalLoginPath(process.env.NEXT_PUBLIC_LOGIN_PATH);
 
   const cfg = {
     SUPABASE_URL:
@@ -22,11 +31,14 @@ export default async function handler(req) {
       process.env.SUPABASE_ANON_KEY ||
       "",
     GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "",
-    HF_GET_STARTED_URL:
-      process.env.NEXT_PUBLIC_HF_GET_STARTED_URL || "",
+    HF_LOGIN_PATH: loginPath,
+    HF_GET_STARTED_URL: normalizeGetStartedUrl(
+      process.env.NEXT_PUBLIC_HF_GET_STARTED_URL,
+      loginPath
+    ),
     HF_GET_STARTED_REDIRECT:
       process.env.NEXT_PUBLIC_HF_GET_STARTED_REDIRECT || "/your-impact",
-    LOGIN_PATH: canonicalLoginPath(process.env.NEXT_PUBLIC_LOGIN_PATH),
+    LOGIN_PATH: loginPath,
     HF_DASHBOARD_URL:
       process.env.NEXT_PUBLIC_HF_DASHBOARD_URL || "/your-impact",
     THANK_HOST:
@@ -52,9 +64,10 @@ export default async function handler(req) {
     window.__ENV__ = ${JSON.stringify(cfg)};
     window.SUPABASE_URL            = window.SUPABASE_URL            || window.__ENV__.SUPABASE_URL;
     window.SUPABASE_ANON_KEY       = window.SUPABASE_ANON_KEY       || window.__ENV__.SUPABASE_ANON_KEY;
-    window.HF_GET_STARTED_URL      = window.HF_GET_STARTED_URL      || window.__ENV__.HF_GET_STARTED_URL;
-    window.HF_GET_STARTED_REDIRECT = window.HF_GET_STARTED_REDIRECT || window.__ENV__.HF_GET_STARTED_REDIRECT;
-    window.LOGIN_PATH              = window.LOGIN_PATH              || window.__ENV__.LOGIN_PATH;
+    window.HF_LOGIN_PATH           = window.HF_LOGIN_PATH           || window.__ENV__.HF_LOGIN_PATH || "/auth/google/";
+    window.HF_GET_STARTED_REDIRECT = window.HF_GET_STARTED_REDIRECT || window.__ENV__.HF_GET_STARTED_REDIRECT || "/your-impact";
+    window.HF_GET_STARTED_URL      = window.HF_GET_STARTED_URL      || window.__ENV__.HF_GET_STARTED_URL || window.HF_LOGIN_PATH;
+    window.LOGIN_PATH              = window.LOGIN_PATH              || window.__ENV__.LOGIN_PATH || window.HF_LOGIN_PATH;
     window.HF_DASHBOARD_URL        = window.HF_DASHBOARD_URL        || window.__ENV__.HF_DASHBOARD_URL;
     window.THANK_HOST              = window.THANK_HOST              || window.__ENV__.THANK_HOST;
     window.BACKEND_URL             = window.BACKEND_URL             || window.__ENV__.BACKEND_URL;
