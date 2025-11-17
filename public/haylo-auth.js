@@ -163,6 +163,19 @@
 
   function normalizeRedirect(raw, fallbackPath) {
     var fallback = fallbackPath || dash();
+    
+    // Prefer the shared HayloRedirect logic if present
+    try {
+      if (typeof window !== "undefined" &&
+          window.HayloRedirect &&
+          typeof window.HayloRedirect.normalize === "function") {
+        return window.HayloRedirect.normalize(raw, fallback);
+      }
+    } catch (_) {
+      // fall back to local behavior
+    }
+
+    // Local, same-origin-only fallback (no whitelist)
     if (!raw) return fallback;
     try {
       var base = currentOrigin();
