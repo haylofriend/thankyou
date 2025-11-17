@@ -4,7 +4,7 @@
 // withdrawable balance using the DB function
 // public.creator_available_balance(in_creator_id uuid).
 
-const { getUserFromAuthHeader, serviceSupabase } = require('../_supabase-utils');
+const { getUserFromAuthHeader, supabase } = require('../_supabase-utils');
 
 function json(res, status, body) {
   res.statusCode = status;
@@ -26,8 +26,7 @@ module.exports = async function handler(req, res) {
 
     const creatorId = user.id;
 
-    // 2) Call the DB function to compute available balance
-    const supabase = serviceSupabase();
+    // use the shared server-side Supabase client
 
     const { data, error } = await supabase
       .rpc('creator_available_balance', { in_creator_id: creatorId });
