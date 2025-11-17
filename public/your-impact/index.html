@@ -500,6 +500,57 @@ const app = createApp({
       window.location.href = url.toString();
     }
 
+    async function fetchBalance(currentSession) {
+      if (!supabase) return;
+
+      try {
+        const activeSession = currentSession || auth.value?.session || null;
+        let token = activeSession?.access_token;
+
+        if (!token) {
+          const { data } = await supabase.auth.getSession();
+          token = data?.session?.access_token || '';
+        }
+
+        if (!token) {
+          console.warn('No Supabase session token available for fetchBalance');
+          return;
+        }
+
+        const res = await fetch('/api/creator/balance', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          credentials: 'include'
+        });
+
+        if (res.status === 401) {
+          console.warn('Not authenticated when fetching balance');
+          payoutNextAmount.value = 0;
+          payoutNextLabel.value = 'Please log in again';
+          return;
+        }
+
+        const payload = await res.json().catch(() => ({}));
+
+        if (!res.ok || !payload?.ok) {
+          console.warn('Failed to fetch creator balance', payload);
+          return;
+        }
+
+        const cents = Number(payload.available_cents) || 0;
+        payoutNextAmount.value = Math.max(0, cents / 100);
+        payoutNextLabel.value = 'Ready to replenish';
+        payoutPct.value = Math.min(
+          100,
+          Math.round((payoutNextAmount.value / 100) * 100)
+        );
+      } catch (err) {
+        console.error('fetchBalance unexpected error', err);
+      }
+    }
+
     // ===== DATA LOAD (requires auth) =====
     async function hydrateFromDb() {
       try {
@@ -649,6 +700,8 @@ const app = createApp({
           100,
           Math.round((payoutNextAmount.value / 100) * 100)
         );
+
+        await fetchBalance(auth.value.session);
 
         console.log('hydrateFromDb complete');
       } catch (err) {
