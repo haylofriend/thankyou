@@ -512,6 +512,7 @@ const app = createApp({
           totals && Array.isArray(totals) && totals.length > 0
             ? totals[0]
             : null;
+        const hasTotalsRow = !!totalsRow;
 
         if (totalsError) {
           console.error('Error loading dashboard_totals:', totalsError);
@@ -520,7 +521,7 @@ const app = createApp({
           kpi.value.tips = 0;
           kpi.value.referrals = 0;
           kpi.value.approved = 0;
-        } else if (totalsRow) {
+        } else if (hasTotalsRow) {
           earningsToday.value = totalsRow.today || 0;
           earningsWeek.value = totalsRow.week || 0;
           kpi.value.tips = totalsRow.tips || 0;
@@ -552,7 +553,7 @@ const app = createApp({
 
         // 5) Compute payout info from totalsRow
         const paid =
-          totalsRow && typeof totalsRow.paid === 'number'
+          hasTotalsRow && typeof totalsRow.paid === 'number'
             ? totalsRow.paid
             : 0;
 
