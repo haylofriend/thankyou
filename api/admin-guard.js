@@ -1,116 +1,52 @@
-// admin-guard.js
-//
-// Ensures only admins access this page.
-// If the user is not logged in OR not an admin,
-// they are redirected through the ONE canonical login path.
-//
-// Canonical login path = window.LOGIN_PATH || "/auth/google"
+// /api/admin-guard.js
+// Shared helper to ensure admin-only access for server-side handlers.
 
-(function () {
-  /**
-   * Safely extracts a same-origin redirect target.
-   * Prevents open-redirect vulnerabilities.
-   */
-  function safeRedirectTarget(defaultPath) {
+const { getUserFromAuthHeader } = require('./_supabase-utils');
+
+function sendJson(res, status, body) {
+  if (!res.headersSent) {
+    res.statusCode = status;
+    res.setHeader('content-type', 'application/json');
+  }
+  res.end(JSON.stringify(body));
+}
+
+async function requireAdmin(req) {
+  const user = await getUserFromAuthHeader(req);
+  if (!user) {
+    return { error: 'Unauthorized', status: 401 };
+  }
+
+  const role = user?.role || user?.user_metadata?.role || user?.app_role;
+  const isAdmin = role === 'admin' || role === 'super_admin';
+
+  if (!isAdmin) {
+    return { error: 'Forbidden', status: 403 };
+  }
+
+  return { user };
+}
+
+function withAdminGuard(handler) {
+  return async (req, res) => {
     try {
-      var params = new URLSearchParams(location.search);
-      var raw = params.get("redirect") || "";
+      const result = await requireAdmin(req);
+      if (!result || result.error) {
+        const status = result?.status || 403;
+        const message = result?.error || 'Forbidden';
+        return sendJson(res, status, { error: message });
+      }
 
-      if (!raw) return defaultPath;
-
-      var url = new URL(raw, location.origin);
-      if (url.origin !== location.origin) return defaultPath;
-
-      return url.pathname + (url.search || "") + (url.hash || "");
+      req.adminUser = result.user;
+      return handler(req, res);
     } catch (err) {
-      return defaultPath;
+      console.error('Admin guard failed', err);
+      return sendJson(res, 500, { error: 'Internal server error' });
     }
-  }
+  };
+}
 
-  /**
-   * Redirects to the canonical login path.
-   */
-  function canonicalLoginPath(raw) {
-    var fallback = "/auth/google";
-    if (typeof raw !== "string") return fallback;
-    var value = raw.trim();
-    if (!value) return fallback;
-    if (value.startsWith("http://") || value.startsWith("https://")) {
-      try {
-        var origin = typeof location !== "undefined" && location.origin ? location.origin : "";
-        var url = new URL(value, origin || "https://www.haylofriend.com");
-        if (origin && url.origin !== origin) return fallback;
-        return url.pathname + (url.search || "") + (url.hash || "");
-      } catch (_) {
-        return fallback;
-      }
-    }
-    if (value.charAt(0) !== "/") return fallback;
-    return value;
-  }
-
-  function sendToLogin(target) {
-    var login = canonicalLoginPath(window.LOGIN_PATH);
-    try {
-      var origin = typeof location !== "undefined" && location.origin ? location.origin : "";
-      if (origin) {
-        var url = new URL(login, origin);
-        url.searchParams.set("redirect", target);
-        location.replace(url.toString());
-        return;
-      }
-    } catch (_) {}
-    location.replace(login + "?redirect=" + encodeURIComponent(target));
-  }
-
-  /**
-   * Runs the admin enforcement logic.
-   */
-  async function enforceAdmin() {
-    // Get dashboard fallback from env, or use the default.
-    var fallbackTarget = (window.HF_DASHBOARD_URL || "/your-impact");
-    var redirectTarget = safeRedirectTarget(fallbackTarget);
-
-    // If HayloAuth is not loaded yet, redirect through login.
-    if (!window.HayloAuth || typeof window.HayloAuth.getUser !== "function") {
-      sendToLogin(redirectTarget);
-      return;
-    }
-
-    try {
-      // Query current user session
-      var user = await window.HayloAuth.getUser();
-
-      // No user? → Login
-      if (!user) {
-        sendToLogin(redirectTarget);
-        return;
-      }
-
-      // Expect an admin marker (role, custom claim, or metadata)
-      var role = user.role || user.app_role || user.user_role || (user.user_metadata && user.user_metadata.role);
-
-      // Not admin? → No access
-      if (role !== "admin") {
-        // Could send to dashboard or logout → here we send to dashboard
-        location.replace(fallbackTarget);
-        return;
-      }
-
-      // Admin confirmed → allow page to load
-      console.log("ADMIN GUARD: Access granted.");
-
-    } catch (err) {
-      console.error("ADMIN GUARD ERROR:", err);
-      sendToLogin(redirectTarget);
-    }
-  }
-
-  // Execute guard on load
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", enforceAdmin, { once: true });
-  } else {
-    enforceAdmin();
-  }
-
-})();
+module.exports = {
+  requireAdmin,
+  withAdminGuard
+};
