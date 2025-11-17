@@ -7,49 +7,14 @@
 
   <script src="/env.js"></script>
   <script src="/haylo-auth.js"></script>
+
   <script>
-    (function () {
-      var targetPath = '/mission-control';
-      var loginPath = (window.LOGIN_PATH || '/auth/google');
-      var attempted = false;
-      var fallbackTimer = setTimeout(runGate, 4000);
-
-      function toLogin() {
-        try {
-          var url = new URL(loginPath, location.origin);
-          url.searchParams.set('redirect', targetPath);
-          location.replace(url.toString());
-        } catch (_) {
-          location.replace(loginPath + '?redirect=' + encodeURIComponent(targetPath));
-        }
-      }
-
-      function runGate() {
-        if (attempted) return;
-        attempted = true;
-        clearTimeout(fallbackTimer);
-        try {
-          var api = window.HayloAuth;
-          if (api && typeof api.gate === 'function') {
-            api.gate(targetPath).catch(function (err) {
-              console.warn('Auth gate redirect failed', err);
-              toLogin();
-            });
-            return;
-          }
-        } catch (error) {
-          console.error('Auth gate threw an error', error);
-        }
-        toLogin();
-      }
-
-      if (window.HayloAuth && typeof window.HayloAuth.gate === 'function') {
-        runGate();
-      } else {
-        window.addEventListener('hayloauth:ready', runGate, { once: true });
-      }
-    })();
+    // Ensure only authenticated users can even hit this page
+    HayloAuth.gate('/mission-control');
   </script>
+
+  <!-- NOW add the admin-specific guard -->
+  <script src="/admin-guard-ui.js"></script>
 
   <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
