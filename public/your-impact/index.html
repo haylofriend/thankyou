@@ -499,14 +499,24 @@ const app = createApp({
 
         const { data: totals, error: totalsError } = await supabase.rpc('dashboard_totals');
 
+        // dashboard_totals() returns an array of rows; we only need the first one
+        const totalsRow = (totals && totals.length > 0) ? totals[0] : null;
+
         if (totalsError) {
           console.error('Error loading dashboard_totals:', totalsError);
-        } else if (totals) {
-          earningsToday.value = totals.today || 0;
-          earningsWeek.value  = totals.week  || 0;
-          kpi.value.tips      = totals.tips  || 0;
-          kpi.value.referrals = totals.referrals || 0;
-          kpi.value.approved  = totals.approved || 0;
+        } else if (totalsRow) {
+          earningsToday.value = totalsRow.today || 0;
+          earningsWeek.value  = totalsRow.week  || 0;
+          kpi.value.tips      = totalsRow.tips || 0;
+          kpi.value.referrals = totalsRow.referrals || 0;
+          kpi.value.approved  = totalsRow.approved || 0;
+        } else {
+          // No rows yet; keep everything at zero
+          earningsToday.value = 0;
+          earningsWeek.value  = 0;
+          kpi.value.tips      = 0;
+          kpi.value.referrals = 0;
+          kpi.value.approved  = 0;
         }
 
         const { data: ev, error: eventsError } = await supabase
@@ -522,7 +532,11 @@ const app = createApp({
 
         events.value = ev || [];
 
-        payoutNextAmount.value = Math.max(kpi.value.approved - (totals?.paid||0), 0);
+        const paid = (totalsRow && typeof totalsRow.paid === 'number')
+          ? totalsRow.paid
+          : 0;
+
+        payoutNextAmount.value = Math.max(kpi.value.approved - paid, 0);
         payoutNextLabel.value = 'Friday';
         payoutPct.value = Math.min(100, Math.round((payoutNextAmount.value/100)*100));
 
