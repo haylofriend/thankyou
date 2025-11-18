@@ -430,7 +430,7 @@ const app = createApp({
 
     // Payouts
     const payoutNextAmount = ref(0);
-    const payoutNextLabel = ref('Next Friday');
+    const payoutNextLabel = ref('Available to withdraw');
     const payoutPct = ref(20);
 
     window._THANKYOU_DASH = Object.assign(window._THANKYOU_DASH || {}, {
@@ -500,33 +500,60 @@ const app = createApp({
       window.location.href = url.toString();
     }
 
-    async function fetchBalance() {
+    async function fetchBalance(currentSession) {
+      if (!supabase) return;
+
       try {
+        // 1) Get a Supabase access token
+        const activeSession = currentSession || auth.value?.session || null;
+        let token = activeSession?.access_token;
+
+        if (!token) {
+          const { data } = await supabase.auth.getSession();
+          token = data?.session?.access_token || '';
+        }
+
+        if (!token) {
+          console.warn('No Supabase session token available for fetchBalance');
+          payoutNextAmount.value = 0;
+          payoutNextLabel.value = 'Please log in again';
+          return;
+        }
+
+        // 2) Call the balance endpoint with Authorization: Bearer
         const res = await fetch('/api/creator/balance', {
           method: 'GET',
           headers: {
-            'Accept': 'application/json'
-          },
-          credentials: 'include'
+            'Accept': 'application/json',
+            Authorization: `Bearer ${token}`
+          }
         });
 
-        const out = await res.json();
+        if (res.status === 401) {
+          console.warn('Not authenticated when fetching balance');
+          payoutNextAmount.value = 0;
+          payoutNextLabel.value = 'Please log in again';
+          return;
+        }
 
-        if (!out?.ok) {
-          console.warn('Balance fetch failed:', out);
+        const payload = await res.json().catch(() => ({}));
+
+        if (!res.ok || !payload?.ok) {
+          console.warn('Failed to fetch creator balance', payload);
           payoutNextAmount.value = 0;
           payoutNextLabel.value = 'Balance unavailable';
           return;
         }
 
-        const cents = out.available_cents || 0;
+        // 3) Update UI with real balance
+        const cents = Number(payload.available_cents) || 0;
         const dollars = cents / 100;
 
-        payoutNextAmount.value = dollars;
+        payoutNextAmount.value = Math.max(0, dollars);
         payoutNextLabel.value = 'Available to withdraw';
-        payoutPct.value = 100;
+        payoutPct.value = 100; // placeholder for progress bar
       } catch (err) {
-        console.error('fetchBalance error', err);
+        console.error('fetchBalance unexpected error', err);
         payoutNextAmount.value = 0;
         payoutNextLabel.value = 'Balance unavailable';
       }
@@ -676,11 +703,13 @@ const app = createApp({
             : 0;
 
         payoutNextAmount.value = Math.max(kpi.value.approved - paid, 0);
-        payoutNextLabel.value = 'Friday';
+        payoutNextLabel.value = 'Available to withdraw';
         payoutPct.value = Math.min(
           100,
           Math.round((payoutNextAmount.value / 100) * 100)
         );
+
+        await fetchBalance(auth.value.session);
 
         console.log('hydrateFromDb complete');
       } catch (err) {
