@@ -738,6 +738,7 @@ const app = createApp({
 
     onMounted(async () => {
       promotePrettyUrl(slug.value);
+      fetchBalance();
 
       if (!supabase) {
         // No Supabase configured: keep the demo/overlay behavior.
