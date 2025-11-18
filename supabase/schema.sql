@@ -555,3 +555,87 @@ as $$
     coalesce(c.currency, 'usd') as currency
   from credits c, debits d;
 $$;
+
+-- ============================================================================
+-- creator_create_payout: reserve a payout row for a creator
+-- ============================================================================
+create or replace function public.creator_create_payout(
+  in_creator_id uuid,
+  in_speed text
+)
+returns table (
+  payout_id uuid,
+  amount_cents integer,
+  currency text,
+  payout_type text
+)
+language plpgsql
+as $$
+declare
+  bal record;
+  requested_speed text;
+  reserved_cents integer;
+  min_payout_cents integer := 100; -- e.g. $1.00 minimum, adjust as you like
+begin
+  requested_speed := coalesce(in_speed, 'standard');
+
+  -- 1) Look up current available balance
+  select *
+  into bal
+  from public.creator_available_balance(in_creator_id);
+
+  if bal.available_cents is null then
+    bal.available_cents := 0;
+  end if;
+
+  -- 2) Enforce minimums
+  if bal.available_cents <= 0 then
+    raise exception 'NO_FUNDS';
+  end if;
+
+  if bal.available_cents < min_payout_cents then
+    raise exception 'BELOW_MINIMUM';
+  end if;
+
+  reserved_cents := bal.available_cents;
+
+  -- 3) Apply speed-based fee / adjustment (placeholder logic)
+  -- NOTE: adjust this to match your real business rules.
+  if requested_speed = 'instant' then
+    -- Example: take a 3% instant fee
+    reserved_cents := floor(reserved_cents * 0.97);
+  else
+    requested_speed := 'standard';
+  end if;
+
+  if reserved_cents <= 0 then
+    raise exception 'NO_FUNDS_AFTER_FEES';
+  end if;
+
+  -- 4) Insert a pending payout row to reserve this balance
+  insert into public.payouts (
+    seller_id,
+    net_amount_cents,
+    currency,
+    payout_type,
+    status,
+    created_at
+  )
+  values (
+    in_creator_id,
+    reserved_cents,
+    coalesce(bal.currency, 'usd'),
+    requested_speed,       -- 'instant' or 'standard'
+    'pending',             -- reserved; not yet confirmed by Stripe
+    now()
+  )
+  returning
+    id,
+    net_amount_cents,
+    currency,
+    payout_type
+  into payout_id, amount_cents, currency, payout_type;
+
+  return next;
+end;
+$$;
