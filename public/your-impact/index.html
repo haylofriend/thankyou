@@ -430,7 +430,7 @@ const app = createApp({
 
     // Payouts
     const payoutNextAmount = ref(0);
-    const payoutNextLabel = ref('Next Friday');
+    const payoutNextLabel = ref('Available to withdraw');
     const payoutPct = ref(20);
 
     window._THANKYOU_DASH = Object.assign(window._THANKYOU_DASH || {}, {
@@ -703,7 +703,7 @@ const app = createApp({
             : 0;
 
         payoutNextAmount.value = Math.max(kpi.value.approved - paid, 0);
-        payoutNextLabel.value = 'Friday';
+        payoutNextLabel.value = 'Available to withdraw';
         payoutPct.value = Math.min(
           100,
           Math.round((payoutNextAmount.value / 100) * 100)
