@@ -557,7 +557,7 @@ as $$
 $$;
 
 -- ============================================================================
--- creator_create_payout: reserve a payout row for a creator
+-- creator_create_payout: reserve a payout row for a creator (race-safe)
 -- ============================================================================
 create or replace function public.creator_create_payout(
   in_creator_id uuid,
@@ -575,11 +575,18 @@ declare
   bal record;
   requested_speed text;
   reserved_cents integer;
-  min_payout_cents integer := 100; -- e.g. $1.00 minimum, adjust as you like
+  min_payout_cents integer := 100; -- e.g. $1.00 minimum
 begin
   requested_speed := coalesce(in_speed, 'standard');
 
-  -- 1) Look up current available balance
+  -- 0) Serialize per-creator payouts using an advisory lock.
+  --    This makes sure only one payout reservation runs at a time
+  --    for a given creator, preventing double-reservations.
+  perform pg_advisory_xact_lock(
+    ('x' || substr(md5(in_creator_id::text), 1, 16))::bit(64)::bigint
+  );
+
+  -- 1) Recompute available balance *inside* the locked section
   select *
   into bal
   from public.creator_available_balance(in_creator_id);
@@ -599,8 +606,7 @@ begin
 
   reserved_cents := bal.available_cents;
 
-  -- 3) Apply speed-based fee / adjustment (placeholder logic)
-  -- NOTE: adjust this to match your real business rules.
+  -- 3) Apply speed-based fee / adjustment (tweak to match your model)
   if requested_speed = 'instant' then
     -- Example: take a 3% instant fee
     reserved_cents := floor(reserved_cents * 0.97);
@@ -625,8 +631,8 @@ begin
     in_creator_id,
     reserved_cents,
     coalesce(bal.currency, 'usd'),
-    requested_speed,       -- 'instant' or 'standard'
-    'pending',             -- reserved; not yet confirmed by Stripe
+    requested_speed,
+    'pending',
     now()
   )
   returning
