@@ -77,10 +77,54 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // 5) ✅ At this point we KNOW:
+    // 5) Reserve a payout row via Supabase (so balances stay consistent)
+    const { data: reserveRows, error: reserveError } = await supabase.rpc(
+      'creator_create_payout',
+      {
+        in_creator_id: user.id,
+        in_speed: speed
+      }
+    );
+
+    if (reserveError) {
+      const reserveMessage = `${reserveError.message || ''}`;
+
+      if (reserveMessage.includes('NO_FUNDS')) {
+        return json(res, 400, {
+          error: 'You do not have any available funds to payout yet.'
+        });
+      }
+
+      if (reserveMessage.includes('BELOW_MINIMUM')) {
+        return json(res, 400, {
+          error: 'You need to reach the minimum payout amount before cashing out.'
+        });
+      }
+
+      if (reserveMessage.includes('NO_FUNDS_AFTER_FEES')) {
+        return json(res, 400, {
+          error:
+            'Instant payout fees would leave no balance to transfer. Try standard speed instead.'
+        });
+      }
+
+      console.error('creator_create_payout reserve error', reserveError);
+      return json(res, 500, { error: 'Failed to reserve payout' });
+    }
+
+    const reservation = Array.isArray(reserveRows)
+      ? reserveRows[0]
+      : reserveRows;
+
+    if (!reservation || !reservation.payout_id) {
+      return json(res, 500, { error: 'Failed to reserve payout' });
+    }
+
+    // 6) ✅ At this point we KNOW:
     //    - user is authenticated
     //    - user has a connected Stripe Express account
     //    - payouts are enabled
+    //    - a payout row is reserved in Supabase (race-safe)
     //
     // IMPORTANT:
     //   We *do not* trust the client for amounts here.
@@ -91,7 +135,13 @@ module.exports = async function handler(req, res) {
 
     return json(res, 200, {
       ok: true,
-      speed
+      speed,
+      payout: {
+        id: reservation.payout_id,
+        amount_cents: reservation.amount_cents,
+        currency: reservation.currency,
+        type: reservation.payout_type
+      }
     });
   } catch (err) {
     console.error('creator/payout/start error', err);
