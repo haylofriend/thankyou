@@ -90,11 +90,21 @@ module.exports = async function handler(req, res) {
       );
 
       if (reserveError) {
-        const msg = `${reserveError.message || ''} ${reserveError.details || ''}`.toUpperCase();
+        // Supabase often puts our custom reason in `hint` or `details`, not `message`.
+        const msg = [
+          reserveError.message,
+          reserveError.details,
+          reserveError.hint,
+          reserveError.code
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toUpperCase();
 
         if (msg.includes('NO_FUNDS')) {
           return json(res, 400, {
-            error: 'You do not have any available funds to payout yet. Keep an eye on your dashboard.'
+            error:
+              'You do not have any available funds to payout yet. Keep an eye on your dashboard.'
           });
         }
 
@@ -106,10 +116,12 @@ module.exports = async function handler(req, res) {
 
         if (msg.includes('NO_FUNDS_AFTER_FEES')) {
           return json(res, 400, {
-            error: 'Instant payout fees would leave no balance to transfer. Try standard speed instead.'
+            error:
+              'Instant payout fees would leave no balance to transfer. Try standard speed instead.'
           });
         }
 
+        // Unknown error: log everything and return 500
         console.error('creator_create_payout RPC failed:', reserveError);
         return json(res, 500, { error: 'Failed to reserve payout' });
       }
