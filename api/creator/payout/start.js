@@ -127,43 +127,39 @@ module.exports = async function handler(req, res) {
     }
 
     // 5) Reserve a payout row via Supabase (so balances stay consistent)
-    let reservation = null;
+    const { data: reserveRows, error: reserveError } = await supabase.rpc(
+      'creator_create_payout',
+      {
+        in_creator_id: user.id,
+        in_speed: speed
+      }
+    );
 
-    try {
-      const { data: reserveRows, error: reserveError } = await supabase.rpc(
-        'creator_create_payout',
-        {
-          in_creator_id: user.id,
-          in_speed: speed
-        }
-      );
+    if (reserveError) {
+      const mapped = mapPayoutReservationError(reserveError);
 
-      if (reserveError) {
-        const mapped = mapPayoutReservationError(reserveError);
-
-        if (mapped) {
-          return json(res, mapped.status, {
-            error: mapped.publicErrorCode,
-            message: mapped.publicMessage
-          });
-        }
-
-        console.error('[creator/payout/start] Unhandled Supabase RPC error', {
-          code: reserveError.code,
-          message: reserveError.message,
-          details: reserveError.details,
-          hint: reserveError.hint
-        });
-
-        return json(res, 500, {
-          error: 'PAYOUT_START_FAILED',
-          message:
-            'Something went wrong while starting your payout. Please try again.'
+      if (mapped) {
+        return json(res, mapped.status, {
+          error: mapped.publicErrorCode,
+          message: mapped.publicMessage
         });
       }
+
+      console.error('[creator/payout/start] Unhandled Supabase RPC error', {
+        code: reserveError.code,
+        message: reserveError.message,
+        details: reserveError.details,
+        hint: reserveError.hint
+      });
+
+      return json(res, 500, {
+        error: 'PAYOUT_START_FAILED',
+        message:
+          'Something went wrong while starting your payout. Please try again.'
+      });
     }
 
-    reservation = Array.isArray(reserveRows) ? reserveRows[0] : reserveRows;
+    const reservation = Array.isArray(reserveRows) ? reserveRows[0] : reserveRows;
 
     if (!reservation || !reservation.payout_id) {
       console.error('creator_create_payout returned no rows', reserveRows);
