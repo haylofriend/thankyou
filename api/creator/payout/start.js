@@ -89,63 +89,69 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // 5) Reserve a payout row so the ledger is locked in before client UI updates.
+    // 5) Reserve a payout row via Supabase (so balances stay consistent)
     let reservation = null;
 
     try {
-      const { data, error } = await supabase.rpc('creator_create_payout', {
-        in_creator_id: user.id,
-        in_speed: speed
-      });
+      const { data, error: reserveError } = await supabase.rpc(
+        'creator_create_payout',
+        {
+          in_creator_id: user.id,
+          in_speed: speed
+        }
+      );
 
-      if (error) {
-        throw error;
+      if (reserveError) {
+        const msg = reserveError.message || '';
+
+        if (msg.includes('NO_FUNDS')) {
+          return json(res, 400, {
+            error: 'You do not have any available funds to payout yet.'
+          });
+        }
+
+        if (msg.includes('BELOW_MINIMUM')) {
+          return json(res, 400, {
+            error: 'You need to reach the minimum payout amount before cashing out.'
+          });
+        }
+
+        if (msg.includes('NO_FUNDS_AFTER_FEES')) {
+          return json(res, 400, {
+            error:
+              'Instant payout fees would leave no balance to transfer. Try standard speed instead.'
+          });
+        }
+
+        console.error('creator_create_payout RPC failed:', reserveError);
+        return json(res, 500, { error: 'Failed to reserve payout' });
       }
 
-      if (Array.isArray(data) && data.length) {
-        reservation = data[0];
-      } else if (data && data.payout_id) {
-        reservation = data;
+      reservation = Array.isArray(data) ? data[0] : data;
+
+      if (!reservation || !reservation.payout_id) {
+        return json(res, 500, { error: 'Failed to reserve payout' });
       }
-    } catch (rpcError) {
-      const code = (rpcError && rpcError.message) || '';
-
-      if (code.includes('NO_FUNDS')) {
-        return json(res, 400, {
-          error: 'No funds available for payout yet. Keep an eye on your dashboard.'
-        });
-      }
-
-      if (code.includes('BELOW_MINIMUM')) {
-        return json(res, 400, {
-          error: 'You need to earn a bit more before cashing out. Please try again later.'
-        });
-      }
-
-      if (code.includes('NO_FUNDS_AFTER_FEES')) {
-        return json(res, 400, {
-          error: 'Instant payout fees would zero out this transfer. Try the standard option.'
-        });
-      }
-
-      log.error('creator_create_payout RPC failed', {
-        error: rpcError.message
-      });
-
-      return json(res, 500, { error: 'Failed to reserve payout' });
+    } catch (err) {
+      console.error('creator_create_payout/start error:', err);
+      return json(res, 500, { error: 'Failed to start payout' });
     }
 
-    if (!reservation) {
-      log.error('creator_create_payout returned no data');
-      return json(res, 500, { error: 'Failed to reserve payout' });
-    }
+    // 6) At this point:
+    // - user is authenticated
+    // - user has a connected Stripe Express account
+    // - payouts are enabled
+    // - a payout row was reserved in Supabase (race-safe)
 
     return json(res, 200, {
       ok: true,
-      speed: reservation.payout_type || speed,
-      payoutId: reservation.payout_id,
-      amount_cents: reservation.amount_cents,
-      currency: reservation.currency
+      speed,
+      payout: {
+        id: reservation.payout_id,
+        amount_cents: reservation.amount_cents,
+        currency: reservation.currency,
+        type: reservation.payout_type
+      }
     });
   } catch (err) {
     log.error('creator/payout/start error', {
