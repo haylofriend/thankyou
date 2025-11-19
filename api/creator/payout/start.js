@@ -81,7 +81,7 @@ module.exports = async function handler(req, res) {
     let reservation = null;
 
     try {
-      const { data, error: reserveError } = await supabase.rpc(
+      const { data: reserveRows, error: reserveError } = await supabase.rpc(
         'creator_create_payout',
         {
           in_creator_id: user.id,
@@ -90,7 +90,7 @@ module.exports = async function handler(req, res) {
       );
 
       if (reserveError) {
-        const msg = reserveError.message || '';
+        const msg = `${reserveError.message || ''} ${reserveError.details || ''}`.toUpperCase();
 
         if (msg.includes('NO_FUNDS')) {
           return json(res, 400, {
@@ -114,9 +114,10 @@ module.exports = async function handler(req, res) {
         return json(res, 500, { error: 'Failed to reserve payout' });
       }
 
-      reservation = Array.isArray(data) ? data[0] : data;
+      reservation = Array.isArray(reserveRows) ? reserveRows[0] : reserveRows;
 
       if (!reservation || !reservation.payout_id) {
+        console.error('creator_create_payout returned no rows', reserveRows);
         return json(res, 500, { error: 'Failed to reserve payout' });
       }
     } catch (err) {
