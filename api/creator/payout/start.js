@@ -1,100 +1,114 @@
 // api/creator/payout/start.js
 //
-// Kicks off a creator payout in a safe, Stripe-aware way.
-// Right now this endpoint:
-//   1) Authenticates the creator via Supabase JWT (Authorization: Bearer ...)
-//   2) Checks they have a Stripe Connect account
-//   3) Verifies payouts are enabled on that account
-//   4) Returns { ok: true } so the UI can show the success state
-//
-// NOTE: We intentionally do NOT move money yet. Plug your own ledger logic
-// here later so you never trust client-provided amounts.
+// Starts a creator payout by reserving a pending payout row in the DB.
+// This does NOT move money in Stripe yet. It:
+//  - Authenticates via Supabase JWT
+//  - Verifies the creator has a Stripe Connect account with payouts enabled
+//  - Calls public.creator_create_payout(in_creator_id, in_speed)
+//  - Returns payout_id + amount_cents + payout_type to the UI
 
-const {
-  stripe,
-  supabase,
-  parseBody,
-  json,
-  getUserFromAuthHeader
-} = require('../../_stripeShared');
+const { supabase, getUserFromAuthHeader } = require('../../_supabase-utils');
+
+function json(res, status, body) {
+  res.statusCode = status;
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.end(JSON.stringify(body));
+}
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return json(res, 405, { error: 'Method not allowed' });
   }
 
-  if (!supabase) {
-    return json(res, 500, { error: 'Supabase not configured' });
-  }
-
   try {
-    // 1) Who is asking?
+    // 1) Authenticate via Supabase JWT
     const user = await getUserFromAuthHeader(req);
     if (!user) {
       return json(res, 401, { error: 'Unauthorized' });
     }
 
-    // 2) Read and normalize speed from body
-    const body = parseBody(req) || {};
-    const rawSpeed = body.speed;
-    const speed =
-      rawSpeed === 'instant' || rawSpeed === 'standard'
-        ? rawSpeed
-        : 'standard';
+    const creatorId = user.id;
+    const role = user.user_metadata && user.user_metadata.role;
 
-    // 3) Look up their profile to find the Stripe Connect account
-    const { data: profile, error: profileError } = await supabase
+    // Optional: enforce creator role
+    if (role && !['creator', 'admin', 'super_admin'].includes(role)) {
+      return json(res, 403, { error: 'Not a creator' });
+    }
+
+    // 2) Parse body for desired speed
+    let body = {};
+    try {
+      body = req.body || JSON.parse(req.rawBody || '{}');
+    } catch (_) {
+      body = {};
+    }
+
+    let speed = body.speed === 'instant' ? 'instant' : 'standard';
+
+    // 3) Look up creator profile to ensure they have a Stripe account
+    // NOTE: if your table is named something else (e.g. 'creator_profiles'),
+    // adjust the .from(...) and .eq(...) lines accordingly.
+    const { data: profile, error: profErr } = await supabase
       .from('profiles')
-      .select('id, stripe_account_id')
-      .eq('id', user.id)
-      .single();
+      .select('stripe_account_id, payouts_enabled')
+      .eq('id', creatorId)
+      .maybeSingle();
 
-    if (profileError) {
-      console.warn('payout/start profile error', profileError);
+    if (profErr) {
+      console.error('payout/start profile error', profErr);
+      return json(res, 500, { error: 'Profile lookup failed' });
     }
 
     if (!profile || !profile.stripe_account_id) {
-      return json(res, 400, {
-        error:
-          'Stripe payouts are not connected yet. Please set up your Stripe account first.'
-      });
+      return json(res, 400, { error: 'No connected Stripe account' });
     }
 
-    // 4) Ask Stripe if payouts are actually ready
-    const account = await stripe.accounts.retrieve(profile.stripe_account_id);
-
-    if (!account.details_submitted) {
-      return json(res, 400, {
-        error:
-          'Your Stripe account is not fully verified yet. Please finish Stripe onboarding.'
-      });
+    if (profile.payouts_enabled === false) {
+      return json(res, 400, { error: 'Payouts are not enabled for this account' });
     }
 
-    if (!account.payouts_enabled) {
-      return json(res, 400, {
-        error:
-          'Stripe has your account, but payouts are not enabled yet. Check your Stripe dashboard for next steps.'
-      });
+    // 4) Reserve a payout row using the DB function (race-safe)
+    const { data: rows, error: rpcErr } = await supabase.rpc(
+      'creator_create_payout',
+      {
+        in_creator_id: creatorId,
+        in_speed: speed
+      }
+    );
+
+    if (rpcErr) {
+      const msg = rpcErr.message || '';
+      if (msg.includes('NO_FUNDS') || msg.includes('NO_FUNDS_AFTER_FEES')) {
+        return json(res, 400, { error: 'No funds available to withdraw' });
+      }
+      if (msg.includes('BELOW_MINIMUM')) {
+        return json(res, 400, { error: 'Balance is below minimum payout amount' });
+      }
+
+      console.error('creator_create_payout RPC error', rpcErr);
+      return json(res, 500, { error: 'Failed to start payout' });
     }
 
-    // 5) ✅ At this point we KNOW:
-    //    - user is authenticated
-    //    - user has a connected Stripe Express account
-    //    - payouts are enabled
-    //
-    // IMPORTANT:
-    //   We *do not* trust the client for amounts here.
-    //   Plug in your ledger logic (Supabase RPC / balances table) to
-    //   compute a safe amount and create a Stripe Payout/Transfer.
-    //
-    // For now, we just return ok:true so the UI can show the success sheet.
+    const row = Array.isArray(rows) && rows.length ? rows[0] : null;
+    if (!row) {
+      return json(res, 400, { error: 'No payout created' });
+    }
 
+    const payoutId = row.payout_id;
+    const amountCents = row.amount_cents;
+    const currency = row.currency || 'usd';
+    const payoutType = row.payout_type || speed;
+
+    // 5) Respond to the client. STILL no Stripe transfer here.
     return json(res, 200, {
       ok: true,
-      speed
+      speed: payoutType,
+      payout_id: payoutId,
+      amount_cents: amountCents,
+      currency
     });
   } catch (err) {
-    console.error('creator/payout/start error', err);
+    console.error('creator/payout/start unexpected error', err);
     return json(res, 500, { error: 'Failed to start payout' });
   }
 };
