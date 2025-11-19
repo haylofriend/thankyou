@@ -1,3 +1,5 @@
+-- RUN ON SUPABASE: Sets search_path and creates payouts + balance helpers.
+-- Safe to run multiple times; uses IF NOT EXISTS and create or replace.
 -- Canonical schema for the HayloFriend Supabase project.
 -- This file is safe to run multiple times (idempotent).
 
@@ -7,6 +9,14 @@
 
 create extension if not exists "pgcrypto" with schema extensions;
 create extension if not exists "citext" with schema extensions;
+
+-- Ensure the default search_path is consistent for application roles so that
+-- functions executed by Supabase service accounts continue to resolve
+-- objects within the public and extensions schemas.
+alter role postgres set search_path = public, extensions;
+alter role authenticator set search_path = public, extensions;
+alter role anon set search_path = public, extensions;
+alter role service_role set search_path = public, extensions;
 
 -- ============================================================================
 -- Shared utilities
