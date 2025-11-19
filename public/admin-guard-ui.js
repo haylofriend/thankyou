@@ -7,9 +7,18 @@
   }
 
   try {
-    const user = await window.HayloAuth.whoami();
-    // Adjust to match your actual user shape
-    const role = user?.role || user?.user_metadata?.role;
+    const info = await window.HayloAuth.whoami();
+    const user = info?.user || null;
+
+    if (!user) {
+      throw new Error('No authenticated user returned from HayloAuth.whoami()');
+    }
+
+    // role can be on the root user, user_metadata, or app_metadata depending on Supabase config
+    const role =
+      user.role ||
+      user.user_metadata?.role ||
+      user.app_metadata?.role;
 
     const isAdmin = role === 'admin' || role === 'super_admin';
 
