@@ -129,11 +129,57 @@ module.exports = async function handler(req, res) {
     // 5) Reserve a payout row via Supabase (so balances stay consistent)
     let reservation = null;
 
-    const { data: reserveRows, error: reserveError } = await supabase.rpc(
-      'creator_create_payout',
-      {
-        in_creator_id: user.id,
-        in_speed: speed
+    try {
+      const { data: reserveRows, error: reserveError } = await supabase.rpc(
+        'creator_create_payout',
+        {
+          in_creator_id: user.id,
+          in_speed: speed
+        }
+      );
+
+      if (reserveError) {
+        // Supabase often puts our custom reason in `hint` or `details`, not `message`.
+        const msg = [
+          reserveError.message,
+          reserveError.details,
+          reserveError.hint,
+          reserveError.code
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toUpperCase();
+
+        if (msg.includes('NO_FUNDS')) {
+          return json(res, 400, {
+            error:
+              'You do not have any available funds to payout yet. Keep an eye on your dashboard.'
+          });
+        }
+
+        if (msg.includes('BELOW_MINIMUM')) {
+          return json(res, 400, {
+            error: 'You need to reach the minimum payout amount before cashing out.'
+          });
+        }
+
+        if (msg.includes('NO_FUNDS_AFTER_FEES')) {
+          return json(res, 400, {
+            error:
+              'Instant payout fees would leave no balance to transfer. Try standard speed instead.'
+          });
+        }
+
+        // Unknown error: log everything and return 500
+        console.error('[creator/payout/start] Unhandled Supabase RPC error', {
+          code: reserveError.code,
+          // Avoid logging raw payloads / emails / IDs if present
+          message: reserveError.message,
+          details: reserveError.details,
+          hint: reserveError.hint
+        });
+        // We must later wire this to whatever logging infra you use (Datadog, Sentry, etc.).
+        return json(res, 500, { error: 'Failed to reserve payout' });
       }
     );
 
