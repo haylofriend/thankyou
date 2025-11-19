@@ -18,6 +18,65 @@ const {
   getUserFromAuthHeader
 } = require('../../_stripeShared');
 
+// Helper: normalize Supabase payout reservation errors
+function mapPayoutReservationError(supabaseError) {
+  if (!supabaseError) return null;
+
+  const { message, details, hint, code } = supabaseError;
+  const raw = { message, details, hint, code };
+
+  const combinedText = [message, details, hint]
+    .filter(Boolean)
+    .join(' | ')
+    .toLowerCase();
+  const hintText = (hint || '').toLowerCase();
+  const codeText = (code || '').toUpperCase();
+
+  if (
+    combinedText.includes('no_funds') ||
+    hintText.includes('no_funds') ||
+    codeText === 'CREATOR_PAYOUT_NO_FUNDS'
+  ) {
+    return {
+      status: 400,
+      publicErrorCode: 'NO_FUNDS',
+      publicMessage:
+        'You do not have any available funds to payout yet. Keep an eye on your dashboard.',
+      raw
+    };
+  }
+
+  if (
+    combinedText.includes('below_minimum') ||
+    hintText.includes('below_minimum') ||
+    codeText === 'CREATOR_PAYOUT_BELOW_MINIMUM'
+  ) {
+    return {
+      status: 400,
+      publicErrorCode: 'BELOW_MINIMUM',
+      publicMessage:
+        'You need to reach the minimum payout amount before cashing out.',
+      raw
+    };
+  }
+
+  if (
+    combinedText.includes('no_funds_after_fees') ||
+    hintText.includes('no_funds_after_fees') ||
+    codeText === 'CREATOR_PAYOUT_NO_FUNDS_AFTER_FEES'
+  ) {
+    return {
+      status: 400,
+      publicErrorCode: 'NO_FUNDS_AFTER_FEES',
+      publicMessage:
+        'Instant payout fees would leave no balance to transfer. Try standard speed instead.',
+      raw
+    };
+  }
+
+  return null;
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return json(res, 405, { error: 'Method not allowed' });
@@ -90,39 +149,25 @@ module.exports = async function handler(req, res) {
       );
 
       if (reserveError) {
-        // Supabase often puts our custom reason in `hint` or `details`, not `message`.
-        const msg = [
-          reserveError.message,
-          reserveError.details,
-          reserveError.hint,
-          reserveError.code
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toUpperCase();
+        const mappedError = mapPayoutReservationError(reserveError);
 
-        if (msg.includes('NO_FUNDS')) {
-          return json(res, 400, {
-            error:
-              'You do not have any available funds to payout yet. Keep an eye on your dashboard.'
+        if (mappedError) {
+          console.warn('creator_create_payout RPC mapped error', {
+            publicErrorCode: mappedError.publicErrorCode,
+            ...mappedError.raw
           });
-        }
-
-        if (msg.includes('BELOW_MINIMUM')) {
-          return json(res, 400, {
-            error: 'You need to reach the minimum payout amount before cashing out.'
-          });
-        }
-
-        if (msg.includes('NO_FUNDS_AFTER_FEES')) {
-          return json(res, 400, {
-            error:
-              'Instant payout fees would leave no balance to transfer. Try standard speed instead.'
+          return json(res, mappedError.status, {
+            error: mappedError.publicMessage
           });
         }
 
         // Unknown error: log everything and return 500
-        console.error('creator_create_payout RPC failed:', reserveError);
+        console.error('creator_create_payout RPC failed', {
+          message: reserveError.message,
+          details: reserveError.details,
+          hint: reserveError.hint,
+          code: reserveError.code
+        });
         return json(res, 500, { error: 'Failed to reserve payout' });
       }
 
