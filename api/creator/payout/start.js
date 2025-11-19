@@ -117,6 +117,7 @@ module.exports = async function handler(req, res) {
       : reserveRows;
 
     if (!reservation || !reservation.payout_id) {
+      console.error('creator_create_payout returned no rows', reserveRows);
       return json(res, 500, { error: 'Failed to reserve payout' });
     }
 
