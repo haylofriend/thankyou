@@ -18,6 +18,55 @@ const {
   getUserFromAuthHeader
 } = require('../../_stripeShared');
 
+function mapPayoutReservationError(error) {
+  if (!error) {
+    return null;
+  }
+
+  const normalized = [
+    error.message,
+    error.details,
+    error.hint,
+    error.code
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toUpperCase();
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized.includes('NO_FUNDS_AFTER_FEES')) {
+    return {
+      status: 400,
+      publicErrorCode: 'NO_FUNDS_AFTER_FEES',
+      publicMessage:
+        'Instant payout fees would leave no balance to transfer. Try standard speed instead.'
+    };
+  }
+
+  if (normalized.includes('NO_FUNDS')) {
+    return {
+      status: 400,
+      publicErrorCode: 'NO_FUNDS',
+      publicMessage:
+        'You do not have any available funds to payout yet. Keep an eye on your dashboard.'
+    };
+  }
+
+  if (normalized.includes('BELOW_MINIMUM')) {
+    return {
+      status: 400,
+      publicErrorCode: 'BELOW_MINIMUM',
+      publicMessage:
+        'You need to reach the minimum payout amount before cashing out.'
+    };
+  }
+
+  return null;
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return json(res, 405, { error: 'Method not allowed' });
@@ -132,16 +181,37 @@ module.exports = async function handler(req, res) {
         // We must later wire this to whatever logging infra you use (Datadog, Sentry, etc.).
         return json(res, 500, { error: 'Failed to reserve payout' });
       }
+    );
 
-      reservation = Array.isArray(reserveRows) ? reserveRows[0] : reserveRows;
+    if (reserveError) {
+      const mapped = mapPayoutReservationError(reserveError);
 
-      if (!reservation || !reservation.payout_id) {
-        console.error('creator_create_payout returned no rows', reserveRows);
-        return json(res, 500, { error: 'Failed to reserve payout' });
+      if (mapped) {
+        return json(res, mapped.status, {
+          error: mapped.publicErrorCode,
+          message: mapped.publicMessage
+        });
       }
-    } catch (err) {
-      console.error('creator_create_payout/start error:', err);
-      return json(res, 500, { error: 'Failed to start payout' });
+
+      console.error('[creator/payout/start] Unhandled Supabase RPC error', {
+        code: reserveError.code,
+        message: reserveError.message,
+        details: reserveError.details,
+        hint: reserveError.hint
+      });
+
+      return json(res, 500, {
+        error: 'PAYOUT_START_FAILED',
+        message:
+          'Something went wrong while starting your payout. Please try again.'
+      });
+    }
+
+    reservation = Array.isArray(reserveRows) ? reserveRows[0] : reserveRows;
+
+    if (!reservation || !reservation.payout_id) {
+      console.error('creator_create_payout returned no rows', reserveRows);
+      return json(res, 500, { error: 'Failed to reserve payout' });
     }
 
     // 6) At this point we know:
@@ -161,7 +231,15 @@ module.exports = async function handler(req, res) {
       }
     });
   } catch (err) {
-    console.error('creator/payout/start error', err);
-    return json(res, 500, { error: 'Failed to start payout' });
+    console.error('[creator/payout/start] Unhandled server error', {
+      error: err,
+      message: err && err.message,
+      stack: err && err.stack
+    });
+
+    return json(res, 500, {
+      error: 'PAYOUT_START_FAILED',
+      message: 'Something went wrong while starting your payout. Please try again.'
+    });
   }
 };
