@@ -78,60 +78,57 @@ module.exports = async function handler(req, res) {
     }
 
     // 5) Reserve a payout row via Supabase (so balances stay consistent)
-    const { data: reserveRows, error: reserveError } = await supabase.rpc(
-      'creator_create_payout',
-      {
-        in_creator_id: user.id,
-        in_speed: speed
+    let reservation = null;
+
+    try {
+      const { data, error: reserveError } = await supabase.rpc(
+        'creator_create_payout',
+        {
+          in_creator_id: user.id,
+          in_speed: speed
+        }
+      );
+
+      if (reserveError) {
+        const msg = reserveError.message || '';
+
+        if (msg.includes('NO_FUNDS')) {
+          return json(res, 400, {
+            error: 'You do not have any available funds to payout yet. Keep an eye on your dashboard.'
+          });
+        }
+
+        if (msg.includes('BELOW_MINIMUM')) {
+          return json(res, 400, {
+            error: 'You need to reach the minimum payout amount before cashing out.'
+          });
+        }
+
+        if (msg.includes('NO_FUNDS_AFTER_FEES')) {
+          return json(res, 400, {
+            error: 'Instant payout fees would leave no balance to transfer. Try standard speed instead.'
+          });
+        }
+
+        console.error('creator_create_payout RPC failed:', reserveError);
+        return json(res, 500, { error: 'Failed to reserve payout' });
       }
-    );
 
-    if (reserveError) {
-      const reserveMessage = `${reserveError.message || ''}`;
+      reservation = Array.isArray(data) ? data[0] : data;
 
-      if (reserveMessage.includes('NO_FUNDS')) {
-        return json(res, 400, {
-          error: 'You do not have any available funds to payout yet.'
-        });
+      if (!reservation || !reservation.payout_id) {
+        return json(res, 500, { error: 'Failed to reserve payout' });
       }
-
-      if (reserveMessage.includes('BELOW_MINIMUM')) {
-        return json(res, 400, {
-          error: 'You need to reach the minimum payout amount before cashing out.'
-        });
-      }
-
-      if (reserveMessage.includes('NO_FUNDS_AFTER_FEES')) {
-        return json(res, 400, {
-          error:
-            'Instant payout fees would leave no balance to transfer. Try standard speed instead.'
-        });
-      }
-
-      console.error('creator_create_payout reserve error', reserveError);
-      return json(res, 500, { error: 'Failed to reserve payout' });
+    } catch (err) {
+      console.error('creator_create_payout/start error:', err);
+      return json(res, 500, { error: 'Failed to start payout' });
     }
 
-    const reservation = Array.isArray(reserveRows)
-      ? reserveRows[0]
-      : reserveRows;
-
-    if (!reservation || !reservation.payout_id) {
-      return json(res, 500, { error: 'Failed to reserve payout' });
-    }
-
-    // 6) ✅ At this point we KNOW:
-    //    - user is authenticated
-    //    - user has a connected Stripe Express account
-    //    - payouts are enabled
-    //    - a payout row is reserved in Supabase (race-safe)
-    //
-    // IMPORTANT:
-    //   We *do not* trust the client for amounts here.
-    //   Plug in your ledger logic (Supabase RPC / balances table) to
-    //   compute a safe amount and create a Stripe Payout/Transfer.
-    //
-    // For now, we just return ok:true so the UI can show the success sheet.
+    // 6) At this point we know:
+    //  - user is authenticated
+    //  - user has a connected Stripe Express account
+    //  - payouts are enabled
+    //  - a payout row was reserved in Supabase (race-safe)
 
     return json(res, 200, {
       ok: true,
