@@ -122,7 +122,14 @@ module.exports = async function handler(req, res) {
         }
 
         // Unknown error: log everything and return 500
-        console.error('creator_create_payout RPC failed:', reserveError);
+        console.error('[creator/payout/start] Unhandled Supabase RPC error', {
+          code: reserveError.code,
+          // Avoid logging raw payloads / emails / IDs if present
+          message: reserveError.message,
+          details: reserveError.details,
+          hint: reserveError.hint
+        });
+        // We must later wire this to whatever logging infra you use (Datadog, Sentry, etc.).
         return json(res, 500, { error: 'Failed to reserve payout' });
       }
 
