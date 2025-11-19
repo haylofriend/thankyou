@@ -18,59 +18,49 @@ const {
   getUserFromAuthHeader
 } = require('../../_stripeShared');
 
-// Helper: normalize Supabase payout reservation errors
-function mapPayoutReservationError(supabaseError) {
-  if (!supabaseError) return null;
+function mapPayoutReservationError(error) {
+  if (!error) {
+    return null;
+  }
 
-  const { message, details, hint, code } = supabaseError;
-  const raw = { message, details, hint, code };
-
-  const combinedText = [message, details, hint]
+  const normalized = [
+    error.message,
+    error.details,
+    error.hint,
+    error.code
+  ]
     .filter(Boolean)
-    .join(' | ')
-    .toLowerCase();
-  const hintText = (hint || '').toLowerCase();
-  const codeText = (code || '').toUpperCase();
+    .join(' ')
+    .toUpperCase();
 
-  if (
-    combinedText.includes('no_funds') ||
-    hintText.includes('no_funds') ||
-    codeText === 'CREATOR_PAYOUT_NO_FUNDS'
-  ) {
-    return {
-      status: 400,
-      publicErrorCode: 'NO_FUNDS',
-      publicMessage:
-        'You do not have any available funds to payout yet. Keep an eye on your dashboard.',
-      raw
-    };
+  if (!normalized) {
+    return null;
   }
 
-  if (
-    combinedText.includes('below_minimum') ||
-    hintText.includes('below_minimum') ||
-    codeText === 'CREATOR_PAYOUT_BELOW_MINIMUM'
-  ) {
-    return {
-      status: 400,
-      publicErrorCode: 'BELOW_MINIMUM',
-      publicMessage:
-        'You need to reach the minimum payout amount before cashing out.',
-      raw
-    };
-  }
-
-  if (
-    combinedText.includes('no_funds_after_fees') ||
-    hintText.includes('no_funds_after_fees') ||
-    codeText === 'CREATOR_PAYOUT_NO_FUNDS_AFTER_FEES'
-  ) {
+  if (normalized.includes('NO_FUNDS_AFTER_FEES')) {
     return {
       status: 400,
       publicErrorCode: 'NO_FUNDS_AFTER_FEES',
       publicMessage:
-        'Instant payout fees would leave no balance to transfer. Try standard speed instead.',
-      raw
+        'Instant payout fees would leave no balance to transfer. Try standard speed instead.'
+    };
+  }
+
+  if (normalized.includes('NO_FUNDS')) {
+    return {
+      status: 400,
+      publicErrorCode: 'NO_FUNDS',
+      publicMessage:
+        'You do not have any available funds to payout yet. Keep an eye on your dashboard.'
+    };
+  }
+
+  if (normalized.includes('BELOW_MINIMUM')) {
+    return {
+      status: 400,
+      publicErrorCode: 'BELOW_MINIMUM',
+      publicMessage:
+        'You need to reach the minimum payout amount before cashing out.'
     };
   }
 
@@ -139,47 +129,43 @@ module.exports = async function handler(req, res) {
     // 5) Reserve a payout row via Supabase (so balances stay consistent)
     let reservation = null;
 
-    try {
-      const { data: reserveRows, error: reserveError } = await supabase.rpc(
-        'creator_create_payout',
-        {
-          in_creator_id: user.id,
-          in_speed: speed
-        }
-      );
+    const { data: reserveRows, error: reserveError } = await supabase.rpc(
+      'creator_create_payout',
+      {
+        in_creator_id: user.id,
+        in_speed: speed
+      }
+    );
 
-      if (reserveError) {
-        const mappedError = mapPayoutReservationError(reserveError);
+    if (reserveError) {
+      const mapped = mapPayoutReservationError(reserveError);
 
-        if (mappedError) {
-          console.warn('creator_create_payout RPC mapped error', {
-            publicErrorCode: mappedError.publicErrorCode,
-            ...mappedError.raw
-          });
-          return json(res, mappedError.status, {
-            error: mappedError.publicMessage
-          });
-        }
-
-        // Unknown error: log everything and return 500
-        console.error('creator_create_payout RPC failed', {
-          message: reserveError.message,
-          details: reserveError.details,
-          hint: reserveError.hint,
-          code: reserveError.code
+      if (mapped) {
+        return json(res, mapped.status, {
+          error: mapped.publicErrorCode,
+          message: mapped.publicMessage
         });
-        return json(res, 500, { error: 'Failed to reserve payout' });
       }
 
-      reservation = Array.isArray(reserveRows) ? reserveRows[0] : reserveRows;
+      console.error('[creator/payout/start] Unhandled Supabase RPC error', {
+        code: reserveError.code,
+        message: reserveError.message,
+        details: reserveError.details,
+        hint: reserveError.hint
+      });
 
-      if (!reservation || !reservation.payout_id) {
-        console.error('creator_create_payout returned no rows', reserveRows);
-        return json(res, 500, { error: 'Failed to reserve payout' });
-      }
-    } catch (err) {
-      console.error('creator_create_payout/start error:', err);
-      return json(res, 500, { error: 'Failed to start payout' });
+      return json(res, 500, {
+        error: 'PAYOUT_START_FAILED',
+        message:
+          'Something went wrong while starting your payout. Please try again.'
+      });
+    }
+
+    reservation = Array.isArray(reserveRows) ? reserveRows[0] : reserveRows;
+
+    if (!reservation || !reservation.payout_id) {
+      console.error('creator_create_payout returned no rows', reserveRows);
+      return json(res, 500, { error: 'Failed to reserve payout' });
     }
 
     // 6) At this point we know:
@@ -199,7 +185,15 @@ module.exports = async function handler(req, res) {
       }
     });
   } catch (err) {
-    console.error('creator/payout/start error', err);
-    return json(res, 500, { error: 'Failed to start payout' });
+    console.error('[creator/payout/start] Unhandled server error', {
+      error: err,
+      message: err && err.message,
+      stack: err && err.stack
+    });
+
+    return json(res, 500, {
+      error: 'PAYOUT_START_FAILED',
+      message: 'Something went wrong while starting your payout. Please try again.'
+    });
   }
 };
