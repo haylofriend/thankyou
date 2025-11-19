@@ -146,6 +146,8 @@ module.exports = async function handler(req, res) {
       }
 
       console.error('[creator/payout/start] Unhandled Supabase RPC error', {
+        creatorId: user.id,
+        speed,
         code: reserveError.code,
         message: reserveError.message,
         details: reserveError.details,
