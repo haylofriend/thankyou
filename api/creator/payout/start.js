@@ -11,26 +11,38 @@
 // here later so you never trust client-provided amounts.
 
 const {
-  stripe,
+  getStripe,
   supabase,
   parseBody,
   json,
-  getUserFromAuthHeader
+  getUserFromAuthHeader,
+  createLogger
 } = require('../../_stripeShared');
 
 module.exports = async function handler(req, res) {
+  const log = createLogger(req, { route: 'creator/payout/start' });
+
   if (req.method !== 'POST') {
+    log.warn('Method not allowed', { method: req.method });
     return json(res, 405, { error: 'Method not allowed' });
   }
 
   if (!supabase) {
+    log.error('Supabase client unavailable');
     return json(res, 500, { error: 'Supabase not configured' });
   }
 
   try {
+    const stripe = getStripe();
+    if (!stripe) {
+      log.error('Stripe client unavailable');
+      return json(res, 500, { error: 'Stripe not configured' });
+    }
+
     // 1) Who is asking?
     const user = await getUserFromAuthHeader(req);
     if (!user) {
+      log.warn('Unauthorized request');
       return json(res, 401, { error: 'Unauthorized' });
     }
 
@@ -50,7 +62,7 @@ module.exports = async function handler(req, res) {
       .single();
 
     if (profileError) {
-      console.warn('payout/start profile error', profileError);
+      log.warn('Profile lookup failed', { error: profileError.message });
     }
 
     if (!profile || !profile.stripe_account_id) {
@@ -77,24 +89,69 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // 5) ✅ At this point we KNOW:
-    //    - user is authenticated
-    //    - user has a connected Stripe Express account
-    //    - payouts are enabled
-    //
-    // IMPORTANT:
-    //   We *do not* trust the client for amounts here.
-    //   Plug in your ledger logic (Supabase RPC / balances table) to
-    //   compute a safe amount and create a Stripe Payout/Transfer.
-    //
-    // For now, we just return ok:true so the UI can show the success sheet.
+    // 5) Reserve a payout row so the ledger is locked in before client UI updates.
+    let reservation = null;
+
+    try {
+      const { data, error } = await supabase.rpc('creator_create_payout', {
+        in_creator_id: user.id,
+        in_speed: speed
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (Array.isArray(data) && data.length) {
+        reservation = data[0];
+      } else if (data && data.payout_id) {
+        reservation = data;
+      }
+    } catch (rpcError) {
+      const code = (rpcError && rpcError.message) || '';
+
+      if (code.includes('NO_FUNDS')) {
+        return json(res, 400, {
+          error: 'No funds available for payout yet. Keep an eye on your dashboard.'
+        });
+      }
+
+      if (code.includes('BELOW_MINIMUM')) {
+        return json(res, 400, {
+          error: 'You need to earn a bit more before cashing out. Please try again later.'
+        });
+      }
+
+      if (code.includes('NO_FUNDS_AFTER_FEES')) {
+        return json(res, 400, {
+          error: 'Instant payout fees would zero out this transfer. Try the standard option.'
+        });
+      }
+
+      log.error('creator_create_payout RPC failed', {
+        error: rpcError.message
+      });
+
+      return json(res, 500, { error: 'Failed to reserve payout' });
+    }
+
+    if (!reservation) {
+      log.error('creator_create_payout returned no data');
+      return json(res, 500, { error: 'Failed to reserve payout' });
+    }
 
     return json(res, 200, {
       ok: true,
-      speed
+      speed: reservation.payout_type || speed,
+      payoutId: reservation.payout_id,
+      amount_cents: reservation.amount_cents,
+      currency: reservation.currency
     });
   } catch (err) {
-    console.error('creator/payout/start error', err);
+    log.error('creator/payout/start error', {
+      error: err.message,
+      stack: err.stack
+    });
     return json(res, 500, { error: 'Failed to start payout' });
   }
 };

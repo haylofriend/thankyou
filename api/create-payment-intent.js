@@ -3,15 +3,47 @@
 // Handles PaymentRequest (Apple/Google Pay) flow from bloom.html.
 // Front-end expects: { clientSecret, requiresAction }
 
-const { stripe, supabase, parseBody, json } = require('./_stripeShared');
+const {
+  getStripe,
+  supabase,
+  parseBody,
+  json,
+  getUserFromAuthHeader,
+  calculateApplicationFeeAmount,
+  createLogger
+} = require('./_stripeShared');
 
 module.exports = async function handler(req, res) {
+  const log = createLogger(req, { route: 'create-payment-intent' });
+
   if (req.method !== 'POST') {
+    log.warn('Method not allowed', { method: req.method });
     return json(res, 405, { error: 'Method not allowed' });
   }
 
   try {
-    const { amount, currency, recipientHandle, note } = parseBody(req);
+    const stripe = getStripe();
+    if (!stripe) {
+      log.error('Stripe client unavailable');
+      return json(res, 500, { error: 'Stripe not configured' });
+    }
+
+    const {
+      amount,
+      currency,
+      recipientHandle,
+      note,
+      idempotencyKey: rawIdempotencyKey
+    } = parseBody(req);
+
+    const idempotencyKey =
+      typeof rawIdempotencyKey === 'string' ? rawIdempotencyKey.trim() : '';
+    if (!idempotencyKey) {
+      log.warn('Missing idempotencyKey');
+      return json(res, 400, { error: 'Missing idempotencyKey' });
+    }
+
+    const buyer = await getUserFromAuthHeader(req);
 
     // Front-end sends "amount" in cents already.
     const rawCents = Number.isFinite(amount) ? Math.round(amount) : 0;
@@ -27,42 +59,71 @@ module.exports = async function handler(req, res) {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('stripe_account_id')
+          .select('id, stripe_account_id, charges_enabled, payouts_enabled')
           .eq('slug', recipientHandle)
           .maybeSingle();
 
         if (!error && data && data.stripe_account_id) {
-          destination = data.stripe_account_id;
+          if (data.charges_enabled && data.payouts_enabled) {
+            destination = data.stripe_account_id;
+          } else {
+            log.warn('Creator not eligible for transfers', {
+              recipientHandle,
+              charges_enabled: data.charges_enabled,
+              payouts_enabled: data.payouts_enabled
+            });
+          }
         }
       } catch (e) {
-        console.warn('Supabase lookup failed, proceeding without destination', e);
+        log.warn('Supabase lookup failed, proceeding without destination', {
+          recipientHandle,
+          error: e.message
+        });
       }
+    }
+
+    const metadata = {
+      recipientHandle: recipientHandle || '',
+      note: (note || '').slice(0, 180)
+    };
+
+    if (buyer?.id) {
+      metadata.buyer_user_id = buyer.id;
+    }
+    if (buyer?.email) {
+      metadata.buyer_email = buyer.email;
     }
 
     const params = {
       amount: cents,
       currency: cur,
       payment_method_types: ['card'],
-      metadata: {
-        recipientHandle: recipientHandle || '',
-        note: (note || '').slice(0, 180)
-      }
+      metadata
     };
 
     // If we know a connected account, route funds there
     if (destination) {
       params.transfer_data = { destination };
-      // Optional: you can set application_fee_amount here for platform fees.
     }
 
-    const paymentIntent = await stripe.paymentIntents.create(params);
+    const applicationFeeAmount = calculateApplicationFeeAmount(cents);
+    if (applicationFeeAmount) {
+      params.application_fee_amount = applicationFeeAmount;
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create(params, {
+      idempotencyKey
+    });
 
     return json(res, 200, {
       clientSecret: paymentIntent.client_secret,
       requiresAction: !!paymentIntent.next_action
     });
   } catch (err) {
-    console.error('create-payment-intent error', err);
+    log.error('create-payment-intent error', {
+      error: err.message,
+      stack: err.stack
+    });
     return json(res, 500, { error: 'Failed to create PaymentIntent' });
   }
 };
