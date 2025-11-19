@@ -53,7 +53,18 @@ async function getUserFromAuthHeader(source) {
   const { data, error } = await supabase.auth.getUser(token);
   if (error || !data?.user) return null;
 
-  return data.user;
+  const payload = data.user;
+  const user = {
+    id: payload.sub,
+    sub: payload.sub,
+    email: payload.email,
+    role: payload.role || payload.app_metadata?.role || 'authenticated',
+    app_metadata: payload.app_metadata || {},
+    user_metadata: payload.user_metadata || {},
+    raw: payload
+  };
+
+  return user;
 }
 
 module.exports = {
