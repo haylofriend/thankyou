@@ -34,12 +34,13 @@ module.exports = async function handler(req, res) {
     // 2) Look up their profile to find stripe_account_id
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('stripe_account_id')
+      .select('id, stripe_account_id')
       .eq('id', user.id)
       .maybeSingle();
 
     if (profileError) {
-      console.warn('Profile lookup error (status route)', profileError);
+      console.error('creator/stripe/status profile error', profileError);
+      return json(res, 500, { error: 'Failed to fetch Stripe profile' });
     }
 
     if (!profile || !profile.stripe_account_id) {
