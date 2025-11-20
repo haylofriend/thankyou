@@ -539,11 +539,11 @@ returns table (
 language sql
 stable
 as $$
-  with credits as (
+  with credits_raw as (
     select
+      currency,
       -- Creator's earnings = gross - platform fee
-      coalesce(sum(amount - coalesce(app_fee_amount, 0)), 0) as total_cents,
-      max(currency) as currency
+      sum(amount - coalesce(app_fee_amount, 0)) as total_cents
     from public.transactions
     where creator_user_id = in_creator_id
       -- Only count successful/settled transactions.
@@ -552,6 +552,14 @@ as $$
         status is null
         or status in ('succeeded', 'paid')
       )
+    group by currency
+  ),
+  credits as (
+    select
+      coalesce(sum(total_cents), 0) as total_cents,
+      max(currency) as currency,
+      count(distinct currency) as currency_count
+    from credits_raw
   ),
   debits as (
     select
@@ -562,8 +570,19 @@ as $$
       and status in ('pending', 'processing', 'paid')
   )
   select
-    greatest(c.total_cents - d.total_cents, 0) as available_cents,
-    coalesce(c.currency, 'usd') as currency
+    case
+      when c.currency_count > 1 then
+        -- Protect against mixed currencies for a single creator.
+        -- You can raise or handle this however you prefer.
+        -- For now, default to 0 available and 'usd'.
+        0
+      else
+        greatest(c.total_cents - d.total_cents, 0)
+    end as available_cents,
+    case
+      when c.currency_count > 1 then 'usd'
+      else coalesce(c.currency, 'usd')
+    end as currency
   from credits c, debits d;
 $$;
 
