@@ -431,6 +431,7 @@ create table if not exists public.payouts (
   stripe_transfer_id text,
   stripe_payout_id text,
   net_amount_cents integer,
+  currency text default 'usd',        -- ISO currency code (e.g. 'usd')
   payout_type text,                   -- 'instant' or 'scheduled'
   payout_scheduled_for timestamptz,
   payout_completed_at timestamptz,
