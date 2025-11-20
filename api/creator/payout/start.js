@@ -73,7 +73,9 @@ function mapPayoutReservationError(error) {
     combinedText.includes('no_funds') ||
     hintText.includes('no_funds') ||
     codeText === 'CREATOR_PAYOUT_NO_FUNDS' ||
-    codeText === 'NO_FUNDS'
+    codeText === 'NO_FUNDS' ||
+    hintText.includes('creator_payout_no_funds') ||
+    combinedText.includes('creator_payout_no_funds')
   ) {
     return {
       status: 400,
@@ -204,19 +206,6 @@ module.exports = async function handler(req, res) {
     );
 
     if (reserveError) {
-      // ⚠️ TEMP: Expose raw RPC error to debug mapping. Remove after confirming.
-      return json(res, 500, {
-        error: 'DEBUG_RESERVE_ERROR',
-        raw: {
-          code: reserveError.code,
-          message: reserveError.message,
-          details: reserveError.details,
-          hint: reserveError.hint
-        }
-      });
-
-      // (The code below will be re-enabled after debugging)
-      /*
       const mapped = mapPayoutReservationError(reserveError);
 
       if (mapped) {
@@ -243,7 +232,6 @@ module.exports = async function handler(req, res) {
         message:
           'Something went wrong while starting your payout. Please try again.'
       });
-      */
     }
 
     const reservation = Array.isArray(reserveRows) ? reserveRows[0] : reserveRows;
