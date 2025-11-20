@@ -607,14 +607,20 @@ declare
   reserved_cents integer;
   min_payout_cents integer := 100; -- e.g. $1.00 minimum
 begin
+  -- Normalize and validate speed input
   requested_speed := coalesce(in_speed, 'standard');
+  requested_speed := lower(requested_speed);
+
+  if requested_speed not in ('instant', 'standard') then
+    requested_speed := 'standard';
+  end if;
 
   -- 0) Serialize per-creator payouts using an advisory lock.
   perform pg_advisory_xact_lock(
     ('x' || substr(md5(in_creator_id::text), 1, 16))::bit(64)::bigint
   );
 
-  -- 1) Recompute available balance *inside* the locked section.
+  -- 1) Recompute available balance *inside* the locked section
   select *
   into bal
   from public.creator_available_balance(in_creator_id);
@@ -623,7 +629,7 @@ begin
     bal.available_cents := 0;
   end if;
 
-  -- 2) Enforce minimums.
+  -- 2) Enforce minimums before fees
   if bal.available_cents <= 0 then
     raise exception 'NO_FUNDS';
   end if;
@@ -634,14 +640,18 @@ begin
 
   reserved_cents := bal.available_cents;
 
-  -- 3) Apply speed-based fee / adjustment.
+  -- 3) Apply speed-based fee / adjustment
   if requested_speed = 'instant' then
     reserved_cents := floor(reserved_cents * 0.97);
-  else
-    requested_speed := 'standard';
+  end if;
+  -- For 'standard', keep the full amount.
+
+  -- 4) Enforce minimum after fees
+  if reserved_cents < min_payout_cents then
+    raise exception 'NO_FUNDS_AFTER_FEES';
   end if;
 
-  -- 4) Insert the reserved payout row (uses payout_type).
+  -- 5) Insert the reserved payout row
   insert into public.payouts (
     seller_id,
     net_amount_cents,
