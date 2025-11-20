@@ -591,13 +591,11 @@ begin
   requested_speed := coalesce(in_speed, 'standard');
 
   -- 0) Serialize per-creator payouts using an advisory lock.
-  --    This makes sure only one payout reservation runs at a time
-  --    for a given creator, preventing double-reservations.
   perform pg_advisory_xact_lock(
     ('x' || substr(md5(in_creator_id::text), 1, 16))::bit(64)::bigint
   );
 
-  -- 1) Recompute available balance *inside* the locked section
+  -- 1) Recompute available balance *inside* the locked section.
   select *
   into bal
   from public.creator_available_balance(in_creator_id);
@@ -606,7 +604,7 @@ begin
     bal.available_cents := 0;
   end if;
 
-  -- 2) Enforce minimums
+  -- 2) Enforce minimums.
   if bal.available_cents <= 0 then
     raise exception 'NO_FUNDS';
   end if;
@@ -617,19 +615,14 @@ begin
 
   reserved_cents := bal.available_cents;
 
-  -- 3) Apply speed-based fee / adjustment (tweak to match your model)
+  -- 3) Apply speed-based fee / adjustment.
   if requested_speed = 'instant' then
-    -- Example: take a 3% instant fee
     reserved_cents := floor(reserved_cents * 0.97);
   else
     requested_speed := 'standard';
   end if;
 
-  if reserved_cents <= 0 then
-    raise exception 'NO_FUNDS_AFTER_FEES';
-  end if;
-
-  -- 4) Insert a pending payout row to reserve this balance
+  -- 4) Insert the reserved payout row (uses payout_type).
   insert into public.payouts (
     seller_id,
     net_amount_cents,
