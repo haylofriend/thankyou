@@ -42,6 +42,7 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   display_name text,
   slug citext unique,
+  thank_slug text unique,
   avatar_url text,
   stripe_account_id text,
   role text not null default 'creator',
@@ -51,6 +52,9 @@ create table if not exists public.profiles (
     slug is null or slug ~ '^[a-z0-9](?:[a-z0-9-_]*[a-z0-9])?$'
   )
 );
+
+-- NOTE: thank_slug is used for public URLs like /thank/{slug}.
+-- For existing users, we will backfill with a generated value in a separate migration.
 
 -- Extra columns used by the app (Stripe + Pro flags)
 alter table public.profiles
