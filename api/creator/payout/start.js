@@ -40,48 +40,63 @@ try {
 // ---------- Supabase payout reservation error mapping ----------
 
 function mapPayoutReservationError(error) {
-  if (!error) {
-    return null;
-  }
+  if (!error) return null;
 
-  const normalized = [
-    error.message,
-    error.details,
-    error.hint,
-    error.code
-  ]
+  const { message, details, hint, code } = error;
+  const raw = { message, details, hint, code };
+
+  const combinedText = [message, details, hint]
     .filter(Boolean)
     .join(' ')
-    .toUpperCase();
+    .toLowerCase();
+  const hintText = (hint || '').toLowerCase();
+  const codeText = (code || '').toUpperCase();
 
-  if (!normalized) {
-    return null;
-  }
-
-  if (normalized.includes('NO_FUNDS_AFTER_FEES')) {
+  // 1) No funds after fees (instant payout)
+  if (
+    combinedText.includes('no_funds_after_fees') ||
+    hintText.includes('no_funds_after_fees') ||
+    codeText === 'CREATOR_PAYOUT_NO_FUNDS_AFTER_FEES' ||
+    codeText === 'NO_FUNDS_AFTER_FEES'
+  ) {
     return {
       status: 400,
       publicErrorCode: 'NO_FUNDS_AFTER_FEES',
       publicMessage:
-        'Instant payout fees would leave no balance to transfer. Try standard speed instead.'
+        'Instant payout fees would leave no balance to transfer. Try standard speed instead.',
+      raw
     };
   }
 
-  if (normalized.includes('NO_FUNDS')) {
+  // 2) No funds at all
+  if (
+    combinedText.includes('no_funds') ||
+    hintText.includes('no_funds') ||
+    codeText === 'CREATOR_PAYOUT_NO_FUNDS' ||
+    codeText === 'NO_FUNDS'
+  ) {
     return {
       status: 400,
       publicErrorCode: 'NO_FUNDS',
       publicMessage:
-        'You do not have any available funds to payout yet. Keep an eye on your dashboard.'
+        'You do not have any available funds to payout yet. Keep an eye on your dashboard.',
+      raw
     };
   }
 
-  if (normalized.includes('BELOW_MINIMUM')) {
+  // 3) Below minimum payout threshold
+  if (
+    combinedText.includes('below_minimum') ||
+    hintText.includes('below_minimum') ||
+    codeText === 'CREATOR_PAYOUT_BELOW_MINIMUM' ||
+    codeText === 'BELOW_MINIMUM'
+  ) {
     return {
       status: 400,
       publicErrorCode: 'BELOW_MINIMUM',
       publicMessage:
-        'You need to reach the minimum payout amount before cashing out.'
+        'You need to reach the minimum payout amount before cashing out.',
+      raw
     };
   }
 
@@ -192,6 +207,11 @@ module.exports = async function handler(req, res) {
       const mapped = mapPayoutReservationError(reserveError);
 
       if (mapped) {
+        console.warn('[creator/payout/start] RPC mapped error', {
+          publicErrorCode: mapped.publicErrorCode,
+          raw: mapped.raw
+        });
+
         return json(res, mapped.status, {
           error: mapped.publicErrorCode,
           message: mapped.publicMessage
