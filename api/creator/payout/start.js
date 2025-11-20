@@ -5,18 +5,39 @@
 //   1) Authenticates the creator via Supabase JWT (Authorization: Bearer ...)
 //   2) Checks they have a Stripe Connect account
 //   3) Verifies payouts are enabled on that account
-//   4) Returns { ok: true } so the UI can show the success state
+//   4) Reserves a payout row via Supabase
+//   5) Returns { ok: true, payout: {...} } so the UI can show the success state
 //
 // NOTE: We intentionally do NOT move money yet. Plug your own ledger logic
 // here later so you never trust client-provided amounts.
 
-const {
-  stripe,
-  supabase,
-  parseBody,
-  json,
-  getUserFromAuthHeader
-} = require('../../_stripeShared');
+// ---------- Bootstrap shared deps defensively ----------
+
+let bootstrapError = null;
+let stripe;
+let supabase;
+let parseBody;
+let json;
+let getUserFromAuthHeader;
+
+try {
+  ({
+    stripe,
+    supabase,
+    parseBody,
+    json,
+    getUserFromAuthHeader
+  } = require('../../_stripeShared'));
+} catch (err) {
+  bootstrapError = err;
+  // Log once per cold start so we can see why the function was failing.
+  console.error('[creator/payout/start] Failed to bootstrap shared deps', {
+    message: err && err.message,
+    stack: err && err.stack
+  });
+}
+
+// ---------- Supabase payout reservation error mapping ----------
 
 function mapPayoutReservationError(error) {
   if (!error) {
@@ -67,12 +88,44 @@ function mapPayoutReservationError(error) {
   return null;
 }
 
+// ---------- Main handler ----------
+
 module.exports = async function handler(req, res) {
+  // If bootstrap failed (e.g. _stripeShared threw), never let the function crash.
+  if (bootstrapError) {
+    console.error(
+      '[creator/payout/start] Using fallback handler due to bootstrap error',
+      {
+        message: bootstrapError && bootstrapError.message
+      }
+    );
+
+    if (typeof json === 'function') {
+      return json(res, 500, {
+        error: 'PAYOUT_START_FAILED',
+        message:
+          'Something went wrong while starting your payout. Please try again.'
+      });
+    }
+
+    // Extra safety: if json helper is unavailable, fall back to raw res.
+    return res
+      .status(500)
+      .json({
+        error: 'PAYOUT_START_FAILED',
+        message:
+          'Something went wrong while starting your payout. Please try again.'
+      });
+  }
+
   if (req.method !== 'POST') {
     return json(res, 405, { error: 'Method not allowed' });
   }
 
   if (!supabase) {
+    console.error(
+      '[creator/payout/start] Supabase client missing during handler execution'
+    );
     return json(res, 500, { error: 'Supabase not configured' });
   }
 
@@ -146,8 +199,6 @@ module.exports = async function handler(req, res) {
       }
 
       console.error('[creator/payout/start] Unhandled Supabase RPC error', {
-        creatorId: user.id,
-        speed,
         code: reserveError.code,
         message: reserveError.message,
         details: reserveError.details,
@@ -193,7 +244,8 @@ module.exports = async function handler(req, res) {
 
     return json(res, 500, {
       error: 'PAYOUT_START_FAILED',
-      message: 'Something went wrong while starting your payout. Please try again.'
+      message:
+        'Something went wrong while starting your payout. Please try again.'
     });
   }
 };
