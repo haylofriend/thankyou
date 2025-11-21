@@ -367,6 +367,10 @@ async function applySessionFromUrl() {
   if (!supabase || typeof window === "undefined") return;
 
   try {
+    console.log("[auth/callback] checking URL for tokens", {
+      href: window.location.href,
+    });
+
     // Prefer hash (#access_token=...) — Supabase default
     const hash = window.location.hash || "";
     const hashParams = new URLSearchParams(
@@ -384,15 +388,28 @@ async function applySessionFromUrl() {
     const accessToken  = accessTokenHash  || accessTokenQ  || null;
     const refreshToken = refreshTokenHash || refreshTokenQ || null;
 
-    if (!accessToken) return;
+    if (!accessToken) {
+      console.log("[auth/callback] no access token found in URL; skipping setSession");
+      return;
+    }
 
-    const { error } = await supabase.auth.setSession({
+    console.log("[auth/callback] applying session via setSession", {
+      hasRefreshToken: !!refreshToken,
+      href: window.location.href,
+    });
+
+    const { data, error } = await supabase.auth.setSession({
       access_token: accessToken,
       refresh_token: refreshToken ?? undefined,
     });
 
+    console.log("[auth/callback] setSession result", {
+      hasSession: !!data?.session,
+      error,
+    });
+
     if (error) {
-      console.error("Error applying session from URL tokens", error);
+      console.error("[auth/callback] error applying session from URL tokens", error);
       return;
     }
 
@@ -400,7 +417,7 @@ async function applySessionFromUrl() {
     const cleanUrl = window.location.pathname + window.location.search;
     window.history.replaceState(null, "", cleanUrl);
 
-    console.log("Supabase session applied from URL.");
+    console.log("[auth/callback] Supabase session applied from URL");
   } catch (e) {
     console.warn("Failed to apply session from URL", e);
   }

@@ -14,6 +14,17 @@
         return new URL(location.href).searchParams.get(name);
       }
 
+      function hasSupabaseSessionCookie() {
+        try {
+          return (
+            document.cookie.match(/(?:^|;\s*)sb-access-token=/) ||
+            document.cookie.match(/(?:^|;\s*)supabase\.auth\.token=/)
+          );
+        } catch (_) {
+          return false;
+        }
+      }
+
       var SUPABASE_URL = (window.NEXT_PUBLIC_SUPABASE_URL || "").trim();
       var ANON = (window.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
       var FALLBACK_PATH = "/your-impact";
@@ -59,14 +70,20 @@
         redirectParam || (autostart ? FALLBACK_PATH : FALLBACK_PATH)
       );
 
+      console.log("[auth/google] starting auth redirect", {
+        href: location.href,
+        redirectParam: redirectParam,
+        redirectPath: redirectPath,
+      });
+
       // If already signed in, just go to the sanitized target.
       try {
-        var hasSb =
-          document.cookie.match(/(?:^|;\s*)sb-access-token=/) ||
-          document.cookie.match(/(?:^|;\s*)supabase\.auth\.token=/);
+        var hasSb = hasSupabaseSessionCookie();
 
         if (hasSb) {
-          location.replace(safeAbsRedirect(redirectPath));
+          var target = safeAbsRedirect(redirectPath);
+          console.log("[auth/google] detected existing Supabase session; redirecting", { target: target });
+          location.replace(target);
           return;
         }
       } catch (_) {
@@ -75,7 +92,9 @@
 
       if (!SUPABASE_URL || !ANON) {
         // Fail safe: go to the local dashboard fallback, never off-origin
-        location.replace(safeAbsRedirect(redirectPath));
+        var fallbackTarget = safeAbsRedirect(redirectPath);
+        console.warn("[auth/google] missing env; redirecting to fallback", { target: fallbackTarget });
+        location.replace(fallbackTarget);
         return;
       }
 
@@ -84,7 +103,22 @@
       authorize.searchParams.set("provider", "google");
       authorize.searchParams.set("redirect_to", safeAbsRedirect(redirectPath));
 
+      console.log("[auth/google] redirecting to Supabase authorize", {
+        authorize: authorize.toString(),
+      });
+
       location.replace(authorize.toString());
+
+      // Safety: if we're somehow still here after a few seconds, leave /auth.
+      setTimeout(function () {
+        var hasSbCookie = !!hasSupabaseSessionCookie();
+        var target = hasSbCookie ? safeAbsRedirect(redirectPath) : "/login";
+        console.warn("[auth/google] safety redirect firing", {
+          hasSessionCookie: hasSbCookie,
+          target: target,
+        });
+        location.replace(target);
+      }, 6000);
     })();
   </script>
   <style>
