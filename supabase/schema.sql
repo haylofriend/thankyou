@@ -58,11 +58,15 @@ create table if not exists public.profiles (
 
 -- Extra columns used by the app (Stripe + Pro flags)
 alter table public.profiles
+  add column if not exists thank_slug text unique,
   add column if not exists stripe_customer_id text,
+  add column if not exists stripe_account_id text,
   add column if not exists charges_enabled boolean default false,
   add column if not exists payouts_enabled boolean default false,
   add column if not exists is_pro boolean default false,
-  add column if not exists pro_expires_at timestamptz;
+  add column if not exists pro_expires_at timestamptz,
+  add column if not exists prox_express_onboarded_at timestamptz,
+  add column if not exists prox_express_prefs_at timestamptz;
 
 comment on table public.profiles is
   'User profile fields + Stripe Connect metadata used by the dashboard and payouts flows.';
