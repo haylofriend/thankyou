@@ -1,0 +1,11 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="halo_grad" x1="8" y1="8" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FDE68A"/>
+      <stop offset="0.5" stop-color="#F59E0B"/>
+      <stop offset="1" stop-color="#F472B6"/>
+    </linearGradient>
+  </defs>
+  <circle cx="24" cy="24" r="14" stroke="url(#halo_grad)" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <ellipse cx="24" cy="24" rx="6" ry="1.8" fill="url(#halo_grad)" opacity="0.6"/>
+</svg>
