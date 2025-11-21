@@ -268,19 +268,8 @@
       </div>
     </div>
 
-    <div class="glass rounded-2xl p-5">
-      <div class="text-xs uppercase text-white/60">One-tap share</div>
-      <h3 class="text-2xl font-semibold mt-1">Invite a thank-you</h3>
-      <p class="text-white/70 text-sm mt-2">Use a tested script or QR.</p>
-      <div class="mt-3 grid grid-cols-2 gap-2">
-        <button class="pill relative overflow-hidden text-sm" @click="share('x')">Post on X</button>
-        <button class="pill relative overflow-hidden text-sm" @click="share('sms')">Text a regular</button>
-        <button class="pill relative overflow-hidden text-sm" @click="downloadQR">Download QR</button>
-        <button class="pill relative overflow-hidden text-sm" @click="copyDM">Copy 1-line DM</button>
-      </div>
-      <div class="mt-4 p-3 rounded-xl bg-white/5 border border-white/10 text-xs">
-        “Quick thank-you link for small kindnesses—every bit helps. {{ shareUrl }}”
-      </div>
+    <div class="lg:col-span-1">
+      <div id="one-tap-share-root"></div>
     </div>
   </section>
 
@@ -502,6 +491,21 @@ const app = createApp({
     function createRipple(event){ const button = event?.currentTarget || document.activeElement; if(!button) return; const circle=document.createElement('span'); const diameter=Math.max(button.clientWidth,button.clientHeight); const radius=diameter/2; circle.style.width=circle.style.height=`${diameter}px`; const rect=button.getBoundingClientRect(); circle.style.left=`${(event?.clientX||rect.left+radius)-rect.left-radius}px`; circle.style.top =`${(event?.clientY||rect.top +radius)-rect.top -radius}px`; circle.classList.add('ripple-effect'); const old = button.getElementsByClassName('ripple-effect')[0]; if(old) old.remove(); button.style.position='relative'; button.appendChild(circle); }
 
     function openPublic(e){ createRipple(e); window.open(shareUrl.value, '_blank', 'noopener,noreferrer'); }
+
+    const oneTapShare = {
+      shareLink: shareUrl.value,
+      onPrimaryShare: () => copyLink(new Event('click')),
+      onPostX: () => share('x'),
+      onSMS: () => share('sms'),
+      onQR: () => downloadQR(new Event('click')),
+      onCopyDM: () => copyDM(new Event('click')),
+    };
+
+    watch(shareUrl, (next) => {
+      oneTapShare.shareLink = next;
+      window.ONE_TAP_SHARE = oneTapShare;
+      document.dispatchEvent(new CustomEvent('share-link-updated', { detail: next }));
+    }, { immediate: true });
 
     async function sendMagic(){
       if (!supabase) return alert('Supabase not configured');
@@ -990,6 +994,120 @@ window.app = app;
 <script type="text/babel" data-presets="react">
   const { useEffect, useMemo, useState } = React;
 
+  const MagicShareButton = ({
+    onClick,
+    disabled = false,
+    className = '',
+    label = 'Share The Magic',
+  }) => {
+    return (
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        className={[
+          'relative overflow-hidden',
+          'inline-flex items-center justify-center gap-2',
+          'px-6 py-2 rounded-full',
+          'bg-black text-white font-medium text-sm',
+          'shadow-[0_0_0_1px_rgba(255,255,255,0.12)]',
+          'transition-all duration-200',
+          'hover:shadow-[0_0_25px_rgba(150,150,255,0.45)] hover:scale-[1.02]',
+          'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100',
+          className,
+        ].join(' ')}
+      >
+        {label}
+
+        <span className="relative flex items-center justify-center">
+          <img
+            src="/haylofriend_sunrise_halo.svg"
+            alt="halo"
+            width={16}
+            height={16}
+            className="opacity-90"
+          />
+        </span>
+      </button>
+    );
+  };
+
+  const OneTapShareCard = ({
+    shareLink,
+    onPrimaryShare,
+    onPostX,
+    onSMS,
+    onQR,
+    onCopyDM,
+  }) => {
+    const shortScript = `“Hey, I set up a tiny thank-you space on Haylofriend. No pressure at all, but if you ever feel like saying thanks or supporting my work, this is where to do it 💛”\n${shareLink}`;
+
+    return (
+      <div
+        className="
+          rounded-3xl
+          bg-gradient-to-b from-slate-900/60 to-slate-900/40
+          border border-white/10
+          shadow-[0px_15px_40px_-10px_rgba(0,0,0,0.6)]
+          backdrop-blur-xl
+          p-6
+          flex flex-col gap-5
+        "
+      >
+        <div className="text-xs tracking-[0.18em] text-slate-400 uppercase">
+          ONE-TAP SHARE
+        </div>
+
+        <h3 className="text-lg font-semibold text-white">Invite a thank-you</h3>
+
+        <p className="text-sm text-slate-300 leading-relaxed">
+          Share with someone who already appreciates you — only if it feels right.
+          Gratitude is the most powerful currency.
+        </p>
+
+        <MagicShareButton onClick={onPrimaryShare} className="w-full mt-2" />
+
+        <div className="grid grid-cols-2 gap-3 mt-2">
+          <button
+            onClick={onPostX}
+            className="px-3 py-2 rounded-full border border-white/10 text-sm text-slate-200 hover:bg-white/5 transition"
+          >
+            Post on X
+          </button>
+
+          <button
+            onClick={onSMS}
+            className="px-3 py-2 rounded-full border border-white/10 text-sm text-slate-200 hover:bg-white/5 transition"
+          >
+            Text a regular
+          </button>
+
+          <button
+            onClick={onQR}
+            className="px-3 py-2 rounded-full border border-white/10 text-sm text-slate-200 hover:bg-white/5 transition"
+          >
+            Download QR
+          </button>
+
+          <button
+            onClick={onCopyDM}
+            className="px-3 py-2 rounded-full border border-white/10 text-sm text-slate-200 hover:bg-white/5 transition"
+          >
+            Copy 1-line DM
+          </button>
+        </div>
+
+        <div
+          className="
+            rounded-2xl border border-white/10 bg-slate-900/60
+            p-4 text-sm text-slate-300 leading-relaxed
+          "
+        >
+          {shortScript}
+        </div>
+      </div>
+    );
+  };
+
   const ReplenishModal = ({ isOpen, onClose, shareLink }) => {
     const [stripeStatus, setStripeStatus] = useState(null);
     const [balance, setBalance] = useState(null);
@@ -1327,6 +1445,53 @@ window.app = app;
     );
   };
 
+  const OneTapShareMount = () => {
+    const [shareLink, setShareLink] = useState(
+      () => window.ONE_TAP_SHARE?.shareLink || ''
+    );
+
+    const readActions = () => {
+      const api = window.ONE_TAP_SHARE || {};
+      return {
+        onPrimaryShare: api.onPrimaryShare || (() => {}),
+        onPostX: api.onPostX || (() => {}),
+        onSMS: api.onSMS || (() => {}),
+        onQR: api.onQR || (() => {}),
+        onCopyDM: api.onCopyDM || (() => {}),
+      };
+    };
+
+    const [actions, setActions] = useState(readActions);
+
+    useEffect(() => {
+      const handleUpdate = (event) => {
+        setShareLink(event?.detail || '');
+        setActions(readActions());
+      };
+
+      document.addEventListener('share-link-updated', handleUpdate);
+
+      if (window.ONE_TAP_SHARE) {
+        handleUpdate({ detail: window.ONE_TAP_SHARE.shareLink });
+      }
+
+      return () => {
+        document.removeEventListener('share-link-updated', handleUpdate);
+      };
+    }, []);
+
+    return (
+      <OneTapShareCard
+        shareLink={shareLink}
+        onPrimaryShare={actions.onPrimaryShare}
+        onPostX={actions.onPostX}
+        onSMS={actions.onSMS}
+        onQR={actions.onQR}
+        onCopyDM={actions.onCopyDM}
+      />
+    );
+  };
+
   const YourImpactReplenish = () => {
     const [isReplenishOpen, setIsReplenishOpen] = useState(false);
 
@@ -1355,6 +1520,12 @@ window.app = app;
     if (mountNode && ReactDOM.createRoot) {
       const root = ReactDOM.createRoot(mountNode);
       root.render(<YourImpactReplenish />);
+    }
+
+    const shareRoot = document.getElementById('one-tap-share-root');
+    if (shareRoot && ReactDOM.createRoot) {
+      const shareRootInstance = ReactDOM.createRoot(shareRoot);
+      shareRootInstance.render(<OneTapShareMount />);
     }
   });
 </script>
