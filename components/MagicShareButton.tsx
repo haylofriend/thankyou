@@ -4,44 +4,41 @@ import Image from 'next/image';
 type MagicShareButtonProps = {
   onClick: () => void;
   disabled?: boolean;
-  label?: string;
   className?: string;
+  label?: string;
 };
 
 export const MagicShareButton: React.FC<MagicShareButtonProps> = ({
   onClick,
   disabled = false,
-  label = 'Share The Magic',
   className = '',
+  label = 'Share The Magic',
 }) => {
   return (
     <button
-      type="button"
       onClick={onClick}
       disabled={disabled}
       className={[
+        'relative overflow-hidden',
         'inline-flex items-center justify-center gap-2',
-        'rounded-full px-6 py-2',
-        'bg-black text-slate-100 text-sm font-medium',
-        'shadow-[0_0_0_1px_rgba(148,163,184,0.25)]',
-        'ring-1 ring-transparent',
-        'hover:shadow-[0_0_0_1px_rgba(129,140,248,0.6),0_0_30px_rgba(37,99,235,0.45)]',
-        'hover:ring-[rgba(59,130,246,0.7)]',
-        'transition-transform transition-shadow duration-150 ease-out',
-        'hover:scale-[1.02]',
-        'disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none',
+        'px-6 py-2 rounded-full',
+        'bg-black text-white font-medium text-sm',
+        'shadow-[0_0_0_1px_rgba(255,255,255,0.12)]',
+        'transition-all duration-200',
+        'hover:shadow-[0_0_25px_rgba(150,150,255,0.45)] hover:scale-[1.02]',
+        'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100',
         className,
       ].join(' ')}
     >
-      <span>{label}</span>
+      {label}
 
-      {/* Small Haylo halo icon to match the site CTA */}
-      <span className="inline-flex items-center justify-center">
+      <span className="relative flex items-center justify-center">
         <Image
           src="/haylofriend_sunrise_halo.svg"
-          alt=""
-          width={18}
-          height={18}
+          alt="halo"
+          width={16}
+          height={16}
+          className="opacity-90"
         />
       </span>
     </button>
