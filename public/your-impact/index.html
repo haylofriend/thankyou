@@ -309,6 +309,92 @@
         Open AI Co-Pilot
         <span class="w-1.5 h-1.5 rounded-full bg-[var(--acc)] animate-pulse"></span>
       </button>
+
+      <!-- RIGHT-RAIL: Tip & Glow (sits under Co-Pilot) -->
+      <div id="gbloom-card" class="mt-4 glass rounded-2xl p-5 flex flex-col gap-4">
+        <div>
+          <div class="text-[11px] uppercase tracking-wide text-white/60">Gratitude</div>
+          <h3 class="text-2xl font-semibold mt-1">Tip & Glow</h3>
+          <p class="mt-1 text-sm text-white/70">Turn today’s thanks into tomorrow’s good.</p>
+        </div>
+
+        <!-- Recipient -->
+        <div>
+          <label class="text-xs text-white/60">Who made your day?</label>
+          <div class="mt-1 flex gap-2">
+            <input v-model.trim="who" type="text" inputmode="text"
+                   placeholder="@handle, email, or name"
+                   class="w-full rounded-xl bg-black/30 border border-white/10 px-3 py-2 text-sm outline-none focus:border-[var(--acc)]/60">
+            <button @click="clearWho"
+                    class="px-3 py-2 rounded-xl border border-white/10 text-xs text-white/70 hover:bg-white/5">Clear</button>
+          </div>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <button v-for="s in suggestions" :key="s" @click="who = s"
+                    class="pill text-[11px] hover:bg-white/10">{{ s }}</button>
+          </div>
+        </div>
+
+        <!-- Amount presets -->
+        <div>
+          <label class="text-xs text-white/60">Tip amount</label>
+          <div class="mt-2 grid grid-cols-4 gap-2">
+            <button v-for="a in presets" :key="a" @click="selectAmount(a)"
+                    :class="['rounded-xl border px-3 py-2 text-sm transition',
+                             amount===a ? 'border-[var(--acc)] bg-white/10' : 'border-white/10 bg-black/20 hover:bg-white/5']">
+              $ {{ a }}
+            </button>
+            <div class="col-span-2 relative">
+              <input v-model.number="custom" type="number" min="1" step="1" placeholder="Custom"
+                     class="w-full rounded-xl bg-black/30 border border-white/10 px-3 py-2 text-sm outline-none focus:border-[var(--acc)]/60">
+              <span class="absolute right-3 top-2 text-white/40 text-xs">USD</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bloom split -->
+        <div>
+          <div class="flex items-center justify-between">
+            <label class="text-xs text-white/60">Bloom split</label>
+            <div class="text-xs text-white/70">{{ split }}% to Bloom</div>
+          </div>
+          <input v-model.number="split" type="range" min="0" max="50" class="w-full mt-2">
+          <div class="mt-1 text-[11px] text-white/60">
+            Tip {{ (100 - split) }}% → recipient · Bloom {{ split }}% → pooled good
+          </div>
+        </div>
+
+        <!-- Privacy + note -->
+        <div class="grid grid-cols-1 gap-2">
+          <label class="inline-flex items-center gap-2 text-sm text-white/80">
+            <input type="checkbox" v-model="anon" class="w-4 h-4 accent-[var(--acc)]">
+            Send anonymously
+          </label>
+          <input v-model.trim="note" maxlength="120" placeholder="Add a kind word (optional)"
+                 class="rounded-xl bg-black/30 border border-white/10 px-3 py-2 text-sm outline-none focus:border-[var(--acc)]/60">
+        </div>
+
+        <!-- CTA — same breathing halo vibe -->
+        <div class="flex flex-col gap-2">
+          <button
+            @click="tipAndGlow"
+            :disabled="!canSubmit"
+            class="relative overflow-hidden w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl
+                   bg-black text-white text-sm font-medium border border-white/12
+                   animate-pulse-glow hover:scale-[1.01] disabled:opacity-50 disabled:animate-none">
+            <span class="w-1.5 h-1.5 rounded-full bg-[var(--acc)] animate-pulse"></span>
+            Tip & Glow
+          </button>
+          <div class="text-[12px] text-white/60">
+            Ripple: ${{ tipPart.toFixed(2) }} → <span class="text-white/80">{{ who || 'recipient' }}</span>,
+            ${{ bloomPart.toFixed(2) }} → Bloom
+          </div>
+        </div>
+
+        <!-- success toast -->
+        <div v-if="justSent" class="rounded-xl border border-emerald-400/40 bg-emerald-400/10 p-3 text-sm text-emerald-100">
+          You made someone’s day. And tomorrow’s. 🌱
+        </div>
+      </div>
     </div>
   </section>
 
@@ -999,6 +1085,78 @@ window.app = app;
 </script>
 <script>
   app.mount('#app');
+</script>
+
+<script>
+(() => {
+  const { createApp, ref, computed } = Vue;
+
+  // mount only if the card exists (safe on any page variant)
+  const mountEl = document.getElementById('gbloom-card');
+  if (!mountEl) return;
+
+  createApp({
+    setup() {
+      const who = ref('');
+      const presets = ref([2, 5, 10, 20]);
+      const amount = ref(5);
+      const custom = ref(null);
+      const split = ref(20);
+      const anon  = ref(true);
+      const note  = ref('');
+      const justSent = ref(false);
+
+      const suggestions = ref(['@barista', '@teacher', '@teammate', 'mom@example.com']);
+
+      const chosenAmount = computed(() => {
+        const c = Number(custom.value || 0);
+        return c > 0 ? c : amount.value;
+      });
+
+      const tipPart   = computed(() => chosenAmount.value * (100 - split.value) / 100);
+      const bloomPart = computed(() => chosenAmount.value * split.value / 100);
+
+      const canSubmit = computed(() =>
+        Boolean(who.value?.trim()) && Number.isFinite(chosenAmount.value) && chosenAmount.value > 0
+      );
+
+      function selectAmount(a){ amount.value = a; custom.value = null; }
+      function clearWho(){ who.value = ''; }
+
+      function tipAndGlow(){
+        if (!canSubmit.value) return;
+
+        // success microstate
+        justSent.value = true;
+        setTimeout(() => justSent.value = false, 2200);
+
+        // analytics-friendly alias event (non-breaking)
+        window.dispatchEvent(new CustomEvent('tglow:sent', {
+          detail: {
+            to:   who.value.trim(),
+            amount: chosenAmount.value,
+            split:  split.value,
+            anon: !!anon.value,
+            note:  note.value.trim()
+          }
+        }));
+
+        // soft reset (keep recipient for quick double-tip)
+        amount.value = 5;
+        custom.value = null;
+        split.value  = 20;
+        anon.value   = true;
+        note.value   = '';
+      }
+
+      return {
+        who, presets, amount, custom, split, anon, note, suggestions,
+        chosenAmount, tipPart, bloomPart, canSubmit, justSent,
+        selectAmount, clearWho, tipAndGlow
+      };
+    }
+  }).mount('#gbloom-card');
+})();
 </script>
 
 <script>
