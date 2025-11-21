@@ -169,9 +169,44 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   
   <script>
-  // ------- CONFIG (swap at build) ---------
-  const STRIPE_PK = window.STRIPE_PK || 'pk_test_XXXXXXXXXXXXXXXXXXXXXXXX';
-  const BACKEND_URL = window.BACKEND_URL || '/api'; // Implement as Supabase Edge Function or server
+  // ------- CONFIG (env-driven) ---------
+  // Stripe publishable key should always come from env.js (NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  const STRIPE_PK =
+    (window.STRIPE_PUBLISHABLE_KEY && window.STRIPE_PUBLISHABLE_KEY.trim()) ||
+    (window.STRIPE_PK && String(window.STRIPE_PK).trim()) ||
+    '';
+
+  if (!STRIPE_PK) {
+    console.error(
+      'Missing Stripe publishable key. Set NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY and expose it via /api/env.js.'
+    );
+  }
+
+  // Backend URL for Stripe endpoints (create-payment-intent, create-checkout-session, etc.)
+  // Priority:
+  //   1) window.BACKEND_URL from env.js
+  //   2) THANK_HOST + "/api" (env.js)
+  //   3) "/api" as a last-resort local-dev fallback
+  (function () {
+    const rawBackend = (window.BACKEND_URL || '').trim();
+    if (rawBackend) {
+      window.BLOOM_BACKEND_URL = rawBackend;
+      return;
+    }
+
+    const thankHost = (window.THANK_HOST || '').trim();
+    if (thankHost) {
+      const trimmed = thankHost.replace(/\/$/, '');
+      window.BLOOM_BACKEND_URL = trimmed + '/api';
+      return;
+    }
+
+    // Final fallback: local dev
+    window.BLOOM_BACKEND_URL = '/api';
+  })();
+
+  const BACKEND_URL = window.BLOOM_BACKEND_URL;
+
   const CURRENCY = (new URL(location).searchParams.get('cur') || 'usd').toLowerCase();
   // NEW: If you prefer a single Stripe-hosted link, set PAYMENT_LINK_URL to your Stripe Payment Link URL.
   // Example: window.PAYMENT_LINK_URL = 'https://buy.stripe.com/test_abc123';
