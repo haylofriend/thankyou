@@ -269,18 +269,83 @@
     </div>
 
     <div class="glass rounded-2xl p-5">
-      <div class="text-xs uppercase text-white/60">One-tap share</div>
-      <h3 class="text-2xl font-semibold mt-1">Invite a thank-you</h3>
-      <p class="text-white/70 text-sm mt-2">Use a tested script or QR.</p>
-      <div class="mt-3 grid grid-cols-2 gap-2">
-        <button class="pill relative overflow-hidden text-sm" @click="share('x')">Post on X</button>
-        <button class="pill relative overflow-hidden text-sm" @click="share('sms')">Text a regular</button>
-        <button class="pill relative overflow-hidden text-sm" @click="downloadQR">Download QR</button>
-        <button class="pill relative overflow-hidden text-sm" @click="copyDM">Copy 1-line DM</button>
-      </div>
-      <div class="mt-4 p-3 rounded-xl bg-white/5 border border-white/10 text-xs">
-        “Quick thank-you link for small kindnesses—every bit helps. {{ shareUrl }}”
-      </div>
+      <section class="rounded-3xl bg-slate-950/80 border border-slate-800 p-5 flex flex-col gap-4">
+        <div class="text-xs tracking-[0.18em] text-slate-400 uppercase">
+          ONE-TAP SHARE
+        </div>
+        <div class="space-y-1">
+          <h2 class="text-base font-semibold text-slate-50">
+            Invite a thank-you
+          </h2>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Send one tiny link that lets someone who already appreciates you
+            turn it into real-world support—only if it feels right to them.
+          </p>
+        </div>
+
+        <!-- Primary CTA: Share The Magic -->
+        <div>
+          <button
+            type="button"
+            @click="handleShareLink"
+            :disabled="shareDisabled"
+            class="w-full justify-center inline-flex items-center gap-2 rounded-full px-6 py-2 bg-black text-slate-100 text-sm font-medium shadow-[0_0_0_1px_rgba(148,163,184,0.25)] ring-1 ring-transparent hover:shadow-[0_0_0_1px_rgba(129,140,248,0.6),0_0_30px_rgba(37,99,235,0.45)] hover:ring-[rgba(59,130,246,0.7)] transition-transform transition-shadow duration-150 ease-out hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
+          >
+            <span>Share The Magic</span>
+            <span class="inline-flex items-center justify-center">
+              <img
+                src="/haylofriend_sunrise_halo.svg"
+                alt=""
+                class="w-[18px] h-[18px]"
+              />
+            </span>
+          </button>
+        </div>
+
+        <!-- Power row: secondary helpers -->
+        <div class="flex flex-wrap gap-2 text-xs">
+          <button
+            type="button"
+            @click="handlePostOnX"
+            class="flex-1 min-w-[110px] rounded-full border border-slate-700 bg-slate-900/70 px-3 py-2 text-slate-200 hover:border-slate-500 transition"
+          >
+            Post on X
+          </button>
+          <button
+            type="button"
+            @click="handleTextRegular"
+            class="flex-1 min-w-[110px] rounded-full border border-slate-700 bg-slate-900/70 px-3 py-2 text-slate-200 hover:border-slate-500 transition"
+          >
+            Text a regular
+          </button>
+          <button
+            type="button"
+            @click="handleDownloadQr"
+            class="flex-1 min-w-[110px] rounded-full border border-slate-700 bg-slate-900/70 px-3 py-2 text-slate-200 hover:border-slate-500 transition"
+          >
+            Download QR
+          </button>
+          <button
+            type="button"
+            @click="handleCopyDm"
+            class="flex-1 min-w-[110px] rounded-full border border-slate-700 bg-slate-900/70 px-3 py-2 text-slate-200 hover:border-slate-500 transition"
+          >
+            Copy 1-line DM
+          </button>
+        </div>
+
+        <!-- Script preview -->
+        <div class="mt-1 rounded-2xl bg-slate-900/80 border border-slate-800 px-3 py-3 text-xs text-slate-300 leading-relaxed">
+          “Hey, I set up a tiny thank-you space on Haylofriend.
+          <br />
+          No pressure at all, but if you ever feel like saying thanks or
+          supporting my work, this is where to do it 💛”
+          <br />
+          <span class="break-all text-slate-400 text-[11px]">
+            {{ shareLink }}
+          </span>
+        </div>
+      </section>
     </div>
   </section>
 
@@ -470,6 +535,8 @@ const app = createApp({
 
     // ===== DERIVED =====
     const shareUrl = computed(()=> `${THANK_HOST}/thank/${slug.value}`);
+    const shareLink = computed(() => shareUrl.value);
+    const shareDisabled = computed(() => !shareLink.value);
     const perMinute = computed(()=> Math.max(earningsWeek.value,0) / (7*24*60));
     const perMinuteDisplay = computed(()=> perMinute.value.toFixed(2));
     const todayDisplay = computed(()=> earningsToday.value.toFixed(2));
@@ -488,6 +555,34 @@ const app = createApp({
     async function copyLink(e){ createRipple(e); const ok = await copyToClipboard(shareUrl.value); events.value.unshift({label:'Link copied', value:shareUrl.value, type:'share'}); toast(ok?'Copied!':'Link ready'); }
     function downloadQR(e){ createRipple(e); alert('Demo: Beautiful QR would generate for ' + shareUrl.value); }
     async function share(kind){ const text = `Tiny thank-you link for little kindnesses: ${shareUrl.value}`; if(kind==='sms'){ window.open(`sms:?&body=${encodeURIComponent(text)}`,'_blank'); } if(kind==='x'){ window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}`,'_blank'); } events.value.unshift({label:'Shared invitation', value:kind.toUpperCase(), type:'share'}); }
+    async function handleShareLink(event){
+      createRipple(event);
+      const sharePayload = {
+        title: 'Haylofriend thank-you',
+        text: 'If you ever feel like saying thanks, this is where to do it.',
+        url: shareLink.value,
+      };
+
+      try {
+        if (navigator.share) {
+          await navigator.share(sharePayload);
+          events.value.unshift({ label: 'Shared invitation', value: 'MAGIC', type: 'share' });
+          toast('Shared!');
+          return;
+        }
+      } catch (err) {
+        if (err?.name === 'AbortError') return;
+        console.warn('Web Share failed, falling back to copy', err);
+      }
+
+      await copyToClipboard(shareLink.value);
+      events.value.unshift({ label: 'Link copied', value: shareLink.value, type: 'share' });
+      toast('Link ready');
+    }
+    function handlePostOnX(){ share('x'); }
+    function handleTextRegular(){ share('sms'); }
+    function handleDownloadQr(event){ downloadQR(event); }
+    function handleCopyDm(event){ copyDM(event); }
     async function copyDM(e){ createRipple(e); await copyToClipboard(`If I’ve helped you lately, here’s a $2 thank-you: ${shareUrl.value}`); toast('DM copied'); }
     function genScripts(){ aiScripts.value = shuffle(aiScripts.value); toast('New scripts ready'); }
     function genAffiliates(){ affiliates.value = shuffle(affiliates.value); toast('Updated picks'); }
@@ -829,7 +924,10 @@ const app = createApp({
       payoutNextAmount, payoutNextLabel, payoutPct,
       aiScripts, affiliates, openCopilot, tasks, showBurst,
       // actions
-      shareUrl, eventColor, copyLink, downloadQR, share, copyDM, genScripts, genAffiliates, maybeCelebrate, openPublic
+      shareUrl, shareLink, shareDisabled,
+      eventColor, copyLink, downloadQR, share, copyDM,
+      handleShareLink, handlePostOnX, handleTextRegular, handleDownloadQr, handleCopyDm,
+      genScripts, genAffiliates, maybeCelebrate, openPublic
     };
   }
 });
