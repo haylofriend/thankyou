@@ -591,6 +591,60 @@ as $$
 $$;
 
 -- ============================================================================
+-- generate_mindful_thank_slug: returns a unique, loving URL slug
+-- Examples: friend-lumin, friend-bloom, friend-rise, friend-shine, friend-light, friend-warm, friend-joy
+-- ============================================================================
+
+create or replace function public.generate_mindful_thank_slug()
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  -- We keep "friend" as the constant prefix for the story.
+  prefix text := 'friend';
+
+  -- Loving / mindful suffixes. You can tweak this list anytime.
+  suffixes text[] := array[
+    'lumin', 'rise', 'bloom', 'glow', 'light', 'kind',
+    'joy', 'ember', 'aurora', 'horizon', 'grace', 'halo',
+    'flourish', 'spark', 'wave', 'flow', 'heart', 'echo',
+    'shine', 'dawn', 'solace', 'bliss', 'whisper', 'radiance'
+  ];
+
+  suffix text;
+  slug text;
+  attempt int := 0;
+begin
+  loop
+    attempt := attempt + 1;
+
+    -- Pick a random suffix from the list
+    suffix := suffixes[1 + floor(random() * array_length(suffixes, 1))::int];
+
+    -- Add a tiny random tail for uniqueness without making it ugly.
+    -- e.g. friend-lumin-3f, friend-rise-k2
+    slug := prefix || '-' || suffix || '-' ||
+            to_hex((floor(random() * 256))::int);
+
+    -- If no existing profile uses this slug, we're done.
+    exit when not exists (
+      select 1 from public.profiles where thank_slug = slug
+    );
+
+    -- Safety break to avoid infinite loop (very unlikely)
+    if attempt > 20 then
+      slug := prefix || '-' || to_hex((floor(random() * 65535))::int);
+      exit;
+    end if;
+  end loop;
+
+  return slug;
+end;
+$$;
+
+-- ============================================================================
 -- creator_create_payout: reserve a payout row for a creator (race-safe)
 -- ============================================================================
 create or replace function public.creator_create_payout(
