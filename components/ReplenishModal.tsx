@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { MagicShareButton } from '../components/MagicShareButton';
 
 type StripeStatus = {
   connected: boolean;
@@ -243,12 +244,11 @@ export const ReplenishModal: React.FC<ReplenishModalProps> = ({
         );
       case 'noFunds':
         return (
-          <button
+          <MagicShareButton
             onClick={handleShareLink}
-            className="w-full rounded-xl border border-slate-700 px-4 py-3 font-semibold text-slate-100 hover:border-slate-500 transition"
-          >
-            Share your link
-          </button>
+            disabled={flowState === 'loading' || flowState === 'payoutInProgress'}
+            className="w-full"
+          />
         );
       case 'ready':
         return (
