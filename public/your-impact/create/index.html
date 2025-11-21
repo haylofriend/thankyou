@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Create — Extend Your Impact · Haylo</title>
+
+  <!-- Tailwind (CDN for demo) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg:   '#0b0b0c',
+            card: '#121214',
+            ink:  '#e7e7ea',
+            hair: 'rgba(231,231,234,.12)',
+            acc:  '#4da3ff',
+            good: '#15c39a',
+            warn: '#ffcc00',
+            bad:  '#ff5a5a',
+            primary: {
+              50:'#eef2ff',100:'#e0e7ff',200:'#c7d2fe',300:'#a5b4fc',
+              400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca',
+              800:'#3730a3',900:'#312e81'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      --bg:   #0b0b0c;
+      --card: #121214;
+      --ink:  #e7e7ea;
+      --hair: rgba(231,231,234,.12);
+      --acc:  #4da3ff;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg) !important;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text',
+                   'Helvetica Neue', Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      overflow: hidden; /* only internal scroll */
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    h1,h2,h3,h4{ letter-spacing:-0.01em; }
+
+    .haylo-card{
+      background:var(--card);
+      border:1px solid var(--hair);
+      box-shadow:0 8px 24px rgba(0,0,0,.35);
+    }
+
+    .haylo-cta{
+      border-radius:0.75rem;
+      border:1px solid var(--hair);
+      background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));
+      box-shadow:0 8px 24px rgba(0,0,0,.35);
+      backdrop-filter:blur(10px);
+      color:var(--ink);
+      font-size:.875rem;
+      font-weight:500;
+      transition:background .25s ease,box-shadow .25s ease,transform .15s ease;
+    }
+    .haylo-cta:hover{
+      background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.05));
+      box-shadow:0 10px 30px rgba(0,0,0,.85);
+      transform:translateY(-1px);
+    }
+
+    .primary-add-btn{
+      border-radius:0.75rem;
+      border:1px solid #2563eb;
+      background:var(--acc);
+      box-shadow:
+        0 0 0 1px rgba(15,23,42,0.4),
+        0 18px 40px rgba(0,0,0,0.9);
+      color:#fff;
+      font-size:.9rem;
+      font-weight:500;
+      padding-top:.7rem;
+      padding-bottom:.7rem;
+      transition:background .2s ease,box-shadow .2s ease,transform .12s ease;
+    }
+    .primary-add-btn:hover{
+      background:#60a5ff;
+      box-shadow:
+        0 0 0 1px rgba(56,189,248,0.5),
+        0 22px 48px rgba(0,0,0,1);
+      transform:translateY(-1px);
+    }
+
+    @keyframes haylo-breath{
+      0%{transform:translateZ(0) scale(1);box-shadow:0 0 0 rgba(0,0,0,0);}
+      100%{transform:translateZ(0) scale(1.015);box-shadow:0 12px 30px rgba(250,208,196,0.10);}
+    }
+    .breath{
+      transition:transform .4s cubic-bezier(.2,.8,.2,1),box-shadow .6s ease;
+      will-change:transform,box-shadow;
+    }
+    .breath:hover{animation:haylo-breath 1.8s ease-in-out alternate infinite;}
+    @media (prefers-reduced-motion:reduce){
+      .breath:hover{animation:none;transform:scale(1.01);}
+    }
+
+    .haylo-ripple{
+      position:absolute;
+      pointer-events:none;
+      border-radius:9999px;
+      opacity:.6;
+      transform:scale(0);
+      background:radial-gradient(circle,var(--halo-a)0%,var(--halo-b)55%,transparent60%);
+      animation:haylo-ripple .6s ease-out forwards;
+      filter:drop-shadow(0 4px 10px rgba(250,208,196,.35));
+    }
+    @keyframes haylo-ripple{
+      to{transform:scale(1);opacity:0;}
+    }
+    .cta{position:relative;overflow:hidden;}
+
+    .inspect-enter-from{opacity:0;transform:translateY(6px) scale(.98);}
+    .inspect-enter-active{transition:opacity .15s ease,transform .2s cubic-bezier(.2,.8,.2,1);}
+    .inspect-leave-to{opacity:0;transform:translateY(6px) scale(.98);}
+    .inspect-leave-active{transition:opacity .12s ease,transform .15s ease;}
+  </style>
+
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+</head>
+<body>
+  <main id="app" class="h-screen flex flex-col overflow-hidden">
+    <!-- Top bar -->
+    <header class="sticky top-0 z-30 border-b border-[color:var(--hair)] bg-black/40 backdrop-blur">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+        <div class="flex items-center gap-3 text-sm text-white/60">
+          <a href="/your-impact" class="hover:text-white transition">Your Impact</a>
+          <span class="opacity-40">/</span>
+          <span class="text-white">Create</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button data-cta @click="publish" class="cta haylo-cta px-4 py-2">Publish</button>
+          <a href="/dashboard" class="text-sm px-3 py-1.5 rounded-xl border border-[color:var(--hair)] bg-white/5 hover:bg-white/10 transition breath">Dashboard</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Below header: all content, internal scroll only -->
+    <div class="flex-1 flex flex-col overflow-hidden bg-[color:var(--bg)]">
+      <!-- Hero + best practices + editor -->
+      <section class="bg-[color:var(--bg)]">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+          <div class="grid gap-8 lg:grid-cols-2 items-start">
+            <!-- LEFT: Story + best practices -->
+            <div>
+              <h1 class="text-3xl sm:text-4xl md:text-5xl font-semibold leading-tight tracking-tight">
+                Turn gratitude into <span class="text-[color:var(--acc)]">momentum</span>
+              </h1>
+              <p class="mt-4 text-base sm:text-lg text-white/80 max-w-xl">
+                Your advocates already tipped to say “thank you.” Now invite them to go deeper—
+                subscribe to your <em>services</em>, support your <em>goods</em>, and share
+                <em>affiliate links</em> that reflect your values.
+              </p>
+
+              <h3 class="mt-8 font-medium">
+                <span v-if="active==='services'">Best practices</span>
+                <span v-else-if="active==='goods'">Guidance</span>
+                <span v-else>Guidelines</span>
+              </h3>
+
+              <!-- Services tips -->
+              <ul v-if="active==='services'" class="mt-3 space-y-2 text-sm text-white/80">
+                <li>• Lead with outcomes, not features.</li>
+                <li>• Keep cadence realistic—consistency builds trust.</li>
+                <li>• Price for sustainability; tips are the bonus.</li>
+              </ul>
+
+              <!-- Goods tips -->
+              <ul v-else-if="active==='goods'" class="mt-3 space-y-2 text-sm text-white/80">
+                <li>• Keep SKUs simple; scarcity can help.</li>
+                <li>• Photos matter—use natural light.</li>
+                <li>• Add a one-line origin story.</li>
+              </ul>
+
+              <!-- Affiliate tips -->
+              <ul v-else class="mt-3 space-y-2 text-sm text-white/80">
+                <li>• Only share what you genuinely use.</li>
+                <li>• Add a short value-based note (not salesy).</li>
+                <li>• Use clean, readable URLs.</li>
+              </ul>
+            </div>
+
+            <!-- RIGHT: Editor card -->
+            <div class="breath haylo-card rounded-2xl p-5 sm:p-6">
+              <!-- SERVICES EDITOR -->
+              <div v-if="active==='services'" class="space-y-4">
+                <div>
+                  <label class="block text-sm text-white/80">Title</label>
+                  <input
+                    v-model="svc.title"
+                    class="mt-2 w-full rounded-lg bg-black/40 border border-[color:var(--hair)] px-3 py-2.5 outline-none focus:ring-2 focus:ring-[color:var(--acc)]"
+                    placeholder="Weekly mindful coaching"
+                  />
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm text-white/80">Cadence</label>
+                    <select
+                      v-model="svc.cadence"
+                      class="mt-2 w-full rounded-lg bg-black/40 border border-[color:var(--hair)] px-3 py-2.5 outline-none focus:ring-2 focus:ring-[color:var(--acc)]"
+                    >
+                      <option value="weekly">Weekly</option>
+                      <option value="biweekly">Bi-weekly</option>
+                      <option value="monthly">Monthly</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-sm text-white/80">Price</label>
+                    <input
+                      type="number" min="0" step="0.01"
+                      v-model.number="svc.price"
+                      class="mt-2 w-full rounded-lg bg-black/40 border border-[color:var(--hair)] px-3 py-2.5 outline-none focus:ring-2 focus:ring-[color:var(--acc)]"
+                      placeholder="75.00"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm text-white/80">Notes</label>
+                  <textarea
+                    rows="3"
+                    v-model="svc.notes"
+                    class="mt-2 w-full rounded-lg bg-black/40 border border-[color:var(--hair)] px-3 py-2.5 outline-none focus:ring-2 focus:ring-[color:var(--acc)]"
+                    placeholder="Why this matters, what people get…"
+                  ></textarea>
+                </div>
+
+                <button
+                  data-cta
+                  @click="addService"
+                  :disabled="saving"
+                  class="cta primary-add-btn w-full disabled:opacity-60 disabled:cursor-wait"
+                >
+                  {{ saving ? 'Saving…' : 'Add Service' }}
+                </button>
+              </div>
+
+              <!-- GOODS EDITOR -->
+              <div v-else-if="active==='goods'" class="space-y-4">
+                <div>
+                  <label class="block text-sm text-white/80">Title</label>
+                  <input
+                    v-model="good.title"
+                    class="mt-2 w-full rounded-lg bg-black/40 border border-[color:var(--hair)] px-3 py-2.5 outline-none focus:ring-2 focus:ring-[color:var(--acc)]"
+                    placeholder="Artisan soy candles"
+                  />
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm text-white/80">Price</label>
+                    <input
+                      type="number" min="0" step="0.01"
+                      v-model.number="good.price"
+                      class="mt-2 w-full rounded-lg bg-black/40 border border-[color:var(--hair)] px-3 py-2.5 outline-none focus:ring-2 focus:ring-[color:var(--acc)]"
+                      placeholder="28.00"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm text-white/80">Quantity</label>
+                    <input
+                      type="number" min="0"
+                      v-model.number="good.qty"
+                      class="mt-2 w-full rounded-lg bg-black/40 border border-[color:var(--hair)] px-3 py-2.5 outline-none focus:ring-2 focus:ring-[color:var(--acc)]"
+                      placeholder="Limited edition"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm text-white/80">Story</label>
+                  <textarea
+                    rows="3"
+                    v-model="good.notes"
+                    class="mt-2 w-full rounded-lg bg-black/40 border border-[color:var(--hair)] px-3 py-2.5 outline-none focus:ring-2 focus:ring-[color:var(--acc)]"
+                    placeholder="Each candle is made with…"
+                  ></textarea>
+                </div>
+                <button
+                  data-cta
+                  @click="addGood"
+                  :disabled="saving"
+                  class="cta primary-add-btn w-full disabled:opacity-60 disabled:cursor-wait"
+                >
+                  {{ saving ? 'Saving…' : 'Add Good' }}
+                </button>
+              </div>
+
+              <!-- AFFILIATES EDITOR -->
+              <div v-else class="space-y-4">
+                <div>
+                  <label class="block text-sm text-white/80">Title</label>
+                  <input
+                    v-model="aff.title"
+                    class="mt-2 w-full rounded-lg bg-black/40 border border-[color:var(--hair)] px-3 py-2.5 outline-none focus:ring-2 focus:ring-[color:var(--acc)]"
+                    placeholder="The mic I record with"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm text-white/80">URL</label>
+                  <input
+                    v-model="aff.url"
+                    class="mt-2 w-full rounded-lg bg-black/40 border border-[color:var(--hair)] px-3 py-2.5 outline-none focus:ring-2 focus:ring-[color:var(--acc)]"
+                    placeholder="https://…"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm text-white/80">Why this?</label>
+                  <textarea
+                    rows="3"
+                    v-model="aff.notes"
+                    class="mt-2 w-full rounded-lg bg-black/40 border border-[color:var(--hair)] px-3 py-2.5 outline-none focus:ring-2 focus:ring-[color:var(--acc)]"
+                    placeholder="One line on why you recommend it…"
+                  ></textarea>
+                </div>
+                <button
+                  data-cta
+                  @click="addAffiliate"
+                  :disabled="saving"
+                  class="cta primary-add-btn w-full disabled:opacity-60 disabled:cursor-wait"
+                >
+                  {{ saving ? 'Saving…' : 'Add Affiliate' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- KPI rail -->
+      <section class="bg-[color:var(--bg)]">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4">
+          <div class="grid md:grid-cols-3 gap-3">
+            <!-- Tips (30d) – Sparkles -->
+            <div class="breath haylo-card rounded-xl p-4">
+              <div class="flex items-center gap-3">
+                <div
+                  class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                  style="background: linear-gradient(135deg, #4da3ff, #8acbff); box-shadow: 0 14px 35px rgba(0,0,0,0.7);"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg"
+                       viewBox="0 0 20 20"
+                       class="w-5 h-5 text-white"
+                       fill="currentColor">
+                    <path d="M5 2a.9.9 0 01.8.53L7 5l2.47.9a.9.9 0 010 1.7L7 8.5 5.8 11.47a.9.9 0 01-1.6 0L3 8.5.53 7.6a.9.9 0 010-1.7L3 5l1.2-2.47A.9.9 0 015 2z"/>
+                    <path d="M13.5 3.5a.8.8 0 01.73.48L15 5l1.02.4a.8.8 0 010 1.48L15 7.3l-.77 1.82a.8.8 0 01-1.46 0L12 7.3 10.98 6.9a.8.8 0 010-1.48L12 5l.77-1.82a.8.8 0 01.73-.48z"/>
+                    <path d="M15.5 10.5a.8.8 0 01.7.47L17 12l.9.33a.7.7 0 010 1.34L17 14l-.8 1.6a.8.8 0 01-1.4 0L14 14l-.9-.33a.7.7 0 010-1.34L14 12l.8-1.6a.8.8 0 01.7-.47z"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="text-xs text-white/60">Tips (30d)</div>
+                  <div class="mt-1 text-lg font-semibold">$1,240</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Advocates – Heart -->
+            <div class="breath haylo-card rounded-xl p-4">
+              <div class="flex items-center gap-3">
+                <div
+                  class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                  style="background: linear-gradient(135deg, #ff5a5a, #ff9aa5); box-shadow: 0 14px 35px rgba(0,0,0,0.7);"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg"
+                       viewBox="0 0 20 20"
+                       class="w-5 h-5 text-white"
+                       fill="currentColor">
+                    <path fill-rule="evenodd"
+                          d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
+                          clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div>
+                  <div class="text-xs text-white/60"># of advocates</div>
+                  <div class="mt-1 text-lg font-semibold">62</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Avg MRR – loop/clock icon -->
+            <div class="breath haylo-card rounded-xl p-4">
+              <div class="flex items-center gap-3">
+                <div
+                  class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                  style="background: linear-gradient(135deg, #ffcc00, #fbbf24); box-shadow: 0 14px 35px rgba(0,0,0,0.7);"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg"
+                       viewBox="0 0 20 20"
+                       class="w-5 h-5 text-white"
+                       fill="currentColor">
+                    <path fill-rule="evenodd"
+                          d="M10 3.5a6.5 6.5 0 11-4.596 1.904.75.75 0 011.06 1.06A5 5 0 1010 5a.75.75 0 01-.75-.75V3.5a.75.75 0 011.5 0v.212A6.5 6.5 0 0110 3.5zm0 3a.75.75 0 01.75.75v2.19l1.28 1.28a.75.75 0 11-1.06 1.06l-1.5-1.5A.75.75 0 019 10.75v-3.5A.75.75 0 0110 6.5z"
+                          clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div>
+                  <div class="text-xs text-white/60">Avg MRR</div>
+                  <div class="mt-1 text-lg font-semibold">$428</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Ledger: full-width scroll area -->
+      <section class="py-6 sm:py-8 bg-[color:var(--bg)] flex-1 overflow-hidden">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 h-full flex flex-col">
+          <!-- Tabs + status -->
+          <div class="flex items-center justify-between">
+            <div class="inline-flex rounded-xl border border-[color:var(--hair)] p-1 bg-white/5">
+              <button @click="active='services'" :class="tabClass('services')" class="px-3 py-1.5 rounded-lg text-sm">Services</button>
+              <button @click="active='goods'" :class="tabClass('goods')" class="px-3 py-1.5 rounded-lg text-sm">Goods</button>
+              <button @click="active='affiliates'" :class="tabClass('affiliates')" class="px-3 py-1.5 rounded-lg text-sm">Affiliates</button>
+            </div>
+
+            <div class="hidden sm:flex items-center gap-2 text-xs text-white/60">
+              <button @click="statusFilter='all'"        :class="statusFilterClass('all')"        class="px-2 py-1 rounded-full border">All</button>
+              <button @click="statusFilter='draft'"      :class="statusFilterClass('draft')"      class="px-2 py-1 rounded-full border">Draft</button>
+              <button @click="statusFilter='published'"  :class="statusFilterClass('published')"  class="px-2 py-1 rounded-full border">Published</button>
+            </div>
+          </div>
+
+          <!-- Scrollable ledger -->
+          <div class="mt-6 flex-1 overflow-y-auto space-y-2">
+            <article
+              v-for="item in filteredItems"
+              :key="itemKey(item)"
+              class="breath haylo-card rounded-xl p-4 cursor-pointer"
+              @click="openInspector($event, item)"
+            >
+              <div class="flex items-start gap-3">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <h4 class="font-medium truncate" :title="titleOf(item)">{{ titleOf(item) }}</h4>
+                    <span
+                      class="text-[10px] px-1.5 py-0.5 rounded-full border uppercase tracking-wide"
+                      :class="tagClass(item.type)"
+                    >
+                      {{ tagLabel(item.type) }}
+                    </span>
+                  </div>
+                  <p class="mt-1 text-sm text-white/80 line-clamp-1">{{ notesOf(item) }}</p>
+                  <div class="mt-2 flex items-center gap-3 text-xs text白/60">
+                    <span class="px-1.5 py-0.5 rounded-full border border-[color:var(--hair)]">
+                      {{ statusOf(item) }}
+                    </span>
+                    <span v-if="item.type==='service'">
+                      {{ item.cadence }} · ${{ (+item.price).toFixed(2) }}
+                    </span>
+                    <span v-if="item.type==='good'">
+                      ${{ (+item.price).toFixed(2) }} · Qty {{ item.qty || '—' }}
+                    </span>
+                    <a
+                      v-if="item.type==='affiliate'"
+                      :href="item.url"
+                      @click.stop
+                      target="_blank"
+                      class="truncate max-w-[50%] text-[color:var(--acc)]"
+                    >
+                      {{ item.url }}
+                    </a>
+                  </div>
+                </div>
+                <div class="shrink-0 text-right text-xs text-white/60">
+                  <div>Clicks</div>
+                  <div class="text-green-400 text-sm font-semibold">+{{ clicksOf(item) }}</div>
+                  <div class="mt-1">Bought</div>
+                  <div class="text-green-400 text-sm font-semibold">+{{ buysOf(item) }}</div>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Inspector -->
+    <transition name="inspect">
+      <div v-if="inspector.open" class="fixed inset-0 z-40 pointer-events-none">
+        <div class="absolute inset-0 pointer-events-auto" @click="closeInspector"></div>
+        <div
+          class="pointer-events-auto absolute w-[min(92vw,420px)] max-w-full haylo-card rounded-2xl p-4"
+          :style="{ top: inspector.pos.y + 'px', left: inspector.pos.x + 'px' }"
+        >
+          <header class="flex items-center justify-between pb-2 border-b border-[color:var(--hair)]">
+            <div class="font-medium">{{ inspector.typeLabel }}</div>
+            <button data-cta @click="closeInspector" class="cta haylo-cta px-3 py-1.5 text-xs">Close</button>
+          </header>
+          <div class="pt-3 space-y-3" v-if="inspector.item">
+            <div class="text-sm text-white/60">Share link</div>
+            <div class="flex items-center gap-2">
+              <input
+                :value="shareUrl(inspector.item)"
+                readonly
+                class="flex-1 rounded-lg bg-black/40 border border-[color:var(--hair)] px-3 py-2 outline-none text-xs"
+              />
+              <button data-cta @click="shareItem(inspector.item)" class="cta haylo-cta px-3 py-2 text-xs">
+                Copy
+              </button>
+            </div>
+            <div class="pt-2 border-t border-[color:var(--hair)]">
+              <div class="text-sm text-white/60">Preview</div>
+              <div class="mt-2 haylo-card rounded-xl p-4">
+                <div class="font-medium">{{ titleOf(inspector.item) }}</div>
+                <div v-if="inspector.item.type==='service'" class="mt-1 text-sm text-white/80">
+                  {{ inspector.item.cadence }} · ${{ (+inspector.item.price).toFixed(2) }}
+                </div>
+                <div v-if="inspector.item.type==='good'" class="mt-1 text-sm text-white/80">
+                  ${{ (+inspector.item.price).toFixed(2) }} · Qty {{ inspector.item.qty || '—' }}
+                </div>
+                <a
+                  v-if="inspector.item.type==='affiliate'"
+                  :href="inspector.item.url"
+                  target="_blank"
+                  class="mt-1 block text-sm text-[color:var(--acc)] truncate"
+                >
+                  {{ inspector.item.url }}
+                </a>
+                <p class="mt-2 text-sm text-white/80 whitespace-pre-line">
+                  {{ notesOf(inspector.item) || '—' }}
+                </p>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button data-cta @click="closeInspector" class="cta haylo-cta flex-1 px-3 py-2 text-sm">Done</button>
+              <button data-cta @click="shareItem(inspector.item)" class="cta haylo-cta px-3 py-2 text-sm">Share</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
+  </main>
+
+  <script>
+    const { createApp } = Vue;
+    const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+
+    createApp({
+      data() {
+        return {
+          handle: 'friend',
+          saving: false,
+          notice: '',
+          active: 'services',
+          statusFilter: 'all',
+
+          svc: { title: '', cadence: 'weekly', price: 0, notes: '' },
+          good: { title: '', price: 0, qty: null, notes: '' },
+          aff: { title: '', url: '', notes: '' },
+
+          services: [
+            { id: 1, type: 'service', title: 'Mindful Coaching', cadence: 'weekly', price: 75, notes: 'Gentle weekly guidance' }
+          ],
+          goods: [
+            { id: 2, type: 'good', title: 'Artisan Soy Candle', price: 28, qty: 12, notes: 'Hand-poured with essential oils' }
+          ],
+          affiliates: [
+            { id: 3, type: 'affiliate', title: 'My mic', url: 'https://example.com/mic', notes: 'Clear sound on a budget' }
+          ],
+
+          inspector: { open:false, item:null, typeLabel:'', pos:{ x:24, y:24 } }
+        };
+      },
+      computed: {
+        allItems() { return [...this.services, ...this.goods, ...this.affiliates]; },
+        filteredItems() {
+          return this.allItems.filter(item => {
+            if (this.statusFilter === 'all') return true;
+            return this.statusOf(item).toLowerCase() === this.statusFilter;
+          });
+        }
+      },
+      methods: {
+        tabClass(id){
+          return this.active===id
+            ? 'bg-[color:var(--acc)]/20 text-white border border-[color:var(--acc)]'
+            : 'text-white/80 hover:text-white border border-transparent';
+        },
+        statusFilterClass(which){
+          const base = 'border-[color:var(--hair)]';
+          if (this.statusFilter === which) return base+' bg-white/10 text-white';
+          return base+' hover:bg-white/5';
+        },
+        tagLabel(type){
+          if(type==='service') return 'Service';
+          if(type==='good') return 'Good';
+          return 'Affiliate';
+        },
+        tagClass(type){
+          if(type==='service') return 'bg-blue-500/10 text-blue-200 border-blue-500/40';
+          if(type==='good') return 'bg-amber-500/10 text-amber-200 border-amber-500/40';
+          return 'bg-emerald-500/10 text-emerald-200 border-emerald-500/40';
+        },
+        itemKey(item){ return `${item.type}-${item.id}`; },
+        titleOf(item){ return item.title || ('#'+item.id); },
+        notesOf(item){ return item.notes || ''; },
+        statusOf(item){ return item.id % 2 ? 'Draft' : 'Published'; },
+        clicksOf(item){ return (item.id % 11) + 1; },
+        buysOf(item){ return (item.id % 7); },
+
+        addService(){
+          this.saving=true;
+          setTimeout(()=>{
+            const it={ id:Date.now(), type:'service', ...this.svc };
+            this.services.push(it);
+            this.svc={ title:'', cadence:'weekly', price:0, notes:'' };
+            this.saving=false;
+            this.notice='Service saved. Ready to publish.';
+          },500);
+        },
+        addGood(){
+          this.saving=true;
+          setTimeout(()=>{
+            const it={ id:Date.now(), type:'good', ...this.good };
+            this.goods.push(it);
+            this.good={ title:'', price:0, qty:null, notes:'' };
+            this.saving=false;
+            this.notice='Good saved. Ready to publish.';
+          },500);
+        },
+        addAffiliate(){
+          this.saving=true;
+          setTimeout(()=>{
+            const it={ id:Date.now(), type:'affiliate', ...this.aff };
+            this.affiliates.push(it);
+            this.aff={ title:'', url:'', notes:'' };
+            this.saving=false;
+            this.notice='Affiliate saved. Ready to publish.';
+          },500);
+        },
+
+        shareUrl(item){
+          const slug = (item.title || item.id).toString().replace(/\s+/g,'-');
+          return location.origin + '/flow/' + this.handle + '#' + slug;
+        },
+        shareItem(item){
+          navigator.clipboard?.writeText(this.shareUrl(item));
+          this.notice='Share link copied to clipboard.';
+        },
+
+        openInspector(evt,item){
+          const vw=window.innerWidth, vh=window.innerHeight;
+          const panelW=Math.min(420,vw*0.92), panelH=320;
+          const x=clamp(evt.clientX+16,12,vw-panelW-12);
+          const y=clamp(evt.clientY+16,12,vh-panelH-12);
+          this.inspector={ open:true, item, typeLabel:this.tagLabel(item.type), pos:{x,y} };
+        },
+        closeInspector(){ this.inspector.open=false; },
+
+        publish(){ this.notice='Published to your profile and /your-impact.'; }
+      }
+    }).mount('#app');
+
+    function attachRipple(node,e){
+      const rect=node.getBoundingClientRect();
+      const size=Math.max(rect.width,rect.height)*1.2;
+      const x=e.clientX-rect.left-size/2;
+      const y=e.clientY-rect.top-size/2;
+      const el=document.createElement('span');
+      el.className='haylo-ripple';
+      el.style.width=el.style.height=size+'px';
+      el.style.left=x+'px';
+      el.style.top=y+'px';
+      el.style.setProperty('--halo-a','rgba(255,154,158,.35)');
+      el.style.setProperty('--halo-b','rgba(255,210,126,.25)');
+      node.appendChild(el);
+      el.addEventListener('animationend',()=>el.remove());
+    }
+    function playChime(){
+      try{
+        const ctx=new (window.AudioContext||window.webkitAudioContext)();
+        const now=ctx.currentTime;
+        const master=ctx.createGain();
+        master.gain.setValueAtTime(0.15,now);
+        master.connect(ctx.destination);
+        [523.25,659.25].forEach((f,i)=>{
+          const o=ctx.createOscillator();
+          const g=ctx.createGain();
+          o.type='sine';
+          o.frequency.setValueAtTime(f,now);
+          g.gain.setValueAtTime(0,now);
+          g.gain.linearRampToValueAtTime(0.9,now+0.03+i*0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001,now+0.35+i*0.02);
+          o.connect(g).connect(master);
+          o.start(now);
+          o.stop(now+0.5);
+        });
+      }catch(e){}
+    }
+    document.addEventListener('click', e => {
+      const btn=e.target.closest('[data-cta]');
+      if(!btn) return;
+      attachRipple(btn,e);
+      playChime();
+    }, true);
+  </script>
+</body>
+</html>
