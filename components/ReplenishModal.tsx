@@ -173,16 +173,27 @@ export const ReplenishModal: React.FC<ReplenishModalProps> = ({
 
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {
+        const shareText =
+          'Hey, I set up a tiny thank-you space on Haylofriend.\n\n' +
+          'No pressure at all, but if you ever feel like saying thanks or supporting my work, this is where to do it 💛';
+
         await navigator.share({
-          title: 'Support me on Haylo',
-          text: 'Send me a little gratitude here 💌',
+          title: 'Share a little gratitude',
+          text: `${shareText}\n${shareLink}`,
           url: shareLink,
         });
       } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(shareLink);
-        setErrorMessage('Link copied to clipboard. Share it with your friends!');
+        const shareText =
+          'Quick thank-you link for small kindnesses—no pressure at all:\n' +
+          shareLink;
+
+        await navigator.clipboard.writeText(shareText);
+        setErrorMessage('Gratitude link copied. Paste it into any message 💌');
       } else {
-        setErrorMessage('Here is your link. Copy and share it:\n' + shareLink);
+        setErrorMessage(
+          'Here is your gratitude link. Copy and share it with someone who made your day brighter:\n' +
+            shareLink
+        );
       }
     } catch (err) {
       console.error('Share link error', err);
@@ -307,7 +318,7 @@ export const ReplenishModal: React.FC<ReplenishModalProps> = ({
       case 'needsSetup':
         return 'Stripe needs a few more details before we can send payouts.';
       case 'noFunds':
-        return 'No funds yet. Share your link to receive your first tips!';
+        return 'Invite one person to say thanks and turn their appreciation into support—only if it feels right to them.';
       case 'ready':
         return 'Ready to transfer your available balance to your bank.';
       case 'payoutInProgress':
@@ -364,7 +375,9 @@ export const ReplenishModal: React.FC<ReplenishModalProps> = ({
 
           {flowState === 'noFunds' && shareLink && (
             <div className="rounded-xl border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-200">
-              Share your Haylo link to start collecting funds: {shareLink}
+              Share your Haylo thank-you link with someone who made your day brighter:
+              <br />
+              <span className="break-all text-slate-300 text-xs">{shareLink}</span>
             </div>
           )}
 
