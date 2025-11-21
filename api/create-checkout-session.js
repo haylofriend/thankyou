@@ -58,14 +58,33 @@ module.exports = async function handler(req, res) {
       }
     ];
 
-    const defaultSuccess = process.env.HAYLO_DASHBOARD_URL
-      || 'https://www.haylofriend.com/your-impact';
+    // Default host and redirect URLs are fully env-driven.
+    // Priority:
+    //   1) Explicit env overrides for dashboard / cancel
+    //   2) NEXT_PUBLIC_THANK_HOST (shared with /api/env.js)
+    //   3) Localhost fallback for dev
+    const defaultHost =
+      process.env.NEXT_PUBLIC_THANK_HOST ||
+      process.env.THANK_HOST ||
+      'http://localhost:3000';
+
+    const normalizedHost = defaultHost.replace(/\/$/, '');
+
+    const defaultSuccess =
+      process.env.HAYLO_DASHBOARD_URL ||
+      process.env.NEXT_PUBLIC_HF_DASHBOARD_URL ||
+      `${normalizedHost}/your-impact`;
+
+    const defaultCancel =
+      process.env.HAYLO_CHECKOUT_CANCEL_URL ||
+      process.env.NEXT_PUBLIC_HF_CHECKOUT_CANCEL_URL ||
+      normalizedHost;
 
     const sessionParams = {
       mode: 'payment',
       line_items: lineItems,
       success_url: success_url || `${defaultSuccess}?paid=1`,
-      cancel_url: cancel_url || 'https://www.haylofriend.com',
+      cancel_url: cancel_url || defaultCancel,
       metadata: {
         recipientHandle: recipientHandle || '',
         note: (note || '').slice(0, 180)
