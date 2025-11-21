@@ -166,38 +166,47 @@ export const ReplenishModal: React.FC<ReplenishModalProps> = ({
 
   async function handleShareLink() {
     if (!shareLink) {
-      console.warn('Share link pressed but no shareLink provided');
-      setErrorMessage('We could not find your Haylo link yet. Please try again in a moment.');
+      console.info('[ReplenishModal] Share clicked but no shareLink provided');
+      onClose();
       return;
     }
 
-    try {
-      if (typeof navigator !== 'undefined' && navigator.share) {
-        const shareText =
-          'Hey, I set up a tiny thank-you space on Haylofriend.\n\n' +
-          'No pressure at all, but if you ever feel like saying thanks or supporting my work, this is where to do it 💛';
+    const message =
+      'I made a tiny space for gratitude.\n' +
+      'No expectation — just a place for kindness, when it wants to land 💛\n' +
+      shareLink;
 
+    try {
+      // Preferred: native share sheet (iOS / Android / modern browsers)
+      if (typeof navigator !== 'undefined' && navigator.share) {
         await navigator.share({
-          title: 'Share a little gratitude',
-          text: `${shareText}\n${shareLink}`,
+          title: 'Send a little gratitude',
+          text: message,
           url: shareLink,
         });
-      } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        const shareText =
-          'Quick thank-you link for small kindnesses—no pressure at all:\n' +
-          shareLink;
-
-        await navigator.clipboard.writeText(shareText);
-        setErrorMessage('Gratitude link copied. Paste it into any message 💌');
-      } else {
-        setErrorMessage(
-          'Here is your gratitude link. Copy and share it with someone who made your day brighter:\n' +
-            shareLink
-        );
+        setErrorMessage(null);
+        return;
       }
+
+      // Fallback: copy full message to clipboard
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(message);
+        setErrorMessage(
+          'Gratitude message copied. Paste it into any text, DM, or post 💌'
+        );
+        return;
+      }
+
+      // Last resort: show the message inline so they can copy manually
+      setErrorMessage(
+        'Share this gratitude message with someone who made your day brighter:\n\n' +
+          message
+      );
     } catch (err) {
       console.error('Share link error', err);
-      setErrorMessage('Could not open share dialog. Try copying the link.');
+      setErrorMessage(
+        'Could not open the share sheet. You can still copy and paste your link.'
+      );
     }
   }
 
