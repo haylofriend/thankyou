@@ -579,7 +579,29 @@ const app = createApp({
     function downloadQR(e){ createRipple(e); alert('Demo: Beautiful QR would generate for ' + shareUrl.value); }
     async function share(kind){ const text = `Tiny thank-you link for little kindnesses: ${shareUrl.value}`; if(kind==='sms'){ window.open(`sms:?&body=${encodeURIComponent(text)}`,'_blank'); } if(kind==='x'){ window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}`,'_blank'); } events.value.unshift({label:'Shared invitation', value:kind.toUpperCase(), type:'share'}); }
     async function copyDM(e){ createRipple(e); await copyToClipboard(`If I’ve helped you lately, here’s a $2 thank-you: ${shareUrl.value}`); toast('DM copied'); }
-    function sharePrimary(e){ copyLink(e || new Event('click')); }
+    async function sharePrimary(e){
+      createRipple(e || new Event('click'));
+
+      const shareData = {
+        title: 'Send a little gratitude',
+        text: 'Tiny thank-you link for little kindnesses.',
+        url: shareUrl.value,
+      };
+
+      if (navigator?.share) {
+        try {
+          await navigator.share(shareData);
+          events.value.unshift({ label:'Shared invitation', value:'NATIVE', type:'share' });
+          toast('Ready to share');
+          return;
+        } catch (err) {
+          if (err?.name === 'AbortError') return; // user dismissed the sheet
+          console.warn('Native share failed, falling back to copy', err);
+        }
+      }
+
+      await copyLink(new Event('click'));
+    }
     async function copyOneLine(e){ await copyDM(e || new Event('click')); }
     function genScripts(){ aiScripts.value = shuffle(aiScripts.value); toast('New scripts ready'); }
     function genAffiliates(){ affiliates.value = shuffle(affiliates.value); toast('Updated picks'); }
