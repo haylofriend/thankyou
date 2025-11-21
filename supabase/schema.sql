@@ -598,6 +598,8 @@ $$;
 create or replace function public.generate_mindful_thank_slug()
 returns text
 language plpgsql
+security definer
+set search_path = public
 as $$
 declare
   -- We keep "friend" as the constant prefix for the story.
