@@ -306,11 +306,24 @@
     let prButton = elements.create('paymentRequestButton', { paymentRequest, style: { paymentRequestButton: { theme: 'dark', height: '48px' }}});
 
     async function mountPRB(){
+      const logosEl = document.getElementById('prbLogos');
       try{
         const result = await paymentRequest.canMakePayment();
-        if(result){ prButton.mount('#prbWrap'); document.getElementById('fallback').classList.add('hidden'); }
-        else { document.getElementById('fallback').classList.remove('hidden'); }
-      }catch(e){ console.warn(e); document.getElementById('fallback').classList.remove('hidden'); }
+        if(result){
+          prButton.mount('#prbWrap');
+          document.getElementById('fallback').classList.add('hidden');
+          // Hide the static Apple/Google logos when the native button is active
+          if (logosEl) logosEl.classList.add('hidden');
+        } else {
+          document.getElementById('fallback').classList.remove('hidden');
+          // Show logos in fallback mode
+          if (logosEl) logosEl.classList.remove('hidden');
+        }
+      }catch(e){
+        console.warn(e);
+        document.getElementById('fallback').classList.remove('hidden');
+        if (logosEl) logosEl.classList.remove('hidden');
+      }
     }
     mountPRB();
 
