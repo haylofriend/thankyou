@@ -246,23 +246,27 @@
       </div>
 
       <!-- Gap meter: Reality → Possibility -->
-      <div class="rounded-xl border border-white/10 bg-black/40 p-3">
+      <div
+        class="rounded-xl border border-white/10 bg-black/40 p-3 cursor-pointer hover:bg-white/8 transition"
+        @click="goToCreate"
+      >
         <div class="flex items-center justify-between text-[11px] text-white/60">
-          <span>Today’s gap</span>
+          <span class="flex items-center gap-1">
+            Today’s gap
+            <span class="w-1.5 h-1.5 rounded-full bg-[color:var(--acc)] animate-pulse"></span>
+          </span>
           <span>
             {{ bridgePct }}% of ${{ monthlyPotential.toFixed(0) }}
           </span>
         </div>
         <div class="mt-2 h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
           <div
-            class="h-1.5 rounded-full bg-[var(--acc)] transition-all"
+            class="h-1.5 rounded-full bg-[color:var(--acc)] transition-all"
             :style="{ width: Math.min(100, bridgePct) + '%' }"
           ></div>
         </div>
         <div class="mt-2 text-[11px] text-white/60">
-          You’ve already banked
-          <span class="text-white font-medium">${{ weekPaceDisplay }}</span>
-          toward this month’s potential.
+          Tap to open your Create workspace and design how to close this gap.
         </div>
       </div>
 
@@ -634,6 +638,10 @@ const app = createApp({
     });
 
     // ===== ACTIONS =====
+    const goToCreate = () => {
+      window.location.href = '/your-impact/create';
+    };
+
     function eventColor(type){ return { tip:'bg-[var(--acc)]', share:'bg-[#15c39a]', payout:'bg-[#ffcc00]' }[type] || 'bg-white/20'; }
 
     async function copyLink(e){ createRipple(e); const ok = await copyToClipboard(shareUrl.value); events.value.unshift({label:'Link copied', value:shareUrl.value, type:'share'}); toast(ok?'Copied!':'Link ready'); }
@@ -983,7 +991,7 @@ const app = createApp({
       payoutNextAmount, payoutNextLabel, payoutPct,
       aiScripts, affiliates, openCopilot, tasks, showBurst,
       // actions
-      shareUrl, eventColor, copyLink, downloadQR, share, copyDM, sharePrimary, copyOneLine, genScripts, genAffiliates, maybeCelebrate, openPublic
+      shareUrl, eventColor, copyLink, downloadQR, share, copyDM, sharePrimary, copyOneLine, genScripts, genAffiliates, maybeCelebrate, openPublic, goToCreate
     };
   }
 });
