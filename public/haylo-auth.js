@@ -274,6 +274,10 @@
     var ok = await loadSupabase();
 
     function redirectToLogin() {
+      console.log("[HayloAuth] redirectToLogin", {
+        loginPath,
+        normalized
+      });
       var currentUrl = (typeof window !== "undefined" && window.location && window.location.href)
         ? window.location.href
         : "";
