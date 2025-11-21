@@ -166,8 +166,8 @@ export const ReplenishModal: React.FC<ReplenishModalProps> = ({
 
   async function handleShareLink() {
     if (!shareLink) {
-      console.info('Share link pressed but no shareLink provided');
-      onClose();
+      console.warn('Share link pressed but no shareLink provided');
+      setErrorMessage('We could not find your Haylo link yet. Please try again in a moment.');
       return;
     }
 
