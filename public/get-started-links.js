@@ -59,59 +59,26 @@
     return ENV_PROMISE;
   }
 
-  function resolveRedirect(raw) {
-    const origin = window.location.origin;
-    const fallbackPath = window.HF_GET_STARTED_REDIRECT || '/your-impact';
-    const rawValue = raw || fallbackPath;
-
-    // Prefer the shared helper
-    try {
-      if (window.HayloRedirect && typeof HayloRedirect.abs === 'function') {
-        return HayloRedirect.abs(rawValue, fallbackPath);
-      }
-    } catch (_) {
-      // ignore and fall back to local logic
-    }
-
-    let redirectPath = rawValue;
-
-    // Local same-origin-only fallback
-    try {
-      const url = new URL(redirectPath, origin);
-      if (url.origin !== origin) {
-        return origin + fallbackPath;
-      }
-      return url.toString();
-    } catch (e) {
-      return origin + fallbackPath;
-    }
-  }
-
-  function buildLoginHref(redirectUrl) {
-    const loginPath = window.HF_LOGIN_PATH || '/auth/google/';
-    const url = new URL(loginPath, window.location.origin);
-    url.searchParams.set('redirect', redirectUrl);
-    return url.pathname + url.search + url.hash; // keep it relative to origin
-  }
-
   function wireGetStartedLinks() {
-    const origin = window.location.origin;
-
     const links = document.querySelectorAll('[data-get-started]');
     if (!links.length) return;
 
-    links.forEach((link) => {
-      // optional: allow a custom redirect via data-redirect
-      const rawRedirect = link.getAttribute('data-redirect') || null;
-      const safeRedirect = resolveRedirect(rawRedirect);
-      const href = buildLoginHref(safeRedirect);
+    links.forEach((el) => {
+      // canonical target, in this priority order:
+      const CANON_GET_STARTED =
+        (el.dataset.redirect && el.dataset.redirect.trim()) ||
+        (window.HF_GET_STARTED_URL && String(window.HF_GET_STARTED_URL).trim()) ||
+        '/create?autostart=1';
 
-      link.setAttribute('href', href);
+      // apply to the link
+      el.setAttribute('href', CANON_GET_STARTED);
 
-      // extra safety: enforce redirect on click
-      link.addEventListener('click', (event) => {
-        event.preventDefault();
-        window.location.href = href;
+      // ensure click always honors our canonical path
+      el.addEventListener('click', (e) => {
+        // allow ctrl/cmd click to open new tab
+        if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+        e.preventDefault();
+        location.href = CANON_GET_STARTED;
       });
     });
   }
