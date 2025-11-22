@@ -2,8 +2,7 @@
 // Shared helpers for Stripe + Supabase in Vercel serverless functions (CommonJS style)
 
 const Stripe = require('stripe');
-const { supabase } = require('./_supabaseClient');
-const { getUserFromAuthHeader } = require('./utils/getUserFromAuthHeader');
+const { supabase, getUserFromAuthHeader } = require('./_supabase-utils');
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY;
 if (!stripeSecret) {
@@ -33,10 +32,19 @@ function json(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+async function requireAuth(req, res) {
+  const user = await getUserFromAuthHeader(req);
+  if (!user) {
+    json(res, 401, { error: 'Unauthorized' });
+    return null;
+  }
+  return user;
+}
+
 module.exports = {
   stripe,
   supabase,
   parseBody,
   json,
-  getUserFromAuthHeader
+  requireAuth
 };

@@ -12,7 +12,7 @@ const {
   stripe,
   supabase,
   json,
-  getUserFromAuthHeader
+  requireAuth
 } = require('../../_stripeShared');
 
 module.exports = async function handler(req, res) {
@@ -26,9 +26,9 @@ module.exports = async function handler(req, res) {
 
   try {
     // 1) Identify the current user
-    const user = await getUserFromAuthHeader(req);
+    const user = await requireAuth(req, res);
     if (!user) {
-      return json(res, 401, { error: 'Unauthorized' });
+      return;
     }
 
     // 2) Look up their profile to find stripe_account_id
@@ -65,4 +65,3 @@ module.exports = async function handler(req, res) {
     return json(res, 500, { error: 'Failed to fetch Stripe status' });
   }
 };
-

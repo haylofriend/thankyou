@@ -18,7 +18,7 @@ let stripe;
 let supabase;
 let parseBody;
 let json;
-let getUserFromAuthHeader;
+let requireAuth;
 
 try {
   ({
@@ -26,7 +26,7 @@ try {
     supabase,
     parseBody,
     json,
-    getUserFromAuthHeader
+    requireAuth
   } = require('../../_stripeShared'));
 } catch (err) {
   bootstrapError = err;
@@ -148,9 +148,9 @@ module.exports = async function handler(req, res) {
 
   try {
     // 1) Who is asking?
-    const user = await getUserFromAuthHeader(req);
+    const user = await requireAuth(req, res);
     if (!user) {
-      return json(res, 401, { error: 'Unauthorized' });
+      return;
     }
 
     // 2) Read and normalize speed from body

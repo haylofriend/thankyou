@@ -8,7 +8,7 @@ const {
   supabase,
   parseBody,
   json,
-  getUserFromAuthHeader
+  requireAuth
 } = require('../../_stripeShared');
 
 module.exports = async function handler(req, res) {
@@ -22,9 +22,9 @@ module.exports = async function handler(req, res) {
 
   try {
     // 1) Identify the current user from the Authorization: Bearer <token> header
-    const user = await getUserFromAuthHeader(req);
+    const user = await requireAuth(req, res);
     if (!user) {
-      return json(res, 401, { error: 'Unauthorized' });
+      return;
     }
 
     // 2) Read optional return_url from body
