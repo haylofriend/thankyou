@@ -54,7 +54,8 @@
                    'Helvetica Neue', Arial, sans-serif;
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
-      overflow: hidden; /* only internal scroll */
+      overflow-x: hidden;   /* prevent sideways jiggle */
+      overflow-y: auto;     /* allow full-page scroll */
     }
 
     *, *::before, *::after { box-sizing: border-box; }
@@ -144,7 +145,7 @@
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 </head>
 <body>
-  <main id="app" class="h-screen flex flex-col overflow-hidden">
+  <main id="app" class="min-h-screen flex flex-col">
     <!-- Top bar -->
     <header class="sticky top-0 z-30 border-b border-[color:var(--hair)] bg-black/40 backdrop-blur">
       <div class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
@@ -160,8 +161,8 @@
       </div>
     </header>
 
-    <!-- Below header: all content, internal scroll only -->
-    <div class="flex-1 flex flex-col overflow-hidden bg-[color:var(--bg)]">
+    <!-- Below header: content (page scrolls via body) -->
+    <div class="flex-1 flex flex-col bg-[color:var(--bg)]">
       <!-- Hero + best practices + editor -->
       <section class="bg-[color:var(--bg)]">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
@@ -425,9 +426,9 @@
         </div>
       </section>
 
-      <!-- Ledger: full-width scroll area -->
-      <section class="py-6 sm:py-8 bg-[color:var(--bg)] flex-1 overflow-hidden">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 h-full flex flex-col">
+      <!-- Ledger: full-width list (no inner scroll) -->
+      <section class="py-6 sm:py-8 bg-[color:var(--bg)]">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col">
           <!-- Tabs + status -->
           <div class="flex items-center justify-between">
             <div class="inline-flex rounded-xl border border-[color:var(--hair)] p-1 bg-white/5">
@@ -444,7 +445,7 @@
           </div>
 
           <!-- Scrollable ledger -->
-          <div class="mt-6 flex-1 overflow-y-auto space-y-2">
+          <div class="mt-6 space-y-2">
             <article
               v-for="item in filteredItems"
               :key="itemKey(item)"
