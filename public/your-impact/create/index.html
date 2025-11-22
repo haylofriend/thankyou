@@ -451,44 +451,83 @@
               class="breath haylo-card rounded-xl p-4 cursor-pointer"
               @click="openInspector($event, item)"
             >
-              <div class="flex items-start gap-3">
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2">
-                    <h4 class="font-medium truncate" :title="titleOf(item)">{{ titleOf(item) }}</h4>
+              <div class="flex flex-col gap-2">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex flex-wrap items-baseline gap-x-1 gap-y-0.5 min-w-0">
+                    <h4 class="text-sm font-semibold text-zinc-50" :title="titleOf(item)">{{ titleOf(item) }}</h4>
+
+                    <p v-if="notesOf(item)" class="text-xs text-zinc-400">
+                      &nbsp;– {{ notesOf(item) }}
+                    </p>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between gap-3 text-xs">
+                  <div class="flex flex-wrap items-center gap-1.5">
                     <span
                       class="text-[10px] px-1.5 py-0.5 rounded-full border uppercase tracking-wide"
                       :class="tagClass(item.type)"
                     >
                       {{ tagLabel(item.type) }}
                     </span>
-                  </div>
-                  <p class="mt-1 text-sm text-white/80 line-clamp-1">{{ notesOf(item) }}</p>
-                  <div class="mt-2 flex items-center gap-3 text-xs text-white/60">
-                    <span class="px-1.5 py-0.5 rounded-full border border-[color:var(--hair)]">
+
+                    <span
+                      v-if="statusOf(item)"
+                      class="inline-flex items-center rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-zinc-300"
+                    >
                       {{ statusOf(item) }}
                     </span>
-                    <span v-if="item.type==='service'">
+
+                    <span
+                      v-if="item.type==='service' && item.cadence && item.price != null"
+                      class="inline-flex items-center rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-zinc-300"
+                    >
                       {{ item.cadence }} · ${{ (+item.price).toFixed(2) }}
                     </span>
-                    <span v-if="item.type==='good'">
-                      ${{ (+item.price).toFixed(2) }} · Qty {{ item.qty || '—' }}
+
+                    <span
+                      v-if="item.type==='good' && item.qty != null && item.price != null"
+                      class="inline-flex items-center rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-zinc-300"
+                    >
+                      ${{ (+item.price).toFixed(2) }} · Qty {{ item.qty }}
                     </span>
+
                     <a
-                      v-if="item.type==='affiliate'"
+                      v-if="item.type==='affiliate' && item.url"
                       :href="item.url"
                       @click.stop
                       target="_blank"
-                      class="truncate max-w-[50%] text-[color:var(--acc)]"
+                      class="inline-flex max-w-[180px] items-center rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-zinc-400"
                     >
-                      {{ item.url }}
+                      <span class="truncate">{{ item.url }}</span>
                     </a>
                   </div>
-                </div>
-                <div class="shrink-0 text-right text-xs text-white/60">
-                  <div>Clicks</div>
-                  <div class="text-green-400 text-sm font-semibold">+{{ clicksOf(item) }}</div>
-                  <div class="mt-1">Bought</div>
-                  <div class="text-green-400 text-sm font-semibold">+{{ buysOf(item) }}</div>
+
+                  <div class="flex items-center gap-2">
+                    <button
+                      type="button"
+                      class="group inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-0.5 text-[11px] font-medium text-green-400"
+                    >
+                      <span class="tabular-nums">+{{ clicksOf(item) }}</span>
+                      <span
+                        class="max-w-0 overflow-hidden text-[10px] text-zinc-400 opacity-0 transition-all duration-150 ease-out group-hover:max-w-[60px] group-hover:opacity-100"
+                      >
+                        Clicks
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="group inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-0.5 text-[11px] font-medium text-green-400"
+                    >
+                      <span class="tabular-nums">+{{ buysOf(item) }}</span>
+                      <span
+                        class="max-w-0 overflow-hidden text-[10px] text-zinc-400 opacity-0 transition-all duration-150 ease-out group-hover:max-w-[70px] group-hover:opacity-100"
+                      >
+                        Bought
+                      </span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </article>
