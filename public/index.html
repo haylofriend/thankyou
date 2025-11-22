@@ -188,14 +188,13 @@
         <div class="flex flex-col sm:flex-row gap-3 mt-6" data-noprint>
           <button @click="createLink"
                   class="glass px-6 py-3 rounded-xl text-sm font-medium hover:animate-pulse-glow transition-all flex items-center justify-center gap-2"
-                  data-cta-glow
                   data-create-demo-link>
             <span>Create My Link</span>
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
             </svg>
           </button>
-          <button @click="openPayDemo" class="px-6 py-3 rounded-xl border border-white/20 text-sm font-medium hover:border-[var(--acc)] transition-colors flex items-center justify-center gap-2" data-cta-glow>
+          <button @click="openPayDemo" class="px-6 py-3 rounded-xl border border-white/20 text-sm font-medium hover:border-[var(--acc)] transition-colors flex items-center justify-center gap-2">
             <span>See The Magic</span>
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
@@ -268,7 +267,7 @@
           <div class="text-xs uppercase text-white/60 mb-2">01 — Share Your Link</div>
           <div class="text-xl font-medium mb-3">Create your personal thank-you hub</div>
           <p class="text-white/80 text-sm mb-4">Get a beautiful, personalized link in seconds. Share it anywhere—email, social media, messages.</p>
-          <button class="mt-2 text-sm px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] transition-colors w-full" @click="createLink" data-cta-glow>Create My Link</button>
+          <button class="mt-2 text-sm px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] transition-colors w-full" @click="createLink">Create My Link</button>
         </div>
         
         <div class="glass p-6 rounded-2xl fade-in" :class="{visible: fadeInSections}" style="animation-delay: 0.2s">
@@ -280,7 +279,7 @@
           <div class="text-xs uppercase text-white/60 mb-2">02 — Receive Gratitude</div>
           <div class="text-xl font-medium mb-3">Get thanked with meaningful gestures</div>
           <p class="text-white/80 text-sm mb-4">People send you tips, micro-payments, or simply words of appreciation. Every interaction builds your gratitude value.</p>
-          <button class="mt-2 text-sm px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] transition-colors w-full" @click="openPayDemo" data-cta-glow>Try It Now</button>
+          <button class="mt-2 text-sm px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] transition-colors w-full" @click="openPayDemo">Try It Now</button>
         </div>
         
         <div class="glass p-6 rounded-2xl fade-in" :class="{visible: fadeInSections}" style="animation-delay: 0.3s">
@@ -292,7 +291,7 @@
           <div class="text-xs uppercase text-white/60 mb-2">03 — Grow & Withdraw</div>
           <div class="text-xl font-medium mb-3">Watch your impact grow weekly</div>
           <p class="text-white/80 text-sm mb-4">Your gratitude value compounds. Withdraw to your bank every Friday or let it grow to create even more impact.</p>
-          <button class="mt-2 text-sm px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] transition-colors w-full" @click="mockPayout" data-cta-glow>Simulate Growth</button>
+          <button class="mt-2 text-sm px-4 py-2 rounded-full border border-white/20 hover:border-[var(--acc)] transition-colors w-full" @click="mockPayout">Simulate Growth</button>
         </div>
       </div>
     </section>
@@ -310,7 +309,7 @@
             <div class="text-xs uppercase text-white/60">Secure & Private</div>
             <h3 class="text-2xl mt-1 font-medium">Bank-Level Security</h3>
             <p class="text-white/80 text-sm mt-2">Connect your bank with industry-leading security through Plaid. Your data is encrypted and never stored on our servers.</p>
-            <button class="mt-4 px-5 py-2.5 rounded-xl glass text-sm font-medium hover:animate-pulse-glow transition-all" @click="plaidLink" data-cta-glow>
+            <button class="mt-4 px-5 py-2.5 rounded-xl glass text-sm font-medium hover:animate-pulse-glow transition-all" @click="plaidLink">
               Connect Securely
             </button>
             <div class="text-xs text-white/60 mt-3 flex items-center gap-2">
@@ -447,7 +446,7 @@
       <p class="mt-2">This is more than a product—it's a movement.</p>
     </footer>
 
-    <!-- Sticky bottom CTA -->
+    <!-- Sticky bottom CTA (temporarily disabled)
     <div v-show="!showPay && !showReflex" id="stickyCta" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60]" data-noprint>
       <div class="glass rounded-full px-5 py-3 flex items-center gap-4 shadow-xl animate-pulse-glow">
         <span class="text-sm text-white/90 font-medium">Ready to create value with gratitude?</span>
@@ -459,6 +458,7 @@
         </a>
       </div>
     </div>
+    -->
 
     <!-- MODALS -->
     <div v-if="showPay" class="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-[70]" data-noprint>
@@ -502,7 +502,7 @@
         </div>
         
         <div class="mt-6 flex gap-3">
-        <button class="flex-1 glass px-4 py-3 rounded-xl text-sm font-medium hover:animate-pulse-glow transition-all" @click="confirmPay" data-cta-glow>
+        <button class="flex-1 glass px-4 py-3 rounded-xl text-sm font-medium hover:animate-pulse-glow transition-all" @click="confirmPay">
           Send ${{ amount.toFixed(2) }}
         </button>
           <button class="px-4 py-3 rounded-xl border border-white/20 text-sm font-medium hover:border-white/40 transition-colors" @click="showPay=false">
@@ -523,7 +523,6 @@
         <p class="text-white/80 text-sm mt-2">You've just created value with gratitude. Now imagine receiving these thank-yous yourself.</p>
         <a href="#"
            class="mt-4 glass px-5 py-3 rounded-xl text-sm font-medium w-full hover:animate-pulse-glow transition-all inline-block"
-           data-cta-glow
            data-get-started>
           Create My Thank-You Link
         </a>
