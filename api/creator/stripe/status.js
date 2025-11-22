@@ -12,7 +12,7 @@ const {
   stripe,
   supabase,
   json,
-  getUserFromAuthHeader
+  authenticateRequest,
 } = require('../../_stripeShared');
 
 module.exports = async function handler(req, res) {
@@ -25,11 +25,14 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    // 1) Identify the current user
-    const user = await getUserFromAuthHeader(req);
-    if (!user) {
-      return json(res, 401, { error: 'Unauthorized' });
+    // 1) Authenticate the current user via Supabase JWT
+    const authResult = await authenticateRequest(req, res);
+    if (!authResult || !authResult.user) {
+      // authenticateRequest already sent the error response (401/500)
+      return;
     }
+
+    const user = authResult.user;
 
     // 2) Look up their profile to find stripe_account_id
     const { data: profile, error: profileError } = await supabase
@@ -48,7 +51,7 @@ module.exports = async function handler(req, res) {
       return json(res, 200, {
         connected: false,
         payouts_enabled: false,
-        details_submitted: false
+        details_submitted: false,
       });
     }
 
@@ -58,11 +61,10 @@ module.exports = async function handler(req, res) {
     return json(res, 200, {
       connected: !!account.charges_enabled,
       payouts_enabled: !!account.payouts_enabled,
-      details_submitted: !!account.details_submitted
+      details_submitted: !!account.details_submitted,
     });
   } catch (err) {
     console.error('creator/stripe/status error', err);
     return json(res, 500, { error: 'Failed to fetch Stripe status' });
   }
 };
-
