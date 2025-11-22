@@ -108,6 +108,37 @@
       .mini-burst{pointer-events:none;position:fixed;inset:0;display:none}
       .mini-burst.active{display:block}
 
+      /* Floating gratitude ledger tray (bottom-right) */
+      .hf-ledger-tray {
+        position: fixed;
+        right: 1.5rem;
+        bottom: 1.5rem;
+        z-index: 45;
+      }
+
+      @media (max-width: 768px) {
+        .hf-ledger-tray {
+          right: 1rem;
+          bottom: 1rem;
+        }
+      }
+
+      /* Soft pop-in animation for the tray */
+      .animate-ledger-pop {
+        animation: hf-ledger-pop 0.35s ease-out;
+      }
+
+      @keyframes hf-ledger-pop {
+        0% {
+          opacity: 0;
+          transform: translateY(10px) scale(0.98);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
       .hf-card-todaysgap .hf-card-heart {
         display: flex;
         align-items: center;
@@ -562,21 +593,75 @@
           </div>
         </section>
 
-        <section class="hf-card hf-card-ledger glass rounded-2xl p-5">
-          <div class="text-xs uppercase text-white/60">Your Gratitude Ledger</div>
-          <div class="mt-3 space-y-2 max-h-[340px] overflow-auto pr-1">
-            <div v-for="(e, idx) in events" :key="idx" class="flex items-center justify-between p-3 rounded-xl border border-white/10 bg-white/5">
-              <div class="flex items-center gap-3">
-                <div class="w-2 h-2 rounded-full" :class="eventColor(e.type)"></div>
-                <div class="text-sm">{{ e.label }}</div>
-              </div>
-              <div class="text-sm text-white/70">{{ e.value }}</div>
-            </div>
-          <div v-if="!events.length" class="text-white/60 text-sm">No entries yet—your first share will light this up.</div>
-          </div>
-        </section>
       </div>
     </section>
+
+    <!-- Floating Gratitude Ledger tray -->
+    <div class="hf-ledger-tray" data-noprint>
+      <!-- Subtle halo trigger (always visible) -->
+      <button
+        type="button"
+        class="mb-2 flex h-9 w-9 items-center justify-center rounded-full border border-white/18 bg-white/5 shadow-[0_12px_30px_rgba(0,0,0,0.65)] backdrop-blur hover:bg-white/10 transition"
+        @click="toggleLedgerTray"
+        :aria-pressed="showLedger ? 'true' : 'false'"
+        aria-label="Open gratitude activity"
+      >
+        <span
+          class="h-2 w-2 rounded-full bg-[var(--acc)]"
+          :class="{'animate-pulse': hasFreshLedger}"
+        ></span>
+      </button>
+
+      <!-- Glass notification tray -->
+      <section
+        v-show="showLedger"
+        class="glass rounded-2xl p-3 w-[280px] sm:w-[320px] shadow-[0_20px_60px_rgba(0,0,0,0.85)] animate-ledger-pop"
+      >
+        <div class="mb-2 flex items-center justify-between text-[11px] text-white/60">
+          <span class="flex items-center gap-1">
+            Your Gratitude Ledger
+            <span
+              class="h-1.5 w-1.5 rounded-full bg-[var(--acc)]"
+              :class="{'animate-pulse': hasFreshLedger}"
+            ></span>
+          </span>
+          <button
+            type="button"
+            class="text-[10px] text-white/40 hover:text-white/75 transition"
+            @click="hideLedgerTray"
+          >
+            Hide
+          </button>
+        </div>
+
+        <div class="max-h-[220px] space-y-2 overflow-auto pr-1">
+          <div
+            v-for="(e, idx) in events"
+            :key="idx"
+            class="flex items-center justify-between rounded-xl border border-white/10 bg-black/40 px-2 py-2"
+          >
+            <div class="flex items-center gap-3">
+              <div class="h-2 w-2 rounded-full" :class="eventColor(e.type)"></div>
+              <div class="text-[13px] leading-tight">
+                {{ e.label }}
+              </div>
+            </div>
+            <div
+              class="ml-3 max-w-[110px] truncate text-right text-[11px] text-white/60"
+            >
+              {{ e.value }}
+            </div>
+          </div>
+
+          <div
+            v-if="!events.length"
+            class="px-1 py-1.5 text-[12px] text-white/60"
+          >
+            No entries yet—your first share will light this up.
+          </div>
+        </div>
+      </section>
+    </div>
   <!-- AI Co-Pilot (drawer) -->
   <div v-if="openCopilot" class="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center md:justify-center p-4">
     <div class="glass rounded-2xl p-5 w-full max-w-2xl">
@@ -734,6 +819,37 @@ const app = createApp({
     const events = ref([]);
     const openCopilot = ref(false);
     const showBurst = ref(false);
+    const showLedger = ref(false);
+    const hasFreshLedger = ref(false);
+    let ledgerTimer = null;
+
+    function openLedgerTray(auto = true) {
+      showLedger.value = true;
+      if (auto) {
+        hasFreshLedger.value = true;
+      }
+      if (ledgerTimer) clearTimeout(ledgerTimer);
+      ledgerTimer = setTimeout(() => {
+        showLedger.value = false;
+      }, 6000);
+    }
+
+    function hideLedgerTray() {
+      showLedger.value = false;
+      if (ledgerTimer) clearTimeout(ledgerTimer);
+    }
+
+    function toggleLedgerTray() {
+      if (showLedger.value) {
+        hideLedgerTray();
+      } else {
+        openLedgerTray(false);
+      }
+    }
+
+    function pingLedger() {
+      openLedgerTray(true);
+    }
 
     // Projections
     const sharesPerDay = ref(10);
@@ -785,6 +901,19 @@ const app = createApp({
       return Math.max(0, Math.min(120, Math.round(pct)));
     });
 
+    let lastEventCount = 0;
+    watch(
+      events,
+      (val) => {
+        const count = Array.isArray(val) ? val.length : 0;
+        if (count > lastEventCount) {
+          pingLedger();
+        }
+        lastEventCount = count;
+      },
+      { deep: true }
+    );
+
     // ===== ACTIONS =====
     const goToCreate = () => {
       window.location.href = '/your-impact/create';
@@ -792,9 +921,33 @@ const app = createApp({
 
     function eventColor(type){ return { tip:'bg-[var(--acc)]', share:'bg-[#15c39a]', payout:'bg-[#ffcc00]' }[type] || 'bg-white/20'; }
 
-    async function copyLink(e){ createRipple(e); const ok = await copyToClipboard(shareUrl.value); events.value.unshift({label:'Link copied', value:shareUrl.value, type:'share'}); toast(ok?'Copied!':'Link ready'); }
+    async function copyLink(e){
+      createRipple(e);
+      const ok = await copyToClipboard(shareUrl.value);
+      events.value.unshift({
+        label: 'Link copied',
+        value: shareUrl.value,
+        type: 'share'
+      });
+      pingLedger();
+      toast(ok ? 'Copied!' : 'Link ready');
+    }
     function downloadQR(e){ createRipple(e); alert('Demo: Beautiful QR would generate for ' + shareUrl.value); }
-    async function share(kind){ const text = `Tiny thank-you link for little kindnesses: ${shareUrl.value}`; if(kind==='sms'){ window.open(`sms:?&body=${encodeURIComponent(text)}`,'_blank'); } if(kind==='x'){ window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}`,'_blank'); } events.value.unshift({label:'Shared invitation', value:kind.toUpperCase(), type:'share'}); }
+    async function share(kind){
+      const text = `Tiny thank-you link for little kindnesses: ${shareUrl.value}`;
+      if(kind==='sms'){
+        window.open(`sms:?&body=${encodeURIComponent(text)}`,'_blank');
+      }
+      if(kind==='x'){
+        window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}`,'_blank');
+      }
+      events.value.unshift({
+        label: 'Shared invitation',
+        value: kind.toUpperCase(),
+        type: 'share'
+      });
+      pingLedger();
+    }
     async function copyDM(e){ createRipple(e); await copyToClipboard(`If I’ve helped you lately, here’s a $2 thank-you: ${shareUrl.value}`); toast('DM copied'); }
     function sharePrimary(e){ copyLink(e || new Event('click')); }
     async function copyOneLine(e){ await copyDM(e || new Event('click')); }
@@ -1138,6 +1291,8 @@ const app = createApp({
       bridgePct,
       payoutNextAmount, payoutNextLabel, payoutPct,
       aiScripts, affiliates, openCopilot, tasks, showBurst,
+      // ledger tray
+      showLedger, hasFreshLedger, toggleLedgerTray, hideLedgerTray,
       // actions
       shareUrl, eventColor, copyLink, downloadQR, share, copyDM, sharePrimary, copyOneLine, genScripts, genAffiliates, maybeCelebrate, openPublic, goToCreate
     };
