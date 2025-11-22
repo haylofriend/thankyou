@@ -4,13 +4,7 @@
 // withdrawable balance using the DB function
 // public.creator_available_balance(in_creator_id uuid).
 
-const { getUserFromAuthHeader, supabase } = require('../_supabase-utils');
-
-function json(res, status, body) {
-  res.statusCode = status;
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.end(JSON.stringify(body));
-}
+const { supabase, json, requireAuth } = require('../_stripeShared');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -19,9 +13,9 @@ module.exports = async function handler(req, res) {
 
   try {
     // 1) Authenticate via Supabase JWT (same as other creator endpoints)
-    const user = await getUserFromAuthHeader(req);
+    const user = await requireAuth(req, res);
     if (!user) {
-      return json(res, 401, { error: 'Unauthorized' });
+      return;
     }
 
     const creatorId = user.id;
