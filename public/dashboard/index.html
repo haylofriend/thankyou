@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Your Impact</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- No-JS fallback -->
+  <meta http-equiv="refresh" content="0; url=/dashboard_auth_gated.html">
+  <script>
+    (function () {
+      try {
+        // preserve any query string, e.g. ?redirect=...
+        var qs = location.search || '';
+        location.replace('/dashboard_auth_gated.html' + qs);
+      } catch (e) {
+        location.href = '/dashboard_auth_gated.html';
+      }
+    })();
+  </script>
+</head>
+<body>
+  <p>Loading your impact dashboard…</p>
+</body>
+</html>
