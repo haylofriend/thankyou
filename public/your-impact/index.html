@@ -107,6 +107,12 @@
     .dot{width:6px;height:6px;border-radius:999px;background:var(--acc)}
     .mini-burst{pointer-events:none;position:fixed;inset:0;display:none}
     .mini-burst.active{display:block}
+    .hf-dashboard-grid{display:grid;gap:1.5rem;grid-template-columns:1fr;align-items:start}
+    .hf-card{cursor:grab;user-select:none;transition:transform .15s ease,opacity .15s ease}
+    .hf-card:active{cursor:grabbing}
+    .hf-card.dragging{opacity:.9;cursor:grabbing;transform:scale(.995)}
+    @media (min-width:768px){.hf-dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (min-width:1024px){.hf-dashboard-grid{grid-template-columns:repeat(3,minmax(0,1fr));}.hf-card.hf-span-2{grid-column:span 2;}}
   </style>
 </head>
 <body>
@@ -167,9 +173,8 @@
   </section>
 
   <!-- CORE: Possibility → Reality → Bridge -->
-  <section class="mt-8 grid lg:grid-cols-3 gap-6">
-    <!-- Possibility -->
-    <div class="glass rounded-2xl p-5">
+  <main id="hf-dashboard-movable" class="hf-dashboard-grid mt-8">
+    <section class="hf-card glass rounded-2xl p-5" data-card-id="project-upside">
       <div class="text-xs uppercase text-white/60">Possibility</div>
       <h3 class="text-2xl font-semibold mt-1">Project your upside</h3>
       <div class="mt-4 space-y-3">
@@ -188,10 +193,9 @@
           <div class="text-xs text-white/60 mt-1">Assumptions adjustable anytime</div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Reality -->
-    <div class="glass rounded-2xl p-5">
+    <section class="hf-card glass rounded-2xl p-5" data-card-id="reality">
       <div class="text-xs uppercase text-white/60">Reality</div>
       <h3 class="text-2xl font-semibold mt-1">What actually happened</h3>
       <div class="grid grid-cols-3 gap-3 mt-4 text-sm">
@@ -214,7 +218,7 @@
           <div class="text-lg font-semibold">$ {{ payoutNextAmount.toFixed(2) }}</div>
           <div class="text-sm text-white/60">{{ payoutNextLabel }}</div>
         </div>
-        <div class="h-1 w-full bg-white/10 rounded mt-2 overflow-hidden"><div :style="{width: payoutPct + '%'}" class="h-1 bg-[var(--acc)] transition-all"></div></div>
+        <div class="h-1 w-full bg-white/10 rounded mt-2 overflow-hidden"><div :style="{width: payoutPct + '%' }" class="h-1 bg-[var(--acc)] transition-all"></div></div>
         <div class="mt-2 flex items-center justify-between">
           <div class="text-xs text-slate-400">
             Payout next Friday
@@ -230,10 +234,9 @@
           </button>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Bridge the Gap -->
-    <div class="glass rounded-2xl p-5 flex flex-col gap-4">
+    <section class="hf-card glass rounded-2xl p-5 flex flex-col gap-4" data-card-id="copilot-bridge">
       <div>
         <div class="text-xs uppercase text-white/60">Bridge</div>
         <h3 class="text-2xl font-semibold mt-1">
@@ -243,32 +246,6 @@
           We read your reality and your possibility, then suggest the next tiny move that keeps
           gratitude compounding.
         </p>
-      </div>
-
-      <!-- Gap meter: Reality → Possibility -->
-      <div
-        id="todays-gap-card"
-        class="rounded-xl border border-white/10 bg-black/40 p-3 cursor-pointer hover:bg-white/8 transition"
-        @click="goToCreate"
-      >
-        <div class="flex items-center justify-between text-[11px] text-white/60">
-          <span class="flex items-center gap-1">
-            Today’s gap
-            <span class="w-1.5 h-1.5 rounded-full bg-[color:var(--acc)] animate-pulse"></span>
-          </span>
-          <span>
-            {{ bridgePct }}% of ${{ monthlyPotential.toFixed(0) }}
-          </span>
-        </div>
-        <div class="mt-2 h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-          <div
-            class="h-1.5 rounded-full bg-[color:var(--acc)] transition-all"
-            :style="{ width: Math.min(100, bridgePct) + '%' }"
-          ></div>
-        </div>
-        <div class="mt-2 text-[11px] text-white/60">
-          Tap to open your Create workspace and design how to close this gap.
-        </div>
       </div>
 
       <!-- Co-Pilot lane: 3 focused nudges -->
@@ -310,130 +287,9 @@
         Open AI Co-Pilot
         <span class="w-1.5 h-1.5 rounded-full bg-[var(--acc)] animate-pulse"></span>
       </button>
-    </div>
-  </section>
+    </section>
 
-  <!-- Ledger & Share blocks -->
-  <section class="mt-8 grid lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2 glass rounded-2xl p-5">
-      <div class="text-xs uppercase text-white/60">Your Gratitude Ledger</div>
-      <div class="mt-3 space-y-2 max-h-[340px] overflow-auto pr-1">
-        <div v-for="(e, idx) in events" :key="idx" class="flex items-center justify-between p-3 rounded-xl border border-white/10 bg-white/5">
-          <div class="flex items-center gap-3">
-            <div class="w-2 h-2 rounded-full" :class="eventColor(e.type)"></div>
-            <div class="text-sm">{{ e.label }}</div>
-          </div>
-          <div class="text-sm text-white/70">{{ e.value }}</div>
-        </div>
-      <div v-if="!events.length" class="text-white/60 text-sm">No entries yet—your first share will light this up.</div>
-      </div>
-    </div>
-
-    <!-- Spotlight slot for Today's gap (sits next to the ledger on large screens) -->
-    <div id="gap-spotlight-slot" class="mt-6 lg:mt-0 lg:ml-6 lg:w-[360px] lg:float-right"></div>
-
-    <!-- New ONE-TAP SHARE floating card -->
-    <div class="col-span-2">
-      <div
-        class="
-          glass rounded-2xl p-6
-          bg-gradient-to-b from-white/10 to-white/5
-          border border-white/10
-          shadow-[0_15px_40px_-10px_rgba(0,0,0,0.6)]
-          backdrop-blur-xl
-          animate-float-slow
-          flex flex-col gap-5
-        "
-      >
-        <div class="text-xs uppercase tracking-[0.18em] text-white/70">
-          ONE-TAP SHARE
-        </div>
-
-        <h3 class="text-2xl font-semibold text-white">
-          Invite a thank-you
-        </h3>
-
-        <p class="text-sm text-white/70 leading-relaxed">
-          Sometimes the smallest appreciation becomes the brightest moment.
-          Share your link with someone who made you feel seen — only if it feels true.
-        </p>
-
-        <!-- Main CTA -->
-        <button
-          @click="sharePrimary"
-          class="
-            relative overflow-hidden
-            w-full inline-flex items-center justify-center gap-2
-            px-6 py-2 rounded-full
-            bg-black text-white font-medium text-sm
-            shadow-[0_0_0_1px_rgba(255,255,255,0.12)]
-            transition-all duration-200
-            hover:shadow-[0_0_25px_rgba(150,150,255,0.45)]
-            hover:scale-[1.02]
-          "
-        >
-          Share The Magic
-
-          <span class="relative flex items-center justify-center">
-            <img
-              src="/haylofriend_sunrise_halo.svg"
-              alt="halo"
-              width="18"
-              height="18"
-              class="opacity-90"
-            />
-          </span>
-        </button>
-
-        <!-- Secondary actions grid -->
-        <div class="grid grid-cols-2 gap-3">
-          <button
-            @click="share('x')"
-            class="px-3 py-2 rounded-full border border-white/10 text-sm text-white/80 hover:bg-white/5 transition"
-          >
-            Post on X
-          </button>
-
-          <button
-            @click="share('sms')"
-            class="px-3 py-2 rounded-full border border-white/10 text-sm text-white/80 hover:bg-white/5 transition"
-          >
-            Text a regular
-          </button>
-
-          <button
-            @click="downloadQR"
-            class="px-3 py-2 rounded-full border border-white/10 text-sm text-white/80 hover:bg-white/5 transition"
-          >
-            Download QR
-          </button>
-
-          <button
-            @click="copyOneLine"
-            class="px-3 py-2 rounded-full border border-white/10 text-sm text-white/80 hover:bg-white/5 transition"
-          >
-            Copy 1-line DM
-          </button>
-        </div>
-
-        <!-- Script preview -->
-        <div
-          class="
-            rounded-2xl border border-white/10
-            bg-white/5
-            p-4 text-sm text-white/80 leading-relaxed
-          "
-        >
-          “I made a tiny space for gratitude.
-          No expectation — just a place for kindness, when it wants to land 💛
-          <br />
-          <span id="sharePreview" class="mt-1 block text-[13px] text-white/50 break-all"></span>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== Gratitude Bloom (standalone island — no auth / app changes) ===== -->
-    <div id="gbloom-card" class="glass rounded-2xl p-5 flex flex-col gap-4">
+    <section class="hf-card glass rounded-2xl p-5" data-card-id="tip-bloom" id="gbloom-card">
       <div>
         <div class="text-[11px] uppercase tracking-wide text-white/60">Gratitude</div>
         <h3 class="text-2xl font-semibold mt-1">Tip & Bloom</h3>
@@ -511,12 +367,153 @@
       </div>
 
       <!-- success toast -->
-      <div id="gbloom-toast" class="hidden rounded-xl border border-emerald-400/40 bg-emerald-400/10 p-3 text-sm text-emerald-100">
-        You made someone’s day. And tomorrow’s. 🌱
+      <div id="gbloom-toast" class="hidden rounded-xl border border-emerald-400/40 bg-emerald-400/10 p-3 text-sm text-emerald-100 flex items-start gap-3">
+        <div class="mt-0.5 h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></div>
+        <div>
+          <div class="font-semibold">Sent!</div>
+          <div class="text-xs text-emerald-100/80">Kindness is in motion. We’ll handle the rest.</div>
+        </div>
       </div>
-    </div>
-  </section>
 
+      <div class="mt-4 grid md:grid-cols-2 gap-4">
+        <div class="rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/70">
+          Bloom is a dedicated pool that sends surprise $10 boosts to small acts of service.
+        </div>
+        <div class="rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/70">
+          Every tip is optional. You can close this tab anytime and your day keeps going.
+        </div>
+      </div>
+    </section>
+
+    <section class="hf-card glass rounded-2xl p-5" data-card-id="todays-gap" id="todays-gap-card">
+      <div class="text-xs uppercase text-white/60">Bridge</div>
+      <h3 class="text-2xl font-semibold mt-1">Today’s gap</h3>
+      <div
+        class="mt-4 rounded-xl border border-white/10 bg-black/40 p-3 cursor-pointer hover:bg-white/8 transition"
+        @click="goToCreate"
+      >
+        <div class="flex items-center justify-between text-[11px] text-white/60">
+          <span class="flex items-center gap-1">
+            Today’s gap
+            <span class="w-1.5 h-1.5 rounded-full bg-[color:var(--acc)] animate-pulse"></span>
+          </span>
+          <span>
+            {{ bridgePct }}% of ${{ monthlyPotential.toFixed(0) }}
+          </span>
+        </div>
+        <div class="mt-2 h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+          <div
+            class="h-1.5 rounded-full bg-[color:var(--acc)] transition-all"
+            :style="{ width: Math.min(100, bridgePct) + '%' }"
+          ></div>
+        </div>
+        <div class="mt-2 text-[11px] text-white/60">
+          Tap to open your Create workspace and design how to close this gap.
+        </div>
+      </div>
+    </section>
+
+    <section class="hf-card glass rounded-2xl p-5 hf-span-2" data-card-id="gratitude-ledger">
+      <div class="text-xs uppercase text-white/60">Your Gratitude Ledger</div>
+      <div class="mt-3 space-y-2 max-h-[340px] overflow-auto pr-1">
+        <div v-for="(e, idx) in events" :key="idx" class="flex items-center justify-between p-3 rounded-xl border border-white/10 bg-white/5">
+          <div class="flex items-center gap-3">
+            <div class="w-2 h-2 rounded-full" :class="eventColor(e.type)"></div>
+            <div class="text-sm">{{ e.label }}</div>
+          </div>
+          <div class="text-sm text-white/70">{{ e.value }}</div>
+        </div>
+      <div v-if="!events.length" class="text-white/60 text-sm">No entries yet—your first share will light this up.</div>
+      </div>
+    </section>
+
+    <section class="hf-card glass rounded-2xl p-6 bg-gradient-to-b from-white/10 to-white/5 border border-white/10 shadow-[0_15px_40px_-10px_rgba(0,0,0,0.6)] backdrop-blur-xl animate-float-slow flex flex-col gap-5 hf-span-2" data-card-id="invite-thankyou">
+      <div class="text-xs uppercase tracking-[0.18em] text-white/70">
+        ONE-TAP SHARE
+      </div>
+
+      <h3 class="text-2xl font-semibold text-white">
+        Invite a thank-you
+      </h3>
+
+      <p class="text-sm text-white/70 leading-relaxed">
+        Sometimes the smallest appreciation becomes the brightest moment.
+        Share your link with someone who made you feel seen — only if it feels true.
+      </p>
+
+      <!-- Main CTA -->
+      <button
+        @click="sharePrimary"
+        class="
+          relative overflow-hidden
+          w-full inline-flex items-center justify-center gap-2
+          px-6 py-2 rounded-full
+          bg-black text-white font-medium text-sm
+          shadow-[0_0_0_1px_rgba(255,255,255,0.12)]
+          transition-all duration-200
+          hover:shadow-[0_0_25px_rgba(150,150,255,0.45)]
+          hover:scale-[1.02]
+        "
+      >
+        Share The Magic
+
+        <span class="relative flex items-center justify-center">
+          <img
+            src="/haylofriend_sunrise_halo.svg"
+            alt="halo"
+            width="18"
+            height="18"
+            class="opacity-90"
+          />
+        </span>
+      </button>
+
+      <!-- Secondary actions grid -->
+      <div class="grid grid-cols-2 gap-3 w-full">
+        <button
+          @click="share('x')"
+          class="px-3 py-2 rounded-full border border-white/10 text-sm text-white/80 hover:bg-white/5 transition"
+        >
+          Post on X
+        </button>
+
+        <button
+          @click="share('sms')"
+          class="px-3 py-2 rounded-full border border-white/10 text-sm text-white/80 hover:bg-white/5 transition"
+        >
+          Text a regular
+        </button>
+
+        <button
+          @click="downloadQR"
+          class="px-3 py-2 rounded-full border border-white/10 text-sm text-white/80 hover:bg-white/5 transition"
+        >
+          Download QR
+        </button>
+
+        <button
+          @click="copyOneLine"
+          class="px-3 py-2 rounded-full border border-white/10 text-sm text-white/80 hover:bg-white/5 transition"
+        >
+          Copy 1-line DM
+        </button>
+      </div>
+
+      <!-- Script preview -->
+      <div
+        class="
+          rounded-2xl border border-white/10
+          bg-white/5
+          p-4 text-sm text-white/80 leading-relaxed
+        "
+      >
+        “I made a tiny space for gratitude.
+        No expectation — just a place for kindness, when it wants to land 💛
+        <br />
+        <span id="sharePreview" class="mt-1 block text-[13px] text-white/50 break-all"></span>
+      </div>
+    </section>
+  </main>
   <!-- AI Co-Pilot (drawer) -->
   <div v-if="openCopilot" class="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center md:justify-center p-4">
     <div class="glass rounded-2xl p-5 w-full max-w-2xl">
@@ -1738,54 +1735,78 @@ window.app = app;
 </style>
 
 <script>
-/* Move the existing “Today’s gap” mini-card into the new slot next to the Ledger. */
-(function () {
-  var src  = document.getElementById('todays-gap-card');
-  var slot = document.getElementById('gap-spotlight-slot');
-  if (!src || !slot) return;
+(function(){
+  const container = document.getElementById('hf-dashboard-movable');
+  if (!container) return;
 
-  // Move the whole mini-card (keeps its content/logic intact)
-  slot.appendChild(src);
+  const storageKey = 'hf-dashboard-order';
+  let dragging = null;
 
-  // Spotlight styles (float + soft glow)
-  src.id = 'todays-gap-spotlight';
-  src.classList.add('gap-spotlight', 'gap-glow');
+  function applySavedOrder(){
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      saved.forEach(id => {
+        const card = container.querySelector(`[data-card-id="${id}"]`);
+        if (card) container.appendChild(card);
+      });
+    } catch (err) {}
+  }
 
-  // If the Bridge panel had spacing adjusted by removing this card, no-op is fine.
+  function saveOrder(){
+    const order = Array.from(container.children)
+      .map(el => el.getAttribute('data-card-id'))
+      .filter(Boolean);
+    try { localStorage.setItem(storageKey, JSON.stringify(order)); } catch (err) {}
+  }
+
+  function handleDragStart(e){
+    dragging = e.currentTarget;
+    dragging.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', dragging.dataset.cardId || '');
+  }
+
+  function handleDragOver(e){
+    e.preventDefault();
+    if (!dragging) return;
+    const target = e.currentTarget;
+    if (target === dragging) return;
+    const rect = target.getBoundingClientRect();
+    const offset = (e.clientY - rect.top) / rect.height;
+    if (offset > 0.5) {
+      target.after(dragging);
+    } else {
+      target.before(dragging);
+    }
+  }
+
+  function handleDrop(e){
+    e.preventDefault();
+    saveOrder();
+  }
+
+  function handleDragEnd(){
+    if (dragging) dragging.classList.remove('dragging');
+    dragging = null;
+    saveOrder();
+  }
+
+  function init(){
+    applySavedOrder();
+    Array.from(container.children).forEach(card => {
+      card.setAttribute('draggable', 'true');
+      card.addEventListener('dragstart', handleDragStart);
+      card.addEventListener('dragover', handleDragOver);
+      card.addEventListener('drop', handleDrop);
+      card.addEventListener('dragend', handleDragEnd);
+    });
+    container.addEventListener('dragover', e => e.preventDefault());
+    container.addEventListener('drop', handleDrop);
+  }
+
+  document.addEventListener('DOMContentLoaded', init, { once: true });
 })();
 </script>
 
-<style>
-/* Gentle float to draw attention without being noisy */
-.gap-spotlight {
-  position: sticky;        /* sticks while scrolling the ledger */
-  top: 1rem;
-  z-index: 1;
-  animation: gapFloat 6s ease-in-out infinite;
-  will-change: transform, box-shadow;
-}
-
-/* Soft breathing glow matching your accent */
-.gap-glow {
-  box-shadow: 0 0 0 0 rgba(77,163,255,.0);
-  animation: gapFloat 6s ease-in-out infinite, gapPulse 2.8s ease-in-out infinite;
-}
-
-@keyframes gapFloat {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-3px); }
-}
-
-@keyframes gapPulse {
-  0%   { box-shadow: 0 0 0 0 rgba(77,163,255,.00); }
-  50%  { box-shadow: 0 0 24px 2px rgba(77,163,255,.25); }
-  100% { box-shadow: 0 0 0 0 rgba(77,163,255,.00); }
-}
-
-/* Respect small screens: no float/sticky on mobile to avoid layout squeeze */
-@media (max-width: 1023px) {
-  .gap-spotlight { position: static; top: auto; }
-}
-</style>
 </body>
 </html>
