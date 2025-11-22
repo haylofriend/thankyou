@@ -121,6 +121,37 @@
         font-size: 0.9rem;
       }
 
+      .hf-avatar-button {
+        border: none;
+        background: transparent;
+        padding: 0;
+        cursor: pointer;
+      }
+
+      .hf-avatar-circle {
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        overflow: hidden;
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .hf-avatar-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: none;
+      }
+
+      .hf-avatar-fallback {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
       /* === 3-lane desktop layout (under KPI row) === */
       .hf-dashboard-lanes {
         display: grid;
@@ -201,14 +232,15 @@
     <div class="max-w-[1160px] mx-auto px-6 py-3 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <div class="w-6 h-6 rounded-md animate-pulse-glow" style="background:linear-gradient(135deg,var(--acc),#8acbff)"></div>
-        <div class="tracking-[.14em] uppercase text-xs text-white/90">Thank-You Link</div>
+        <span class="hf-header-title">HayloFriend</span>
       </div>
       <div class="flex items-center gap-2">
-        <button class="pill relative overflow-hidden" @click="copyLink"><span class="text-xs">Copy Link</span>
-          <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M8 4a3 3 0 013-3h5a3 3 0 013 3v5a3 3 0 01-3 3h-1V8a4 4 0 00-4-4H8V4z"/><path d="M2 8a4 4 0 014-4h5a4 4 0 014 4v5a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/></svg>
+        <button class="hf-avatar-button" id="hf-header-avatar">
+          <div class="hf-avatar-circle">
+            <img id="hf-avatar-img" alt="Profile" class="hf-avatar-img" />
+            <span id="hf-avatar-fallback" class="hf-avatar-fallback">YO</span>
+          </div>
         </button>
-        <button class="pill relative overflow-hidden text-xs" @click="openPublic">Open public page</button>
-        <img :alt="displayName" class="w-8 h-8 rounded-full border border-white/20" :src="avatarUrl">
       </div>
     </div>
   </nav>
@@ -656,6 +688,44 @@ function promotePrettyUrl(slugValue) {
   }
 }
 
+function updateHeaderAvatar(user) {
+  const img = document.getElementById("hf-avatar-img");
+  const fallback = document.getElementById("hf-avatar-fallback");
+  if (!img || !fallback || !user) return;
+
+  const meta = user.user_metadata || {};
+  const photo =
+    meta.avatar_url ||
+    meta.picture ||
+    meta.photoURL ||
+    null;
+
+  const fullName = meta.full_name || meta.name || user.email || "";
+  const initials = fullName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0].toUpperCase())
+    .join("") || "YO";
+
+  fallback.textContent = initials;
+
+  if (photo) {
+    img.src = photo;
+    img.onload = function () {
+      img.style.display = "block";
+      fallback.style.display = "none";
+    };
+    img.onerror = function () {
+      img.style.display = "none";
+      fallback.style.display = "flex";
+    };
+  } else {
+    img.style.display = "none";
+    fallback.style.display = "flex";
+  }
+}
+
 async function applySessionFromUrl() {
   if (!supabase || typeof window === "undefined") return;
 
@@ -912,6 +982,8 @@ const app = createApp({
           return;
         }
 
+        updateHeaderAvatar(user);
+
         // 2) Load profile (display_name, slug, avatar_url)
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
@@ -1107,9 +1179,12 @@ const app = createApp({
       auth.value.session = session;
       auth.value.loading = false;
 
+      updateHeaderAvatar(session?.user);
+
       // 4) Subscribe so future refreshes/magic links hydrate automatically
       supabase.auth.onAuthStateChange(async (_event, s) => {
         auth.value.session = s;
+        updateHeaderAvatar(s?.user);
         if (s) await hydrateFromDb();
       });
 
