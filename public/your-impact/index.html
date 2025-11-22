@@ -247,6 +247,7 @@
 
       <!-- Gap meter: Reality → Possibility -->
       <div
+        id="todays-gap-card"
         class="rounded-xl border border-white/10 bg-black/40 p-3 cursor-pointer hover:bg-white/8 transition"
         @click="goToCreate"
       >
@@ -324,9 +325,12 @@
           </div>
           <div class="text-sm text-white/70">{{ e.value }}</div>
         </div>
-        <div v-if="!events.length" class="text-white/60 text-sm">No entries yet—your first share will light this up.</div>
+      <div v-if="!events.length" class="text-white/60 text-sm">No entries yet—your first share will light this up.</div>
       </div>
     </div>
+
+    <!-- Spotlight slot for Today's gap (sits next to the ledger on large screens) -->
+    <div id="gap-spotlight-slot" class="mt-6 lg:mt-0 lg:ml-6 lg:w-[360px] lg:float-right"></div>
 
     <!-- New ONE-TAP SHARE floating card -->
     <div class="col-span-2">
@@ -1718,6 +1722,57 @@ window.app = app;
 @keyframes gbRipple {
   from { opacity:.5; transform:translate(-50%,-50%) scale(.6); }
   to   { opacity:0;  transform:translate(-50%,-50%) scale(1.2); }
+}
+</style>
+
+<script>
+/* Move the existing “Today’s gap” mini-card into the new slot next to the Ledger. */
+(function () {
+  var src  = document.getElementById('todays-gap-card');
+  var slot = document.getElementById('gap-spotlight-slot');
+  if (!src || !slot) return;
+
+  // Move the whole mini-card (keeps its content/logic intact)
+  slot.appendChild(src);
+
+  // Spotlight styles (float + soft glow)
+  src.id = 'todays-gap-spotlight';
+  src.classList.add('gap-spotlight', 'gap-glow');
+
+  // If the Bridge panel had spacing adjusted by removing this card, no-op is fine.
+})();
+</script>
+
+<style>
+/* Gentle float to draw attention without being noisy */
+.gap-spotlight {
+  position: sticky;        /* sticks while scrolling the ledger */
+  top: 1rem;
+  z-index: 1;
+  animation: gapFloat 6s ease-in-out infinite;
+  will-change: transform, box-shadow;
+}
+
+/* Soft breathing glow matching your accent */
+.gap-glow {
+  box-shadow: 0 0 0 0 rgba(77,163,255,.0);
+  animation: gapFloat 6s ease-in-out infinite, gapPulse 2.8s ease-in-out infinite;
+}
+
+@keyframes gapFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+
+@keyframes gapPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(77,163,255,.00); }
+  50%  { box-shadow: 0 0 24px 2px rgba(77,163,255,.25); }
+  100% { box-shadow: 0 0 0 0 rgba(77,163,255,.00); }
+}
+
+/* Respect small screens: no float/sticky on mobile to avoid layout squeeze */
+@media (max-width: 1023px) {
+  .gap-spotlight { position: static; top: auto; }
 }
 </style>
 </body>
