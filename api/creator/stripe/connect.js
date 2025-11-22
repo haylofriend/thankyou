@@ -8,7 +8,7 @@ const {
   supabase,
   parseBody,
   json,
-  getUserFromAuthHeader
+  authenticateRequest,
 } = require('../../_stripeShared');
 
 module.exports = async function handler(req, res) {
@@ -21,14 +21,17 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    // 1) Identify the current user from the Authorization: Bearer <token> header
-    const user = await getUserFromAuthHeader(req);
-    if (!user) {
-      return json(res, 401, { error: 'Unauthorized' });
+    // 1) Identify the current user via Supabase JWT
+    const authResult = await authenticateRequest(req, res);
+    if (!authResult || !authResult.user) {
+      // authenticateRequest already sent the error response (401/500)
+      return;
     }
 
+    const user = authResult.user;
+
     // 2) Read optional return_url from body
-    const body = parseBody(req);
+    const body = parseBody(req) || {};
     const requestedReturnUrl = body.return_url;
 
     const defaultDashboard =
@@ -46,12 +49,11 @@ module.exports = async function handler(req, res) {
       .maybeSingle();
 
     if (profileError && profileError.code !== 'PGRST116') {
-      console.warn('Profile lookup error', profileError);
+      console.warn('creator/stripe/connect profile lookup error', profileError);
     }
 
-    let accountId = profile && profile.stripe_account_id
-      ? profile.stripe_account_id
-      : null;
+    let accountId =
+      profile && profile.stripe_account_id ? profile.stripe_account_id : null;
 
     // 4) If no Stripe account yet, create one and store it
     if (!accountId) {
@@ -60,11 +62,11 @@ module.exports = async function handler(req, res) {
         email: user.email || undefined,
         business_type: 'individual',
         capabilities: {
-          transfers: { requested: true }
+          transfers: { requested: true },
         },
         metadata: {
-          supabase_user_id: user.id
-        }
+          supabase_user_id: user.id,
+        },
       });
 
       accountId = account.id;
@@ -75,18 +77,18 @@ module.exports = async function handler(req, res) {
         .upsert(
           {
             id: user.id,
-            stripe_account_id: accountId
+            stripe_account_id: accountId,
           },
           { onConflict: 'id' }
         );
     }
 
     // 5) Create an onboarding link for this Stripe account
-    const accountLink = await stripe.accountLinks.create({
+   const accountLink = await stripe.accountLinks.create({
       account: accountId,
       refresh_url: refreshUrl,
       return_url: returnUrl,
-      type: 'account_onboarding'
+      type: 'account_onboarding',
     });
 
     return json(res, 200, { url: accountLink.url });
