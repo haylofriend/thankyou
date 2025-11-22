@@ -1,73 +1,131 @@
 // api/utils/getUserFromAuthHeader.js
 //
-// Reads the Authorization: Bearer <jwt> header, validates it with Supabase,
-// and returns a normalized `user` object (or null on failure).
+// Central helpers for reading Supabase auth from the Authorization header.
+// - getAuthResult(req) => { user, token } OR { error, message, status }
+// - getUserFromAuthHeader(req) => user | null (legacy, for older callers)
 //
-// NOTE:
-// - Never throws. All errors are logged and result in `null`.
-// - Normalizes ID so callers can safely use `user.id`.
+// This file never throws; it always returns a structured result.
 
-const { supabase } = require('../_supabaseClient'); // or your shared supabase module
+const { supabase } = require('../_supabaseClient');
 
-async function getUserFromAuthHeader(req) {
+/**
+ * Normalize the Supabase user into a predictable shape.
+ */
+function normalizeUser(payload) {
+  if (!payload) return null;
+
+  const id = payload.id || payload.sub;
+
+  return {
+    id,
+    sub: payload.sub || payload.id,
+    email: payload.email || null,
+    role:
+      payload.role ||
+      payload.app_metadata?.role ||
+      payload.user_metadata?.role ||
+      'authenticated',
+    aud: payload.aud,
+    app_metadata: payload.app_metadata || {},
+    user_metadata: payload.user_metadata || {},
+    raw: payload,
+  };
+}
+
+function buildAuthError({ code, message, status = 401 }) {
+  return { error: code, message, status };
+}
+
+/**
+ * Low-level auth helper that never throws.
+ *
+ * On success:
+ *   { user, token }
+ *
+ * On failure:
+ *   { error, message, status }
+ */
+async function getAuthResult(req) {
   try {
-    const authHeader =
-      req.headers.authorization || req.headers.Authorization || '';
-
-    if (!authHeader.toLowerCase().startsWith('bearer ')) {
-      console.warn('[getUserFromAuthHeader] Missing or non-bearer Authorization header');
-      return null;
+    if (!supabase) {
+      console.error('[getAuthResult] Supabase client unavailable');
+      return buildAuthError({
+        code: 'AUTH_NOT_CONFIGURED',
+        message: 'Authentication service unavailable',
+        status: 500,
+      });
     }
 
-    const token = authHeader.slice('bearer '.length).trim();
+    const header =
+      req.headers?.authorization || req.headers?.Authorization || '';
+
+    if (
+      typeof header !== 'string' ||
+      !header.toLowerCase().startsWith('bearer ')
+    ) {
+      console.warn('[getAuthResult] Missing or non-bearer Authorization header');
+      return buildAuthError({
+        code: 'MISSING_TOKEN',
+        message: 'Authentication required',
+      });
+    }
+
+    const token = header.slice('bearer '.length).trim();
     if (!token) {
-      console.warn('[getUserFromAuthHeader] Empty bearer token');
-      return null;
+      console.warn('[getAuthResult] Empty bearer token');
+      return buildAuthError({
+        code: 'MISSING_TOKEN',
+        message: 'Authentication required',
+      });
     }
 
-    // Validate token with Supabase
     const { data, error } = await supabase.auth.getUser(token);
 
     if (error || !data || !data.user) {
-      console.warn('[getUserFromAuthHeader] Failed to get user from token', {
-        error,
+      console.warn('[getAuthResult] Failed to get user from token', { error });
+      return buildAuthError({
+        code: 'INVALID_TOKEN',
+        message: 'Authentication required',
       });
-      return null;
     }
 
-    const payload = data.user;
+    const user = normalizeUser(data.user);
 
-    // Normalize user shape so downstream code can safely use user.id
-    const user = {
-      id: payload.id || payload.sub, // <----- critical fix
-      sub: payload.sub || payload.id,
-      email: payload.email,
-      role:
-        payload.role ||
-        payload.app_metadata?.role ||
-        'authenticated',
-      app_metadata: payload.app_metadata || {},
-      user_metadata: payload.user_metadata || {},
-      raw: payload,
-    };
-
-    if (!user.id) {
-      console.warn('[getUserFromAuthHeader] User has no id/sub in payload', {
-        payload,
+    if (!user || !user.id) {
+      console.warn('[getAuthResult] User has no id/sub in payload', {
+        payload: data.user,
       });
-      return null;
+      return buildAuthError({
+        code: 'INVALID_TOKEN',
+        message: 'Authentication required',
+      });
     }
 
-    return user;
+    return { user, token };
   } catch (err) {
-    console.error('[getUserFromAuthHeader] Unexpected error', {
+    console.error('[getAuthResult] Unexpected error', {
       message: err && err.message,
       stack: err && err.stack,
     });
-    return null;
+    return buildAuthError({
+      code: 'AUTH_UNKNOWN_ERROR',
+      message: 'Authentication failed',
+      status: 500,
+    });
   }
 }
 
+/**
+ * Legacy convenience: returns just `user | null`.
+ * Callers that need richer error info should use getAuthResult().
+ */
+async function getUserFromAuthHeader(req) {
+  const result = await getAuthResult(req);
+  return result && result.user ? result.user : null;
+}
+
 module.exports = {
+  getAuthResult,
   getUserFromAuthHeader,
+  normalizeUser,
 };
