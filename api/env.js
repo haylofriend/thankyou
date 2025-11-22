@@ -3,11 +3,30 @@ export const config = {
 };
 
 export default async function handler(req) {
+  const requestOrigin = (() => {
+    try {
+      return new URL(req?.url || "https://www.haylofriend.com").origin;
+    } catch (_) {
+      return "https://www.haylofriend.com";
+    }
+  })();
+
   function canonicalLoginPath(raw) {
     const fallback = "/auth/google/";
     if (!raw || typeof raw !== "string") return fallback;
     const value = raw.trim();
     if (!value) return fallback;
+    if (value.startsWith("http://") || value.startsWith("https://")) {
+      try {
+        const url = new URL(value, requestOrigin);
+        if (url.origin !== requestOrigin) return fallback;
+        const search = url.search || "";
+        const hash = url.hash || "";
+        return `${url.pathname}${search}${hash}`;
+      } catch (_) {
+        return fallback;
+      }
+    }
     if (value.startsWith("/")) return value;
     return fallback;
   }
