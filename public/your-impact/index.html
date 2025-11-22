@@ -107,6 +107,12 @@
     .dot{width:6px;height:6px;border-radius:999px;background:var(--acc)}
     .mini-burst{pointer-events:none;position:fixed;inset:0;display:none}
     .mini-burst.active{display:block}
+    .hf-dashboard-grid{display:grid;grid-template-columns:1fr;gap:24px}
+    @media (min-width:768px){.hf-dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (min-width:1024px){.hf-dashboard-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    .hf-card{cursor:grab;user-select:none}
+    .hf-card:active{cursor:grabbing}
+    .hf-card.hf-dragging{opacity:.92;transform:scale(1.01);transition:transform .18s ease,opacity .18s ease}
   </style>
 </head>
 <body>
@@ -166,10 +172,10 @@
     </div>
   </section>
 
-  <!-- CORE: Possibility → Reality → Bridge -->
-  <section class="mt-8 grid lg:grid-cols-3 gap-6">
+  <!-- Movable dashboard grid -->
+  <main id="hf-dashboard-movable" class="hf-dashboard-grid mt-8">
     <!-- Possibility -->
-    <div class="glass rounded-2xl p-5">
+    <section class="hf-card glass rounded-2xl p-5" data-card-id="project-upside">
       <div class="text-xs uppercase text-white/60">Possibility</div>
       <h3 class="text-2xl font-semibold mt-1">Project your upside</h3>
       <div class="mt-4 space-y-3">
@@ -188,10 +194,10 @@
           <div class="text-xs text-white/60 mt-1">Assumptions adjustable anytime</div>
         </div>
       </div>
-    </div>
+    </section>
 
     <!-- Reality -->
-    <div class="glass rounded-2xl p-5">
+    <section class="hf-card glass rounded-2xl p-5" data-card-id="reality">
       <div class="text-xs uppercase text-white/60">Reality</div>
       <h3 class="text-2xl font-semibold mt-1">What actually happened</h3>
       <div class="grid grid-cols-3 gap-3 mt-4 text-sm">
@@ -230,10 +236,10 @@
           </button>
         </div>
       </div>
-    </div>
+    </section>
 
     <!-- Bridge the Gap -->
-    <div class="glass rounded-2xl p-5 flex flex-col gap-4">
+    <section class="hf-card glass rounded-2xl p-5 flex flex-col gap-4" data-card-id="copilot-bridge">
       <div>
         <div class="text-xs uppercase text-white/60">Bridge</div>
         <h3 class="text-2xl font-semibold mt-1">
@@ -310,30 +316,11 @@
         Open AI Co-Pilot
         <span class="w-1.5 h-1.5 rounded-full bg-[var(--acc)] animate-pulse"></span>
       </button>
-    </div>
-  </section>
+    </section>
 
   <!-- Ledger & Share blocks -->
-  <section class="mt-8 grid lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2 glass rounded-2xl p-5">
-      <div class="text-xs uppercase text-white/60">Your Gratitude Ledger</div>
-      <div class="mt-3 space-y-2 max-h-[340px] overflow-auto pr-1">
-        <div v-for="(e, idx) in events" :key="idx" class="flex items-center justify-between p-3 rounded-xl border border-white/10 bg-white/5">
-          <div class="flex items-center gap-3">
-            <div class="w-2 h-2 rounded-full" :class="eventColor(e.type)"></div>
-            <div class="text-sm">{{ e.label }}</div>
-          </div>
-          <div class="text-sm text-white/70">{{ e.value }}</div>
-        </div>
-      <div v-if="!events.length" class="text-white/60 text-sm">No entries yet—your first share will light this up.</div>
-      </div>
-    </div>
-
-    <!-- Spotlight slot for Today's gap (sits next to the ledger on large screens) -->
-    <div id="gap-spotlight-slot" class="mt-6 lg:mt-0 lg:ml-6 lg:w-[360px] lg:float-right"></div>
-
     <!-- New ONE-TAP SHARE floating card -->
-    <div class="col-span-2">
+    <section class="hf-card" data-card-id="invite-thankyou">
       <div
         class="
           glass rounded-2xl p-6
@@ -430,10 +417,10 @@
           <span id="sharePreview" class="mt-1 block text-[13px] text-white/50 break-all"></span>
         </div>
       </div>
-    </div>
+    </section>
 
     <!-- ===== Gratitude Bloom (standalone island — no auth / app changes) ===== -->
-    <div id="gbloom-card" class="glass rounded-2xl p-5 flex flex-col gap-4">
+    <section id="gbloom-card" class="hf-card glass rounded-2xl p-5 flex flex-col gap-4" data-card-id="tip-bloom">
       <div>
         <div class="text-[11px] uppercase tracking-wide text-white/60">Gratitude</div>
         <h3 class="text-2xl font-semibold mt-1">Tip & Bloom</h3>
@@ -514,8 +501,29 @@
       <div id="gbloom-toast" class="hidden rounded-xl border border-emerald-400/40 bg-emerald-400/10 p-3 text-sm text-emerald-100">
         You made someone’s day. And tomorrow’s. 🌱
       </div>
-    </div>
-  </section>
+    </section>
+
+    <!-- Ledger -->
+    <section class="hf-card glass rounded-2xl p-5" data-card-id="gratitude-ledger">
+      <div class="text-xs uppercase text-white/60">Your Gratitude Ledger</div>
+      <div class="mt-3 space-y-2 max-h-[340px] overflow-auto pr-1">
+        <div v-for="(e, idx) in events" :key="idx" class="flex items-center justify-between p-3 rounded-xl border border-white/10 bg-white/5">
+          <div class="flex items-center gap-3">
+            <div class="w-2 h-2 rounded-full" :class="eventColor(e.type)"></div>
+            <div class="text-sm">{{ e.label }}</div>
+          </div>
+          <div class="text-sm text-white/70">{{ e.value }}</div>
+        </div>
+      <div v-if="!events.length" class="text-white/60 text-sm">No entries yet—your first share will light this up.</div>
+      </div>
+    </section>
+
+    <!-- Today’s gap spotlight (movable) -->
+    <section class="hf-card glass rounded-2xl p-5" data-card-id="todays-gap">
+      <div class="text-xs uppercase text-white/60">Today’s gap</div>
+      <div id="gap-spotlight-slot" class="mt-4"></div>
+    </section>
+  </main>
 
   <!-- AI Co-Pilot (drawer) -->
   <div v-if="openCopilot" class="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center md:justify-center p-4">
@@ -559,6 +567,48 @@
 
 <!-- Vue (CDN) -->
 <script src="https://unpkg.com/vue@3"></script>
+
+<script>
+(function(){
+  const grid = document.getElementById('hf-dashboard-movable');
+  if (!grid) return;
+
+  let dragging = null;
+
+  grid.querySelectorAll('.hf-card').forEach(card => {
+    card.setAttribute('draggable', 'true');
+    card.addEventListener('dragstart', (e) => {
+      dragging = card;
+      card.classList.add('hf-dragging');
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', card.dataset.cardId || '');
+      }
+    });
+
+    card.addEventListener('dragend', () => {
+      card.classList.remove('hf-dragging');
+      dragging = null;
+    });
+  });
+
+  grid.addEventListener('dragover', (e) => {
+    if (!dragging) return;
+    e.preventDefault();
+    const target = e.target.closest('.hf-card');
+    if (!target || target === dragging) return;
+    const rect = target.getBoundingClientRect();
+    const before = e.clientY < rect.top + rect.height / 2;
+    if (before) {
+      grid.insertBefore(dragging, target);
+    } else {
+      grid.insertBefore(dragging, target.nextSibling);
+    }
+  });
+
+  grid.addEventListener('drop', (e) => e.preventDefault());
+})();
+</script>
 
 <script>
 const { createApp, ref, computed, onMounted, watch } = Vue;
