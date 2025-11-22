@@ -103,11 +103,71 @@
     .fade-in{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
     .fade-in.visible{opacity:1;transform:translateY(0)}
     .tick{position:relative}
-    .tick:after{content:'';position:absolute;left:0;bottom:-2px;height:2px;width:100%;background:linear-gradient(90deg,transparent,rgba(77,163,255,.6),transparent)}
-    .dot{width:6px;height:6px;border-radius:999px;background:var(--acc)}
-    .mini-burst{pointer-events:none;position:fixed;inset:0;display:none}
-    .mini-burst.active{display:block}
-  </style>
+      .tick:after{content:'';position:absolute;left:0;bottom:-2px;height:2px;width:100%;background:linear-gradient(90deg,transparent,rgba(77,163,255,.6),transparent)}
+      .dot{width:6px;height:6px;border-radius:999px;background:var(--acc)}
+      .mini-burst{pointer-events:none;position:fixed;inset:0;display:none}
+      .mini-burst.active{display:block}
+
+      /* === 3-lane desktop layout (under KPI row) === */
+      .hf-dashboard-lanes {
+        display: grid;
+        grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1.2fr);
+        gap: 1.5rem;
+        align-items: flex-start;
+        width: 100%;
+        margin-top: 1.5rem;
+      }
+
+      /* Each lane is a vertical stack of cards */
+      .hf-lane {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      /* Base card hook – keep your existing visual styles too */
+      .hf-card {
+        border-radius: 1rem;
+        padding: 1rem;
+        /* keep/merge your current background, shadows, typography etc. */
+      }
+
+      /* Tablet: 2 lanes (left+center together, right below or above depending on design) */
+      @media (max-width: 1200px) {
+        .hf-dashboard-lanes {
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+          grid-template-rows: auto auto;
+          grid-template-areas:
+            "left center"
+            "right right";
+        }
+
+        .hf-lane-left {
+          grid-area: left;
+        }
+
+        .hf-lane-center {
+          grid-area: center;
+        }
+
+        .hf-lane-right {
+          grid-area: right;
+        }
+      }
+
+      /* Mobile: single lane, story-ordered */
+      @media (max-width: 768px) {
+        .hf-dashboard-lanes {
+          display: flex;
+          flex-direction: column;
+          gap: 1.5rem;
+        }
+
+        .hf-lane {
+          /* lanes just become sub-stacks in a single column */
+        }
+      }
+    </style>
 </head>
 <body>
 <div id="app" class="max-w-[1160px] mx-auto px-6 py-8 pb-28" v-cloak>
@@ -167,352 +227,339 @@
   </section>
 
   <!-- CORE: Possibility → Reality → Bridge -->
-  <section class="mt-8 grid lg:grid-cols-3 gap-6">
-    <!-- Possibility -->
-    <div class="glass rounded-2xl p-5">
-        <div class="text-xs uppercase text-white/60">Possibility</div>
-        <h3 class="text-2xl font-semibold mt-1">See what’s possible</h3>
-      <div class="mt-4 space-y-3">
-        <div>
-          <div class="flex justify-between text-xs text-white/60 mb-1"><span>Shares/day</span><span>{{ sharesPerDay }}</span></div>
-          <input type="range" min="1" max="50" v-model.number="sharesPerDay" class="w-full">
-        </div>
-        <div class="grid grid-cols-3 gap-3 text-sm">
-          <div><div class="text-white/60 text-xs mb-1">Tip rate</div><input type="range" min="5" max="80" v-model.number="assumeTipRate" class="w-full"><div class="mt-1">{{ assumeTipRate }}%</div></div>
-          <div><div class="text-white/60 text-xs mb-1">Avg tip</div><input type="range" min="1" max="10" v-model.number="assumeAvgTip" class="w-full"><div class="mt-1">$ {{ assumeAvgTip }}</div></div>
-          <div><div class="text-white/60 text-xs mb-1">Ref cut</div><input type="range" min="0" max="100" v-model.number="assumeRefCents" class="w-full"><div class="mt-1">{{ assumeRefCents }}¢</div></div>
-        </div>
-        <div class="mt-2 p-3 rounded-xl bg-white/5 border border-white/10">
-          <div class="text-xs uppercase text-white/60">30-day potential</div>
-          <div class="text-3xl font-semibold mt-1">$ {{ monthlyPotential.toFixed(0) }}</div>
-          <div class="text-xs text-white/60 mt-1">Assumptions adjustable anytime</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Reality -->
-    <div class="glass rounded-2xl p-5">
-      <div class="text-xs uppercase text-white/60">Reality</div>
-      <h3 class="text-2xl font-semibold mt-1">What actually happened</h3>
-      <div class="grid grid-cols-3 gap-3 mt-4 text-sm">
-        <div class="glass rounded-xl p-3 text-center">
-          <div class="text-white/60 text-xs">Tips</div>
-          <div class="text-xl font-medium">{{ kpi.tips }}</div>
-        </div>
-        <div class="glass rounded-xl p-3 text-center">
-          <div class="text-white/60 text-xs">Connections</div>
-          <div class="text-xl font-medium">{{ kpi.referrals }}</div>
-        </div>
-        <div class="glass rounded-xl p-3 text-center">
-          <div class="text-white/60 text-xs">Approved</div>
-          <div class="text-xl font-medium">$ {{ kpi.approved.toFixed(2) }}</div>
-        </div>
-      </div>
-      <div class="mt-4">
-        <div class="text-xs uppercase text-white/60">Payout</div>
-        <div class="flex items-center justify-between mt-1">
-          <div class="text-lg font-semibold">$ {{ payoutNextAmount.toFixed(2) }}</div>
-          <div class="text-sm text-white/60">{{ payoutNextLabel }}</div>
-        </div>
-        <div class="h-1 w-full bg-white/10 rounded mt-2 overflow-hidden"><div :style="{width: payoutPct + '%'}" class="h-1 bg-[var(--acc)] transition-all"></div></div>
-        <div class="mt-2 flex items-center justify-between">
-          <div class="text-xs text-slate-400">
-            Payout next Friday
-          </div>
-          <button
-            id="sourceButton"
-            type="button"
-            class="inline-flex items-center gap-1 text-[11px] px-3 py-1 rounded-full border border-amber-300/40 bg-white/0 text-amber-100 hover:bg-amber-400/10 hover:border-amber-300 hover:text-amber-50 cursor-pointer shadow-sm hover:shadow-[0_0_0_1px_rgba(251,191,36,0.45)] transition-transform transition-shadow duration-150 ease-out hover:-translate-y-0.5"
-            title="See exactly how this payout is calculated"
-          >
-            <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span class="uppercase tracking-wide">Source</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Bridge the Gap -->
-    <div class="glass rounded-2xl p-5 flex flex-col gap-4">
-      <div>
-        <div class="text-xs uppercase text-white/60">Bridge</div>
-        <h3 class="text-2xl font-semibold mt-1">
-          Co-Pilot: bridge the gap
-        </h3>
-        <p class="mt-2 text-sm text-white/70">
-          We read your reality and your possibility, then suggest the next tiny move to close the gap.
-        </p>
-      </div>
-
-      <!-- Gap meter: Reality → Possibility -->
-      <div
-        id="todays-gap-card"
-        class="glass rounded-xl p-3 cursor-pointer hover:bg-white/10 transition"
-        @click="goToCreate"
-      >
-        <div class="flex items-center justify-between text-[11px] text-white/60">
-          <span class="flex items-center gap-1">
-            Today’s gap
-            <span class="w-1.5 h-1.5 rounded-full bg-[color:var(--acc)] animate-pulse"></span>
-          </span>
-          <span>
-            {{ bridgePct }}% of ${{ monthlyPotential.toFixed(0) }}
-          </span>
-        </div>
-        <div class="mt-2 h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-          <div
-            class="h-1.5 rounded-full bg-[color:var(--acc)] transition-all"
-            :style="{ width: Math.min(100, bridgePct) + '%' }"
-          ></div>
-        </div>
-        <div class="mt-2 text-[11px] text-white/60">
-          Tap to open your Create workspace and design how to close this gap.
-        </div>
-      </div>
-
-      <!-- Co-Pilot lane: 3 focused nudges -->
-      <ul class="mt-1 space-y-2">
-        <li
-          v-for="(t, i) in tasks"
-          :key="i"
-          class="flex items-center justify-between p-3 rounded-xl border border-white/10 bg-white/5"
-        >
-          <div class="flex items-center gap-3">
-            <input
-              type="checkbox"
-              class="w-4 h-4 accent-[var(--acc)]"
-              v-model="t.done"
-              @change="maybeCelebrate"
-            />
+    <section class="mt-8 hf-dashboard-lanes">
+      <!-- LEFT LANE: Possibility + Reality -->
+      <div class="hf-lane hf-lane-left">
+        <section class="hf-card hf-card-project glass rounded-2xl p-5">
+            <div class="text-xs uppercase text-white/60">Possibility</div>
+            <h3 class="text-2xl font-semibold mt-1">See what’s possible</h3>
+          <div class="mt-4 space-y-3">
             <div>
-              <div class="text-sm font-medium">
-                {{ t.title }}
+              <div class="flex justify-between text-xs text-white/60 mb-1"><span>Shares/day</span><span>{{ sharesPerDay }}</span></div>
+              <input type="range" min="1" max="50" v-model.number="sharesPerDay" class="w-full">
+            </div>
+            <div class="grid grid-cols-3 gap-3 text-sm">
+              <div><div class="text-white/60 text-xs mb-1">Tip rate</div><input type="range" min="5" max="80" v-model.number="assumeTipRate" class="w-full"><div class="mt-1">{{ assumeTipRate }}%</div></div>
+              <div><div class="text-white/60 text-xs mb-1">Avg tip</div><input type="range" min="1" max="10" v-model.number="assumeAvgTip" class="w-full"><div class="mt-1">$ {{ assumeAvgTip }}</div></div>
+              <div><div class="text-white/60 text-xs mb-1">Ref cut</div><input type="range" min="0" max="100" v-model.number="assumeRefCents" class="w-full"><div class="mt-1">{{ assumeRefCents }}¢</div></div>
+            </div>
+            <div class="mt-2 p-3 rounded-xl bg-white/5 border border-white/10">
+              <div class="text-xs uppercase text-white/60">30-day potential</div>
+              <div class="text-3xl font-semibold mt-1">$ {{ monthlyPotential.toFixed(0) }}</div>
+              <div class="text-xs text-white/60 mt-1">Assumptions adjustable anytime</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="hf-card hf-card-reality glass rounded-2xl p-5">
+          <div class="text-xs uppercase text-white/60">Reality</div>
+          <h3 class="text-2xl font-semibold mt-1">What actually happened</h3>
+          <div class="grid grid-cols-3 gap-3 mt-4 text-sm">
+            <div class="glass rounded-xl p-3 text-center">
+              <div class="text-white/60 text-xs">Tips</div>
+              <div class="text-xl font-medium">{{ kpi.tips }}</div>
+            </div>
+            <div class="glass rounded-xl p-3 text-center">
+              <div class="text-white/60 text-xs">Connections</div>
+              <div class="text-xl font-medium">{{ kpi.referrals }}</div>
+            </div>
+            <div class="glass rounded-xl p-3 text-center">
+              <div class="text-white/60 text-xs">Approved</div>
+              <div class="text-xl font-medium">$ {{ kpi.approved.toFixed(2) }}</div>
+            </div>
+          </div>
+          <div class="mt-4">
+            <div class="text-xs uppercase text-white/60">Payout</div>
+            <div class="flex items-center justify-between mt-1">
+              <div class="text-lg font-semibold">$ {{ payoutNextAmount.toFixed(2) }}</div>
+              <div class="text-sm text-white/60">{{ payoutNextLabel }}</div>
+            </div>
+            <div class="h-1 w-full bg-white/10 rounded mt-2 overflow-hidden"><div :style="{width: payoutPct + '%'}" class="h-1 bg-[var(--acc)] transition-all"></div></div>
+            <div class="mt-2 flex items-center justify-between">
+              <div class="text-xs text-slate-400">
+                Payout next Friday
               </div>
-              <div class="text-xs text-white/60">
-                {{ t.meta }}
+              <button
+                id="sourceButton"
+                type="button"
+                class="inline-flex items-center gap-1 text-[11px] px-3 py-1 rounded-full border border-amber-300/40 bg-white/0 text-amber-100 hover:bg-amber-400/10 hover:border-amber-300 hover:text-amber-50 cursor-pointer shadow-sm hover:shadow-[0_0_0_1px_rgba(251,191,36,0.45)] transition-transform transition-shadow duration-150 ease-out hover:-translate-y-0.5"
+                title="See exactly how this payout is calculated"
+              >
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="uppercase tracking-wide">Source</span>
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- MIDDLE LANE: Co-Pilot -->
+      <div class="hf-lane hf-lane-center">
+        <section class="hf-card hf-card-copilot glass rounded-2xl p-5 flex flex-col gap-4">
+          <div>
+            <div class="text-xs uppercase text-white/60">Bridge</div>
+            <h3 class="text-2xl font-semibold mt-1">
+              Co-Pilot: bridge the gap
+            </h3>
+            <p class="mt-2 text-sm text-white/70">
+              We read your reality and your possibility, then suggest the next tiny move to close the gap.
+            </p>
+          </div>
+
+          <!-- Co-Pilot lane: 3 focused nudges -->
+          <ul class="mt-1 space-y-2">
+            <li
+              v-for="(t, i) in tasks"
+              :key="i"
+              class="flex items-center justify-between p-3 rounded-xl border border-white/10 bg-white/5"
+            >
+              <div class="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  class="w-4 h-4 accent-[var(--acc)]"
+                  v-model="t.done"
+                  @change="maybeCelebrate"
+                />
+                <div>
+                  <div class="text-sm font-medium">
+                    {{ t.title }}
+                  </div>
+                  <div class="text-xs text-white/60">
+                    {{ t.meta }}
+                  </div>
+                </div>
+              </div>
+              <button
+                class="px-3 py-1.5 rounded-full border border-white/14 text-[11px] text-white/80 hover:bg-white/5 transition"
+                @click="t.act()"
+              >
+                {{ t.cta }}
+              </button>
+            </li>
+          </ul>
+
+          <button
+            class="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-xl border border-white/14 bg-white/5 px-4 py-2 text-sm text-white/90 hover:bg-white/8 transition"
+            @click="openCopilot = true"
+          >
+            Open AI Co-Pilot
+            <span class="w-1.5 h-1.5 rounded-full bg-[var(--acc)] animate-pulse"></span>
+          </button>
+        </section>
+      </div>
+
+      <!-- RIGHT LANE: Gratitude lane -->
+      <div class="hf-lane hf-lane-right">
+        <section class="hf-card hf-card-onetap glass rounded-2xl p-6 border border-white/10 shadow-[0_18px_50px_rgba(0,0,0,0.7)] flex flex-col gap-5">
+          <div class="text-xs uppercase tracking-[0.18em] text-white/70">
+            ONE-TAP SHARE
+          </div>
+
+          <h3 class="text-2xl font-semibold text-white">
+            Invite a thank-you
+          </h3>
+
+          <p class="text-sm text-white/70 leading-relaxed">
+            Sometimes the smallest appreciation becomes the brightest moment.
+            Share your link with someone who made you feel seen — only if it feels true.
+          </p>
+
+          <!-- Main CTA -->
+          <button
+            @click="sharePrimary"
+            class="
+              relative overflow-hidden
+              w-full inline-flex items-center justify-center gap-2
+              px-6 py-2 rounded-full
+              bg-black text-white font-medium text-sm
+              shadow-[0_0_0_1px_rgba(255,255,255,0.12)]
+              transition-all duration-200
+              hover:shadow-[0_0_25px_rgba(150,150,255,0.45)]
+              hover:scale-[1.02]
+            "
+          >
+            Share The Magic
+
+            <span class="relative flex items-center justify-center">
+              <img
+                src="/haylofriend_sunrise_halo.svg"
+                alt="halo"
+                width="18"
+                height="18"
+                class="opacity-90"
+              />
+            </span>
+          </button>
+
+          <!-- Secondary actions grid -->
+          <div class="grid grid-cols-2 gap-3">
+            <button
+              @click="share('x')"
+              class="px-3 py-2 rounded-full border border-white/10 text-sm text-white/80 hover:bg-white/5 transition"
+            >
+              Post on X
+            </button>
+
+            <button
+              @click="share('sms')"
+              class="px-3 py-2 rounded-full border border-white/10 text-sm text-white/80 hover:bg-white/5 transition"
+            >
+              Text a regular
+            </button>
+
+            <button
+              @click="downloadQR"
+              class="px-3 py-2 rounded-full border border-white/10 text-sm text-white/80 hover:bg-white/5 transition"
+            >
+              Download QR
+            </button>
+
+            <button
+              @click="copyOneLine"
+              class="px-3 py-2 rounded-full border border-white/10 text-sm text-white/80 hover:bg-white/5 transition"
+            >
+              Copy 1-line DM
+            </button>
+          </div>
+
+          <!-- Script preview -->
+          <div
+            class="
+              rounded-2xl border border-white/10
+              bg-white/5
+              p-4 text-sm text-white/80 leading-relaxed
+            "
+          >
+            “I made a tiny space for gratitude.
+            No expectation — just a place for kindness, when it wants to land 💛
+            <br />
+            <span id="sharePreview" class="mt-1 block text-[13px] text-white/50 break-all"></span>
+          </div>
+        </section>
+
+        <section id="gbloom-card" class="hf-card hf-card-tipbloom glass rounded-2xl p-5 flex flex-col gap-4">
+          <div>
+            <div class="text-[11px] uppercase tracking-wide text-white/60">Gratitude</div>
+            <h3 class="text-2xl font-semibold mt-1">Tip & Bloom</h3>
+            <p class="mt-1 text-sm text-white/70">Turn today’s thanks into tomorrow’s good.</p>
+          </div>
+
+          <!-- Recipient -->
+          <div>
+            <label class="text-xs text-white/60">Who made your day?</label>
+            <div class="mt-1 flex gap-2">
+              <input id="gbloom-who" type="text" inputmode="text"
+                     placeholder="@handle, email, or name"
+                     class="w-full rounded-xl bg-black/30 border border-white/10 px-3 py-2 text-sm outline-none focus:border-[var(--acc)]/60">
+              <button id="gbloom-clear"
+                      class="px-3 py-2 rounded-xl border border-white/10 text-xs text-white/70 hover:bg-white/5">Clear</button>
+            </div>
+            <div class="mt-2 flex flex-wrap gap-2">
+              <button class="pill text-[11px] hover:bg-white/10" data-gbloom-suggest="@barista">@barista</button>
+              <button class="pill text-[11px] hover:bg-white/10" data-gbloom-suggest="@teacher">@teacher</button>
+              <button class="pill text-[11px] hover:bg-white/10" data-gbloom-suggest="@teammate">@teammate</button>
+              <button class="pill text-[11px] hover:bg-white/10" data-gbloom-suggest="mom@example.com">mom@example.com</button>
+            </div>
+          </div>
+
+          <!-- Amount presets -->
+          <div>
+            <label class="text-xs text-white/60">Tip amount</label>
+            <div class="mt-2 grid grid-cols-4 gap-2">
+              <button class="gbloom-amt rounded-xl border px-3 py-2 text-sm border-white/10 bg-black/20 hover:bg-white/5" data-amt="2">$ 2</button>
+              <button class="gbloom-amt rounded-xl border px-3 py-2 text-sm border-white/10 bg-black/20 hover:bg-white/5" data-amt="5">$ 5</button>
+              <button class="gbloom-amt rounded-xl border px-3 py-2 text-sm border-white/10 bg-black/20 hover:bg-white/5" data-amt="10">$ 10</button>
+              <button class="gbloom-amt rounded-xl border px-3 py-2 text-sm border-white/10 bg-black/20 hover:bg-white/5" data-amt="20">$ 20</button>
+              <div class="col-span-2 relative">
+                <input id="gbloom-custom" type="number" min="1" step="1" placeholder="Custom"
+                       class="w-full rounded-xl bg-black/30 border border-white/10 px-3 py-2 text-sm outline-none focus:border-[var(--acc)]/60">
+                <span class="absolute right-3 top-2 text-white/40 text-xs">USD</span>
               </div>
             </div>
           </div>
-          <button
-            class="px-3 py-1.5 rounded-full border border-white/14 text-[11px] text-white/80 hover:bg-white/5 transition"
-            @click="t.act()"
-          >
-            {{ t.cta }}
-          </button>
-        </li>
-      </ul>
 
-      <button
-        class="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-xl border border-white/14 bg-white/5 px-4 py-2 text-sm text-white/90 hover:bg-white/8 transition"
-        @click="openCopilot = true"
-      >
-        Open AI Co-Pilot
-        <span class="w-1.5 h-1.5 rounded-full bg-[var(--acc)] animate-pulse"></span>
-      </button>
-    </div>
-  </section>
-
-  <!-- Ledger & Share blocks -->
-  <section class="mt-8 grid lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2 glass rounded-2xl p-5">
-      <div class="text-xs uppercase text-white/60">Your Gratitude Ledger</div>
-      <div class="mt-3 space-y-2 max-h-[340px] overflow-auto pr-1">
-        <div v-for="(e, idx) in events" :key="idx" class="flex items-center justify-between p-3 rounded-xl border border-white/10 bg-white/5">
-          <div class="flex items-center gap-3">
-            <div class="w-2 h-2 rounded-full" :class="eventColor(e.type)"></div>
-            <div class="text-sm">{{ e.label }}</div>
+          <!-- Bloom split -->
+          <div>
+            <div class="flex items-center justify-between">
+              <label class="text-xs text-white/60">Bloom split</label>
+              <div class="text-xs text-white/70"><span id="gbloom-split-label">20</span>% to Bloom</div>
+            </div>
+            <input id="gbloom-split" type="range" min="0" max="50" value="20" class="w-full mt-2">
+            <div class="mt-1 text-[11px] text-white/60">
+              Tip <span id="gbloom-tip-pct">80</span>% → recipient · Bloom <span id="gbloom-bloom-pct">20</span>% → pooled good
+            </div>
           </div>
-          <div class="text-sm text-white/70">{{ e.value }}</div>
-        </div>
-      <div v-if="!events.length" class="text-white/60 text-sm">No entries yet—your first share will light this up.</div>
-      </div>
-    </div>
 
-    <!-- Spotlight slot for Today's gap (sits next to the ledger on large screens) -->
-    <div id="gap-spotlight-slot" class="mt-6 lg:mt-0 lg:ml-6 lg:w-[360px] lg:float-right"></div>
-
-    <!-- New ONE-TAP SHARE floating card -->
-    <div class="col-span-2">
-      <div
-        class="
-          glass rounded-2xl p-6
-          border border-white/10
-          shadow-[0_18px_50px_rgba(0,0,0,0.7)]
-          flex flex-col gap-5
-        "
-      >
-        <div class="text-xs uppercase tracking-[0.18em] text-white/70">
-          ONE-TAP SHARE
-        </div>
-
-        <h3 class="text-2xl font-semibold text-white">
-          Invite a thank-you
-        </h3>
-
-        <p class="text-sm text-white/70 leading-relaxed">
-          Sometimes the smallest appreciation becomes the brightest moment.
-          Share your link with someone who made you feel seen — only if it feels true.
-        </p>
-
-        <!-- Main CTA -->
-        <button
-          @click="sharePrimary"
-          class="
-            relative overflow-hidden
-            w-full inline-flex items-center justify-center gap-2
-            px-6 py-2 rounded-full
-            bg-black text-white font-medium text-sm
-            shadow-[0_0_0_1px_rgba(255,255,255,0.12)]
-            transition-all duration-200
-            hover:shadow-[0_0_25px_rgba(150,150,255,0.45)]
-            hover:scale-[1.02]
-          "
-        >
-          Share The Magic
-
-          <span class="relative flex items-center justify-center">
-            <img
-              src="/haylofriend_sunrise_halo.svg"
-              alt="halo"
-              width="18"
-              height="18"
-              class="opacity-90"
-            />
-          </span>
-        </button>
-
-        <!-- Secondary actions grid -->
-        <div class="grid grid-cols-2 gap-3">
-          <button
-            @click="share('x')"
-            class="px-3 py-2 rounded-full border border-white/10 text-sm text-white/80 hover:bg-white/5 transition"
-          >
-            Post on X
-          </button>
-
-          <button
-            @click="share('sms')"
-            class="px-3 py-2 rounded-full border border-white/10 text-sm text-white/80 hover:bg-white/5 transition"
-          >
-            Text a regular
-          </button>
-
-          <button
-            @click="downloadQR"
-            class="px-3 py-2 rounded-full border border-white/10 text-sm text-white/80 hover:bg-white/5 transition"
-          >
-            Download QR
-          </button>
-
-          <button
-            @click="copyOneLine"
-            class="px-3 py-2 rounded-full border border-white/10 text-sm text-white/80 hover:bg-white/5 transition"
-          >
-            Copy 1-line DM
-          </button>
-        </div>
-
-        <!-- Script preview -->
-        <div
-          class="
-            rounded-2xl border border-white/10
-            bg-white/5
-            p-4 text-sm text-white/80 leading-relaxed
-          "
-        >
-          “I made a tiny space for gratitude.
-          No expectation — just a place for kindness, when it wants to land 💛
-          <br />
-          <span id="sharePreview" class="mt-1 block text-[13px] text-white/50 break-all"></span>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== Gratitude Bloom (standalone island — no auth / app changes) ===== -->
-    <div id="gbloom-card" class="glass rounded-2xl p-5 flex flex-col gap-4">
-      <div>
-        <div class="text-[11px] uppercase tracking-wide text-white/60">Gratitude</div>
-        <h3 class="text-2xl font-semibold mt-1">Tip & Bloom</h3>
-        <p class="mt-1 text-sm text-white/70">Turn today’s thanks into tomorrow’s good.</p>
-      </div>
-
-      <!-- Recipient -->
-      <div>
-        <label class="text-xs text-white/60">Who made your day?</label>
-        <div class="mt-1 flex gap-2">
-          <input id="gbloom-who" type="text" inputmode="text"
-                 placeholder="@handle, email, or name"
-                 class="w-full rounded-xl bg-black/30 border border-white/10 px-3 py-2 text-sm outline-none focus:border-[var(--acc)]/60">
-          <button id="gbloom-clear"
-                  class="px-3 py-2 rounded-xl border border-white/10 text-xs text-white/70 hover:bg-white/5">Clear</button>
-        </div>
-        <div class="mt-2 flex flex-wrap gap-2">
-          <button class="pill text-[11px] hover:bg-white/10" data-gbloom-suggest="@barista">@barista</button>
-          <button class="pill text-[11px] hover:bg-white/10" data-gbloom-suggest="@teacher">@teacher</button>
-          <button class="pill text-[11px] hover:bg-white/10" data-gbloom-suggest="@teammate">@teammate</button>
-          <button class="pill text-[11px] hover:bg-white/10" data-gbloom-suggest="mom@example.com">mom@example.com</button>
-        </div>
-      </div>
-
-      <!-- Amount presets -->
-      <div>
-        <label class="text-xs text-white/60">Tip amount</label>
-        <div class="mt-2 grid grid-cols-4 gap-2">
-          <button class="gbloom-amt rounded-xl border px-3 py-2 text-sm border-white/10 bg-black/20 hover:bg-white/5" data-amt="2">$ 2</button>
-          <button class="gbloom-amt rounded-xl border px-3 py-2 text-sm border-white/10 bg-black/20 hover:bg-white/5" data-amt="5">$ 5</button>
-          <button class="gbloom-amt rounded-xl border px-3 py-2 text-sm border-white/10 bg-black/20 hover:bg-white/5" data-amt="10">$ 10</button>
-          <button class="gbloom-amt rounded-xl border px-3 py-2 text-sm border-white/10 bg-black/20 hover:bg-white/5" data-amt="20">$ 20</button>
-          <div class="col-span-2 relative">
-            <input id="gbloom-custom" type="number" min="1" step="1" placeholder="Custom"
-                   class="w-full rounded-xl bg-black/30 border border-white/10 px-3 py-2 text-sm outline-none focus:border-[var(--acc)]/60">
-            <span class="absolute right-3 top-2 text-white/40 text-xs">USD</span>
+          <!-- Privacy + note -->
+          <div class="grid grid-cols-1 gap-2">
+            <label class="inline-flex items-center gap-2 text-sm text-white/80">
+              <input id="gbloom-anon" type="checkbox" class="w-4 h-4 accent-[var(--acc)]" checked>
+              Send anonymously
+            </label>
+            <input id="gbloom-note" maxlength="120" placeholder="Add a kind word (optional)"
+                   class="rounded-xl bg-black/30 border border-white/10 px-3 py-2 text-sm outline-none focus:border-[var(--acc)]/60">
           </div>
-        </div>
-      </div>
 
-      <!-- Bloom split -->
-      <div>
-        <div class="flex items-center justify-between">
-          <label class="text-xs text-white/60">Bloom split</label>
-          <div class="text-xs text-white/70"><span id="gbloom-split-label">20</span>% to Bloom</div>
-        </div>
-        <input id="gbloom-split" type="range" min="0" max="50" value="20" class="w-full mt-2">
-        <div class="mt-1 text-[11px] text-white/60">
-          Tip <span id="gbloom-tip-pct">80</span>% → recipient · Bloom <span id="gbloom-bloom-pct">20</span>% → pooled good
-        </div>
-      </div>
+          <!-- CTA -->
+          <div class="flex flex-col gap-2">
+            <button id="gbloom-send"
+                    data-cta-glow
+                    class="relative overflow-hidden w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl glass text-sm font-medium transition-all hover:animate-pulse-glow">
+              <span class="w-1.5 h-1.5 rounded-full bg-[var(--acc)] animate-pulse"></span>
+              Tip & Bloom
+            </button>
+            <div class="text-[12px] text-white/60">
+              Ripple: $<span id="gbloom-tip-part">4.00</span> → <span id="gbloom-who-label">recipient</span>,
+              $<span id="gbloom-bloom-part">1.00</span> → Bloom
+            </div>
+          </div>
 
-      <!-- Privacy + note -->
-      <div class="grid grid-cols-1 gap-2">
-        <label class="inline-flex items-center gap-2 text-sm text-white/80">
-          <input id="gbloom-anon" type="checkbox" class="w-4 h-4 accent-[var(--acc)]" checked>
-          Send anonymously
-        </label>
-        <input id="gbloom-note" maxlength="120" placeholder="Add a kind word (optional)"
-               class="rounded-xl bg-black/30 border border-white/10 px-3 py-2 text-sm outline-none focus:border-[var(--acc)]/60">
-      </div>
+          <!-- success toast -->
+          <div id="gbloom-toast" class="hidden rounded-xl border border-emerald-400/40 bg-emerald-400/10 p-3 text-sm text-emerald-100">
+            You made someone’s day. And tomorrow’s. 🌱
+          </div>
+        </section>
 
-      <!-- CTA -->
-      <div class="flex flex-col gap-2">
-        <button id="gbloom-send"
-                data-cta-glow
-                class="relative overflow-hidden w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl glass text-sm font-medium transition-all hover:animate-pulse-glow">
-          <span class="w-1.5 h-1.5 rounded-full bg-[var(--acc)] animate-pulse"></span>
-          Tip & Bloom
-        </button>
-        <div class="text-[12px] text-white/60">
-          Ripple: $<span id="gbloom-tip-part">4.00</span> → <span id="gbloom-who-label">recipient</span>,
-          $<span id="gbloom-bloom-part">1.00</span> → Bloom
-        </div>
-      </div>
+        <section
+          id="todays-gap-card"
+          class="hf-card hf-card-todaysgap glass rounded-xl p-3 cursor-pointer hover:bg-white/10 transition"
+          @click="goToCreate"
+        >
+          <div class="flex items-center justify-between text-[11px] text-white/60">
+            <span class="flex items-center gap-1">
+              Today’s gap
+              <span class="w-1.5 h-1.5 rounded-full bg-[color:var(--acc)] animate-pulse"></span>
+            </span>
+            <span>
+              {{ bridgePct }}% of ${{ monthlyPotential.toFixed(0) }}
+            </span>
+          </div>
+          <div class="mt-2 h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+            <div
+              class="h-1.5 rounded-full bg-[color:var(--acc)] transition-all"
+              :style="{ width: Math.min(100, bridgePct) + '%' }"
+            ></div>
+          </div>
+          <div class="mt-2 text-[11px] text-white/60">
+            Tap to open your Create workspace and design how to close this gap.
+          </div>
+        </section>
 
-      <!-- success toast -->
-      <div id="gbloom-toast" class="hidden rounded-xl border border-emerald-400/40 bg-emerald-400/10 p-3 text-sm text-emerald-100">
-        You made someone’s day. And tomorrow’s. 🌱
+        <section class="hf-card hf-card-ledger glass rounded-2xl p-5">
+          <div class="text-xs uppercase text-white/60">Your Gratitude Ledger</div>
+          <div class="mt-3 space-y-2 max-h-[340px] overflow-auto pr-1">
+            <div v-for="(e, idx) in events" :key="idx" class="flex items-center justify-between p-3 rounded-xl border border-white/10 bg-white/5">
+              <div class="flex items-center gap-3">
+                <div class="w-2 h-2 rounded-full" :class="eventColor(e.type)"></div>
+                <div class="text-sm">{{ e.label }}</div>
+              </div>
+              <div class="text-sm text-white/70">{{ e.value }}</div>
+            </div>
+          <div v-if="!events.length" class="text-white/60 text-sm">No entries yet—your first share will light this up.</div>
+          </div>
+        </section>
       </div>
-    </div>
-  </section>
-
+    </section>
   <!-- AI Co-Pilot (drawer) -->
   <div v-if="openCopilot" class="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center md:justify-center p-4">
     <div class="glass rounded-2xl p-5 w-full max-w-2xl">
