@@ -72,6 +72,11 @@ export const ReplenishModal: React.FC<ReplenishModalProps> = ({
     null
   );
 
+  // Share state for the Magic button (controls label + disabled)
+  const [shareState, setShareState] = useState<
+    'idle' | 'sharing' | 'shared' | 'copied' | 'error'
+  >('idle');
+
   // Load status + balance whenever the modal opens
   useEffect(() => {
     if (!isOpen) return;
@@ -167,37 +172,55 @@ export const ReplenishModal: React.FC<ReplenishModalProps> = ({
   async function handleShareLink() {
     if (!shareLink) {
       console.warn('Share link pressed but no shareLink provided');
-      setErrorMessage('We could not find your Haylo link yet. Please try again in a moment.');
+      setErrorMessage(
+        'We could not find your Haylo link yet. Please try again in a moment.'
+      );
       return;
     }
 
+    const shareScript =
+      'Hey, I set up a tiny thank-you space on Haylofriend.\n\n' +
+      'No pressure at all, but if you ever feel like saying thanks or supporting my work, this is where to do it 💛\n' +
+      shareLink;
+
     try {
-      if (typeof navigator !== 'undefined' && navigator.share) {
-        const shareText =
-          'Hey, I set up a tiny thank-you space on Haylofriend.\n\n' +
-          'No pressure at all, but if you ever feel like saying thanks or supporting my work, this is where to do it 💛';
+      setShareState('sharing');
+      setErrorMessage(null);
 
-        await navigator.share({
-          title: 'Share a little gratitude',
-          text: `${shareText}\n${shareLink}`,
-          url: shareLink,
+      if (typeof navigator !== 'undefined' && (navigator as any).share) {
+        // Native share sheet (iOS, some Android & desktop browsers)
+        await (navigator as any).share({
+          title: 'Send a little gratitude',
+          text: shareScript,
         });
-      } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        const shareText =
-          'Quick thank-you link for small kindnesses—no pressure at all:\n' +
-          shareLink;
 
-        await navigator.clipboard.writeText(shareText);
+        setShareState('shared');
+        setErrorMessage('Shared! Thank you for spreading a little gratitude.');
+      } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        // Clipboard fallback with full script + link
+        await navigator.clipboard.writeText(shareScript);
+
+        setShareState('copied');
         setErrorMessage('Gratitude link copied. Paste it into any message 💌');
       } else {
+        // Last-resort: surface the text inline
+        setShareState('error');
         setErrorMessage(
           'Here is your gratitude link. Copy and share it with someone who made your day brighter:\n' +
-            shareLink
+            shareScript
         );
       }
     } catch (err) {
       console.error('Share link error', err);
-      setErrorMessage('Could not open share dialog. Try copying the link.');
+      setShareState('error');
+      setErrorMessage(
+        'Could not open the share dialog. Try again, or copy your link.'
+      );
+    } finally {
+      // Gently reset the button label after a short pause
+      setTimeout(() => {
+        setShareState('idle');
+      }, 2500);
     }
   }
 
@@ -253,14 +276,27 @@ export const ReplenishModal: React.FC<ReplenishModalProps> = ({
             Connect Stripe
           </button>
         );
-      case 'noFunds':
+      case 'noFunds': {
+        const isSharingLocked =
+          flowState === 'loading' || flowState === 'payoutInProgress';
+        const label =
+          shareState === 'sharing'
+            ? 'Sending gratitude…'
+            : shareState === 'shared'
+            ? 'Gratitude link shared 💌'
+            : shareState === 'copied'
+            ? 'Gratitude link copied 💌'
+            : 'Share The Magic';
+
         return (
           <MagicShareButton
             onClick={handleShareLink}
-            disabled={flowState === 'loading' || flowState === 'payoutInProgress'}
+            disabled={isSharingLocked || shareState === 'sharing'}
+            label={label}
             className="w-full"
           />
         );
+      }
       case 'ready':
         return (
           <button
