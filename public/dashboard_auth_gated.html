@@ -1,0 +1,1844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Thank-You Link — Dashboard</title>
+  <!-- Tailwind (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#e7e7ea',
+            bg: '#0b0b0c',
+            card: '#121214',
+            hair: 'rgba(231,231,234,.12)',
+            acc: '#4da3ff',
+            good: '#15c39a',
+            warn: '#ffcc00',
+            bad: '#ff5a5a'
+          },
+          animation: {
+            'pulse-glow': 'pulse-glow 2s ease-in-out infinite alternate',
+            'float': 'float 6s ease-in-out infinite',
+            'ripple': 'ripple 1.5s linear infinite',
+          },
+          keyframes: {
+            'pulse-glow': {
+              '0%': { 'box-shadow': '0 0 5px rgba(77, 163, 255, 0.4)' },
+              '100%': { 'box-shadow': '0 0 20px rgba(77, 163, 255, 0.8), 0 0 30px rgba(77, 163, 255, 0.4)' }
+            },
+            'float': { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } },
+            'ripple': { '0%': { transform: 'scale(0.8)', opacity: '1' }, '100%': { transform: 'scale(2.5)', opacity: '0' } }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Runtime env (load from working API path) -->
+  <script src="/env.js"></script>
+  <script src="/haylo-auth.js"></script>
+  <script>
+    (function () {
+      var targetPath = window.HF_DASHBOARD_URL || '/your-impact';
+      var loginPath = (window.LOGIN_PATH || '/auth/google');
+      var attempted = false;
+      var fallbackTimer = setTimeout(runGate, 4000);
+
+      function toLogin() {
+        try {
+          var url = new URL(loginPath, location.origin);
+          url.searchParams.set('redirect', targetPath);
+          location.replace(url.toString());
+        } catch (_) {
+          location.replace(loginPath + '?redirect=' + encodeURIComponent(targetPath));
+        }
+      }
+
+      function runGate() {
+        if (attempted) return;
+        attempted = true;
+        clearTimeout(fallbackTimer);
+        try {
+          var api = window.HayloAuth;
+          if (api && typeof api.gate === 'function') {
+            api.gate(targetPath).catch(function (err) {
+              console.warn('Auth gate redirect failed', err);
+              toLogin();
+            });
+            return;
+          }
+        } catch (error) {
+          console.error('Auth gate threw an error', error);
+        }
+        toLogin();
+      }
+
+      if (window.HayloAuth && typeof window.HayloAuth.gate === 'function') {
+        runGate();
+      } else {
+        window.addEventListener('hayloauth:ready', runGate, { once: true });
+      }
+    })();
+  </script>
+  <!-- Runtime env fallbacks (only if env.js missing values) -->
+  <script>
+    // Only-if-unset fallbacks (do not overwrite values that env.js sets)
+    window.SUPABASE_URL      = window.SUPABASE_URL      || "";
+    window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "";
+  </script>
+  <!-- Supabase (CDN) -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    :root{--bg:#0b0b0c;--card:#121214;--ink:#e7e7ea;--hair:rgba(231,231,234,.12);--acc:#4da3ff}
+    html,body{height:100%;background:var(--bg)!important}
+    body{margin:0;min-height:100vh;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+    *,*::before,*::after{box-sizing:border-box}
+    .glass{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));border:1px solid var(--hair);box-shadow:0 8px 24px rgba(0,0,0,.35);backdrop-filter:blur(10px)}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid var(--hair);background:rgba(255,255,255,.05)}
+    .gradient-text{background:linear-gradient(135deg,var(--acc),#8acbff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .ripple-effect{position:absolute;border-radius:50%;background:rgba(77,163,255,.4);transform:scale(0);animation:ripple 1.5s linear;pointer-events:none}
+    .fade-in{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
+    .fade-in.visible{opacity:1;transform:translateY(0)}
+    .tick{position:relative}
+    .tick:after{content:'';position:absolute;left:0;bottom:-2px;height:2px;width:100%;background:linear-gradient(90deg,transparent,rgba(77,163,255,.6),transparent)}
+    .dot{width:6px;height:6px;border-radius:999px;background:var(--acc)}
+    .mini-burst{pointer-events:none;position:fixed;inset:0;display:none}
+    .mini-burst.active{display:block}
+  </style>
+</head>
+<body>
+<div id="app" class="max-w-[1160px] mx-auto px-6 py-8 pb-28" v-cloak>
+  <!-- React mount for the Replenish modal -->
+  <div id="replenish-modal-root"></div>
+
+
+  <!-- AUTH-GATE OVERLAY -->
+  <div v-if="auth.loading" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+    <div class="glass rounded-2xl p-6 w-[420px]">
+      <div class="text-xs uppercase text-white/60">Checking sign-in…</div>
+      <div class="mt-2 text-lg">Please wait</div>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <nav class="sticky top-0 z-40 backdrop-blur bg-black/30 border-b border-white/10 mb-6">
+    <div class="max-w-[1160px] mx-auto px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-6 h-6 rounded-md animate-pulse-glow" style="background:linear-gradient(135deg,var(--acc),#8acbff)"></div>
+        <div class="tracking-[.14em] uppercase text-xs text-white/90">Thank-You Link</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="pill relative overflow-hidden" @click="copyLink"><span class="text-xs">Copy Link</span>
+          <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M8 4a3 3 0 013-3h5a3 3 0 013 3v5a3 3 0 01-3 3h-1V8a4 4 0 00-4-4H8V4z"/><path d="M2 8a4 4 0 014-4h5a4 4 0 014 4v5a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/></svg>
+        </button>
+        <button class="pill relative overflow-hidden text-xs" @click="openPublic">Open public page</button>
+        <img :alt="displayName" class="w-8 h-8 rounded-full border border-white/20" :src="avatarUrl">
+      </div>
+    </div>
+  </nav>
+
+  <!-- WOW STRIP -->
+  <section class="grid md:grid-cols-4 gap-3">
+    <div class="glass rounded-2xl p-4">
+      <div class="text-xs uppercase text-white/60">Today so far</div>
+      <div class="text-3xl font-semibold mt-1">$ {{ todayDisplay }}</div>
+      <div class="text-xs text-white/60 mt-1 flex items-center gap-2"><span class="dot animate-pulse"></span>live ticks each tip</div>
+    </div>
+    <div class="glass rounded-2xl p-4">
+      <div class="text-xs uppercase text-white/60">This week on pace</div>
+      <div class="text-3xl font-semibold mt-1">$ {{ weekPaceDisplay }}</div>
+      <div class="h-1 w-full bg-white/10 rounded mt-3 overflow-hidden">
+        <div :style="{width: weekPct + '%'}" class="h-1 bg-[var(--acc)] transition-all"></div>
+      </div>
+    </div>
+    <div class="glass rounded-2xl p-4">
+      <div class="text-xs uppercase text-white/60">Earnings / minute</div>
+      <div class="text-3xl font-semibold mt-1 tick">$ {{ perMinuteDisplay }}</div>
+      <div class="text-xs text-white/60 mt-1">AHA: money moves while you sleep</div>
+    </div>
+    <div class="glass rounded-2xl p-4">
+      <div class="text-xs uppercase text-white/60">Conversion</div>
+      <div class="text-3xl font-semibold mt-1">{{ (convRate*100).toFixed(0) }}%</div>
+      <div class="text-xs text-white/60 mt-1">visits → thank-yous</div>
+    </div>
+  </section>
+
+  <!-- CORE: Possibility → Reality → Bridge -->
+  <section class="mt-8 grid lg:grid-cols-3 gap-6">
+    <!-- Possibility -->
+    <div class="glass rounded-2xl p-5">
+      <div class="text-xs uppercase text-white/60">Possibility</div>
+      <h3 class="text-2xl font-semibold mt-1">Project your upside</h3>
+      <div class="mt-4 space-y-3">
+        <div>
+          <div class="flex justify-between text-xs text-white/60 mb-1"><span>Shares/day</span><span>{{ sharesPerDay }}</span></div>
+          <input type="range" min="1" max="50" v-model.number="sharesPerDay" class="w-full">
+        </div>
+        <div class="grid grid-cols-3 gap-3 text-sm">
+          <div><div class="text-white/60 text-xs mb-1">Tip rate</div><input type="range" min="5" max="80" v-model.number="assumeTipRate" class="w-full"><div class="mt-1">{{ assumeTipRate }}%</div></div>
+          <div><div class="text-white/60 text-xs mb-1">Avg tip</div><input type="range" min="1" max="10" v-model.number="assumeAvgTip" class="w-full"><div class="mt-1">$ {{ assumeAvgTip }}</div></div>
+          <div><div class="text-white/60 text-xs mb-1">Ref cut</div><input type="range" min="0" max="100" v-model.number="assumeRefCents" class="w-full"><div class="mt-1">{{ assumeRefCents }}¢</div></div>
+        </div>
+        <div class="mt-2 p-3 rounded-xl bg-white/5 border border-white/10">
+          <div class="text-xs uppercase text-white/60">30-day potential</div>
+          <div class="text-3xl font-semibold mt-1">$ {{ monthlyPotential.toFixed(0) }}</div>
+          <div class="text-xs text-white/60 mt-1">Assumptions adjustable anytime</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reality -->
+    <div class="glass rounded-2xl p-5">
+      <div class="text-xs uppercase text-white/60">Reality</div>
+      <h3 class="text-2xl font-semibold mt-1">What actually happened</h3>
+      <div class="grid grid-cols-3 gap-3 mt-4 text-sm">
+        <div class="glass rounded-xl p-3 text-center">
+          <div class="text-white/60 text-xs">Tips</div>
+          <div class="text-xl font-medium">{{ kpi.tips }}</div>
+        </div>
+        <div class="glass rounded-xl p-3 text-center">
+          <div class="text-white/60 text-xs">Connections</div>
+          <div class="text-xl font-medium">{{ kpi.referrals }}</div>
+        </div>
+        <div class="glass rounded-xl p-3 text-center">
+          <div class="text-white/60 text-xs">Approved</div>
+          <div class="text-xl font-medium">$ {{ kpi.approved.toFixed(2) }}</div>
+        </div>
+      </div>
+      <div class="mt-4">
+        <div class="text-xs uppercase text-white/60">Payout</div>
+        <div class="flex items-center justify-between mt-1">
+          <div class="text-lg font-semibold">$ {{ payoutNextAmount.toFixed(2) }}</div>
+          <div class="text-sm text-white/60">{{ payoutNextLabel }}</div>
+        </div>
+        <div class="h-1 w-full bg-white/10 rounded mt-2 overflow-hidden"><div :style="{width: payoutPct + '%'}" class="h-1 bg-[var(--acc)] transition-all"></div></div>
+        <div class="mt-2 flex items-center justify-between">
+          <div class="text-xs text-slate-400">
+            Payout next Friday
+          </div>
+          <button
+            id="sourceButton"
+            type="button"
+            class="inline-flex items-center gap-1 text-[11px] px-3 py-1 rounded-full border border-amber-300/40 bg-white/0 text-amber-100 hover:bg-amber-400/10 hover:border-amber-300 hover:text-amber-50 cursor-pointer shadow-sm hover:shadow-[0_0_0_1px_rgba(251,191,36,0.45)] transition-transform transition-shadow duration-150 ease-out hover:-translate-y-0.5"
+            title="See exactly how this payout is calculated"
+          >
+            <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="uppercase tracking-wide">Source</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bridge the Gap -->
+    <div class="glass rounded-2xl p-5 flex flex-col gap-4">
+      <div>
+        <div class="text-xs uppercase text-white/60">Bridge</div>
+        <h3 class="text-2xl font-semibold mt-1">
+          Co-Pilot: bridge the gap
+        </h3>
+        <p class="mt-2 text-sm text-white/70">
+          We read your reality and your possibility, then suggest the next tiny move that keeps
+          gratitude compounding.
+        </p>
+      </div>
+
+      <!-- Gap meter: Reality → Possibility -->
+      <div
+        id="todays-gap-card"
+        class="rounded-xl border border-white/10 bg-black/40 p-3 cursor-pointer hover:bg-white/8 transition"
+        @click="goToCreate"
+      >
+        <div class="flex items-center justify-between text-[11px] text-white/60">
+          <span class="flex items-center gap-1">
+            Today’s gap
+            <span class="w-1.5 h-1.5 rounded-full bg-[color:var(--acc)] animate-pulse"></span>
+          </span>
+          <span>
+            {{ bridgePct }}% of ${{ monthlyPotential.toFixed(0) }}
+          </span>
+        </div>
+        <div class="mt-2 h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+          <div
+            class="h-1.5 rounded-full bg-[color:var(--acc)] transition-all"
+            :style="{ width: Math.min(100, bridgePct) + '%' }"
+          ></div>
+        </div>
+        <div class="mt-2 text-[11px] text-white/60">
+          Tap to open your Create workspace and design how to close this gap.
+        </div>
+      </div>
+
+      <!-- Co-Pilot lane: 3 focused nudges -->
+      <ul class="mt-1 space-y-2">
+        <li
+          v-for="(t, i) in tasks"
+          :key="i"
+          class="flex items-center justify-between p-3 rounded-xl border border-white/10 bg-white/5"
+        >
+          <div class="flex items-center gap-3">
+            <input
+              type="checkbox"
+              class="w-4 h-4 accent-[var(--acc)]"
+              v-model="t.done"
+              @change="maybeCelebrate"
+            />
+            <div>
+              <div class="text-sm font-medium">
+                {{ t.title }}
+              </div>
+              <div class="text-xs text-white/60">
+                {{ t.meta }}
+              </div>
+            </div>
+          </div>
+          <button
+            class="px-3 py-1.5 rounded-full border border-white/14 text-[11px] text-white/80 hover:bg-white/5 transition"
+            @click="t.act()"
+          >
+            {{ t.cta }}
+          </button>
+        </li>
+      </ul>
+
+      <button
+        class="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-xl border border-white/14 bg-white/5 px-4 py-2 text-sm text-white/90 hover:bg-white/8 transition"
+        @click="openCopilot = true"
+      >
+        Open AI Co-Pilot
+        <span class="w-1.5 h-1.5 rounded-full bg-[var(--acc)] animate-pulse"></span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Ledger & Share blocks -->
+  <section class="mt-8 grid lg:grid-cols-3 gap-6">
+    <div id="gratitude-ledger-card" class="lg:col-span-2 glass rounded-2xl p-5">
+      <div class="text-xs uppercase text-white/60">Your Gratitude Ledger</div>
+      <div class="mt-3 space-y-2 max-h-[340px] overflow-auto pr-1">
+        <div v-for="(e, idx) in events" :key="idx" class="flex items-center justify-between p-3 rounded-xl border border-white/10 bg-white/5">
+          <div class="flex items-center gap-3">
+            <div class="w-2 h-2 rounded-full" :class="eventColor(e.type)"></div>
+            <div class="text-sm">{{ e.label }}</div>
+          </div>
+          <div class="text-sm text-white/70">{{ e.value }}</div>
+        </div>
+      <div v-if="!events.length" class="text-white/60 text-sm">No entries yet—your first share will light this up.</div>
+      </div>
+    </div>
+
+    <!-- Spotlight slot for Today's gap (sits next to the ledger on large screens) -->
+    <div id="gap-spotlight-slot" class="mt-6 lg:mt-0 lg:ml-6 lg:w-[360px] lg:float-right"></div>
+
+    <!-- New ONE-TAP SHARE floating card -->
+    <div class="col-span-2">
+      <div
+        class="
+          glass rounded-2xl p-6
+          bg-gradient-to-b from-white/10 to-white/5
+          border border-white/10
+          shadow-[0_15px_40px_-10px_rgba(0,0,0,0.6)]
+          backdrop-blur-xl
+          animate-float-slow
+          flex flex-col gap-5
+        "
+      >
+        <div class="text-xs uppercase tracking-[0.18em] text-white/70">
+          ONE-TAP SHARE
+        </div>
+
+        <h3 class="text-2xl font-semibold text-white">
+          Invite a thank-you
+        </h3>
+
+        <p class="text-sm text-white/70 leading-relaxed">
+          Sometimes the smallest appreciation becomes the brightest moment.
+          Share your link with someone who made you feel seen — only if it feels true.
+        </p>
+
+        <!-- Main CTA -->
+        <button
+          @click="sharePrimary"
+          class="
+            relative overflow-hidden
+            w-full inline-flex items-center justify-center gap-2
+            px-6 py-2 rounded-full
+            bg-black text-white font-medium text-sm
+            shadow-[0_0_0_1px_rgba(255,255,255,0.12)]
+            transition-all duration-200
+            hover:shadow-[0_0_25px_rgba(150,150,255,0.45)]
+            hover:scale-[1.02]
+          "
+        >
+          Share The Magic
+
+          <span class="relative flex items-center justify-center">
+            <img
+              src="/haylofriend_sunrise_halo.svg"
+              alt="halo"
+              width="18"
+              height="18"
+              class="opacity-90"
+            />
+          </span>
+        </button>
+
+        <!-- Secondary actions grid -->
+        <div class="grid grid-cols-2 gap-3">
+          <button
+            @click="share('x')"
+            class="px-3 py-2 rounded-full border border-white/10 text-sm text-white/80 hover:bg-white/5 transition"
+          >
+            Post on X
+          </button>
+
+          <button
+            @click="share('sms')"
+            class="px-3 py-2 rounded-full border border-white/10 text-sm text-white/80 hover:bg-white/5 transition"
+          >
+            Text a regular
+          </button>
+
+          <button
+            @click="downloadQR"
+            class="px-3 py-2 rounded-full border border-white/10 text-sm text-white/80 hover:bg-white/5 transition"
+          >
+            Download QR
+          </button>
+
+          <button
+            @click="copyOneLine"
+            class="px-3 py-2 rounded-full border border-white/10 text-sm text-white/80 hover:bg-white/5 transition"
+          >
+            Copy 1-line DM
+          </button>
+        </div>
+
+        <!-- Script preview -->
+        <div
+          class="
+            rounded-2xl border border-white/10
+            bg-white/5
+            p-4 text-sm text-white/80 leading-relaxed
+          "
+        >
+          “I made a tiny space for gratitude.
+          No expectation — just a place for kindness, when it wants to land 💛
+          <br />
+          <span id="sharePreview" class="mt-1 block text-[13px] text-white/50 break-all"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Gratitude Bloom (standalone island — no auth / app changes) ===== -->
+    <div id="gbloom-card" class="glass rounded-2xl p-5 flex flex-col gap-4">
+      <div>
+        <div class="text-[11px] uppercase tracking-wide text-white/60">Gratitude</div>
+        <h3 class="text-2xl font-semibold mt-1">Tip & Bloom</h3>
+        <p class="mt-1 text-sm text-white/70">Turn today’s thanks into tomorrow’s good.</p>
+      </div>
+
+      <!-- Recipient -->
+      <div>
+        <label class="text-xs text-white/60">Who made your day?</label>
+        <div class="mt-1 flex gap-2">
+          <input id="gbloom-who" type="text" inputmode="text"
+                 placeholder="@handle, email, or name"
+                 class="w-full rounded-xl bg-black/30 border border-white/10 px-3 py-2 text-sm outline-none focus:border-[var(--acc)]/60">
+          <button id="gbloom-clear"
+                  class="px-3 py-2 rounded-xl border border-white/10 text-xs text-white/70 hover:bg-white/5">Clear</button>
+        </div>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button class="pill text-[11px] hover:bg-white/10" data-gbloom-suggest="@barista">@barista</button>
+          <button class="pill text-[11px] hover:bg-white/10" data-gbloom-suggest="@teacher">@teacher</button>
+          <button class="pill text-[11px] hover:bg-white/10" data-gbloom-suggest="@teammate">@teammate</button>
+          <button class="pill text-[11px] hover:bg-white/10" data-gbloom-suggest="mom@example.com">mom@example.com</button>
+        </div>
+      </div>
+
+      <!-- Amount presets -->
+      <div>
+        <label class="text-xs text-white/60">Tip amount</label>
+        <div class="mt-2 grid grid-cols-4 gap-2">
+          <button class="gbloom-amt rounded-xl border px-3 py-2 text-sm border-white/10 bg-black/20 hover:bg-white/5" data-amt="2">$ 2</button>
+          <button class="gbloom-amt rounded-xl border px-3 py-2 text-sm border-white/10 bg-black/20 hover:bg-white/5" data-amt="5">$ 5</button>
+          <button class="gbloom-amt rounded-xl border px-3 py-2 text-sm border-white/10 bg-black/20 hover:bg-white/5" data-amt="10">$ 10</button>
+          <button class="gbloom-amt rounded-xl border px-3 py-2 text-sm border-white/10 bg-black/20 hover:bg-white/5" data-amt="20">$ 20</button>
+          <div class="col-span-2 relative">
+            <input id="gbloom-custom" type="number" min="1" step="1" placeholder="Custom"
+                   class="w-full rounded-xl bg-black/30 border border-white/10 px-3 py-2 text-sm outline-none focus:border-[var(--acc)]/60">
+            <span class="absolute right-3 top-2 text-white/40 text-xs">USD</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bloom split -->
+      <div>
+        <div class="flex items-center justify-between">
+          <label class="text-xs text-white/60">Bloom split</label>
+          <div class="text-xs text-white/70"><span id="gbloom-split-label">20</span>% to Bloom</div>
+        </div>
+        <input id="gbloom-split" type="range" min="0" max="50" value="20" class="w-full mt-2">
+        <div class="mt-1 text-[11px] text-white/60">
+          Tip <span id="gbloom-tip-pct">80</span>% → recipient · Bloom <span id="gbloom-bloom-pct">20</span>% → pooled good
+        </div>
+      </div>
+
+      <!-- Privacy + note -->
+      <div class="grid grid-cols-1 gap-2">
+        <label class="inline-flex items-center gap-2 text-sm text-white/80">
+          <input id="gbloom-anon" type="checkbox" class="w-4 h-4 accent-[var(--acc)]" checked>
+          Send anonymously
+        </label>
+        <input id="gbloom-note" maxlength="120" placeholder="Add a kind word (optional)"
+               class="rounded-xl bg-black/30 border border-white/10 px-3 py-2 text-sm outline-none focus:border-[var(--acc)]/60">
+      </div>
+
+      <!-- CTA -->
+      <div class="flex flex-col gap-2">
+        <button id="gbloom-send"
+                data-cta-glow
+                class="relative overflow-hidden w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl glass text-sm font-medium transition-all hover:animate-pulse-glow">
+          <span class="w-1.5 h-1.5 rounded-full bg-[var(--acc)] animate-pulse"></span>
+          Tip & Bloom
+        </button>
+        <div class="text-[12px] text-white/60">
+          Ripple: $<span id="gbloom-tip-part">4.00</span> → <span id="gbloom-who-label">recipient</span>,
+          $<span id="gbloom-bloom-part">1.00</span> → Bloom
+        </div>
+      </div>
+
+      <!-- success toast -->
+      <div id="gbloom-toast" class="hidden rounded-xl border border-emerald-400/40 bg-emerald-400/10 p-3 text-sm text-emerald-100">
+        You made someone’s day. And tomorrow’s. 🌱
+      </div>
+    </div>
+  </section>
+
+  <!-- AI Co-Pilot (drawer) -->
+  <div v-if="openCopilot" class="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center md:justify-center p-4">
+    <div class="glass rounded-2xl p-5 w-full max-w-2xl">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs uppercase text-white/60">AI Co-Pilot</div>
+          <h3 class="text-xl font-semibold">Turn gratitude into revenue</h3>
+        </div>
+        <button class="pill text-xs" @click="openCopilot=false">Close</button>
+      </div>
+      <div class="mt-4 grid md:grid-cols-2 gap-4">
+        <div class="rounded-xl border border-white/10 p-3 bg-white/5">
+          <div class="text-xs uppercase text-white/60">Scripts</div>
+          <ul class="mt-2 space-y-2 text-sm">
+            <li v-for="(s, i) in aiScripts" :key="i" class="p-2 rounded-lg bg-black/20 border border-white/10">{{ s }}</li>
+          </ul>
+          <button class="mt-3 pill text-xs" @click="genScripts">Regenerate</button>
+        </div>
+        <div class="rounded-xl border border-white/10 p-3 bg-white/5">
+          <div class="text-xs uppercase text-white/60">Affiliate picks</div>
+          <ul class="mt-2 space-y-2 text-sm">
+            <li v-for="(a, i) in affiliates" :key="i" class="p-2 rounded-lg bg-black/20 border border-white/10">
+              <div class="font-medium">{{ a.title }}</div>
+              <div class="text-white/60 text-xs">{{ a.pitch }}</div>
+            </li>
+          </ul>
+          <button class="mt-3 pill text-xs" @click="genAffiliates">Refresh</button>
+        </div>
+      </div>
+      <div class="mt-4 text-xs text-white/60">*All content is yours to edit—AI drafts speed the first mile.</div>
+    </div>
+  </div>
+
+  <!-- Minimal celebration -->
+  <div class="mini-burst" :class="{active: showBurst}">
+    <div class="pointer-events-none fixed inset-0 flex items-center justify-center text-4xl">🎉</div>
+  </div>
+
+  <!-- Bottom row anchor: Ledger (left, span-2) + Today's gap (right) -->
+  <div id="ledger-bottom-row-anchor"></div>
+
+</div>
+
+<!-- Vue (CDN) -->
+<script src="https://unpkg.com/vue@3"></script>
+
+<script>
+const { createApp, ref, computed, onMounted, watch } = Vue;
+
+// ===== ENV =====
+const SUPABASE_URL = window.SUPABASE_URL || '';
+const SUPABASE_KEY = window.SUPABASE_ANON_KEY || '';
+const THANK_HOST   = window.THANK_HOST || 'https://grateful.haylofriend.com';
+const LOGIN_PATH   = window.LOGIN_PATH || '/auth/google'; // your dedicated login page (optional)
+
+const supabase = (SUPABASE_URL && SUPABASE_KEY && window.supabase)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null;
+
+// ===== UTIL =====
+async function copyToClipboard(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; }
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.position='fixed'; ta.style.left='-9999px'; ta.style.top='-9999px';
+    document.body.appendChild(ta); ta.focus(); ta.select(); const ok=document.execCommand('copy'); document.body.removeChild(ta); return ok;
+  } catch (err) { alert(`Copy this link: ${text}`); return false; }
+}
+
+function promotePrettyUrl(slugValue) {
+  try {
+    const value = typeof slugValue === 'string' ? slugValue.trim() : '';
+    if (!value || value === 'your-name') return;
+    const desiredPath = `/${encodeURIComponent(value)}/your-impact`;
+    const suffix = `${location.search || ''}${location.hash || ''}`;
+    if (location.pathname !== desiredPath) {
+      history.replaceState(null, '', `${desiredPath}${suffix}`);
+    }
+  } catch (err) {
+    console.warn('Failed to promote pretty URL', err);
+  }
+}
+
+async function applySessionFromUrl() {
+  if (!supabase || typeof window === "undefined") return;
+
+  try {
+    console.log("[auth/callback] checking URL for tokens", {
+      href: window.location.href,
+    });
+
+    // Prefer hash (#access_token=...) — Supabase default
+    const hash = window.location.hash || "";
+    const hashParams = new URLSearchParams(
+      hash.startsWith("#") ? hash.slice(1) : hash
+    );
+    const accessTokenHash  = hashParams.get("access_token");
+    const refreshTokenHash = hashParams.get("refresh_token");
+
+    // Fallback: also support query (?access_token=...)
+    const search = window.location.search || "";
+    const searchParams = new URLSearchParams(search);
+    const accessTokenQ  = searchParams.get("access_token");
+    const refreshTokenQ = searchParams.get("refresh_token");
+
+    const accessToken  = accessTokenHash  || accessTokenQ  || null;
+    const refreshToken = refreshTokenHash || refreshTokenQ || null;
+
+    if (!accessToken) {
+      console.log("[auth/callback] no access token found in URL; skipping setSession");
+      return;
+    }
+
+    console.log("[auth/callback] applying session via setSession", {
+      hasRefreshToken: !!refreshToken,
+      href: window.location.href,
+    });
+
+    const { data, error } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken ?? undefined,
+    });
+
+    console.log("[auth/callback] setSession result", {
+      hasSession: !!data?.session,
+      error,
+    });
+
+    if (error) {
+      console.error("[auth/callback] error applying session from URL tokens", error);
+      return;
+    }
+
+    // Clean the URL so tokens aren't left in the bar
+    const cleanUrl = window.location.pathname + window.location.search;
+    window.history.replaceState(null, "", cleanUrl);
+
+    console.log("[auth/callback] Supabase session applied from URL");
+  } catch (e) {
+    console.warn("Failed to apply session from URL", e);
+  }
+}
+
+const app = createApp({
+  setup(){
+    // ===== AUTH STATE =====
+    const auth = ref({ loading: !!supabase, session: null, email: '', sending: false });
+
+    // ===== PROFILE & UI STATE =====
+    const displayName = ref('You');
+    const avatarUrl = ref('https://api.dicebear.com/7.x/initials/svg?seed=YOU&backgroundType=gradientLinear');
+    const slug = ref('your-name');
+    window.slug = slug;
+
+    const earningsToday = ref(0);
+    const earningsWeek = ref(0);
+    const convRate = ref(0.28);
+    const kpi = ref({ tips: 0, referrals: 0, approved: 0 });
+    const events = ref([]);
+    const openCopilot = ref(false);
+    const showBurst = ref(false);
+
+    // Projections
+    const sharesPerDay = ref(10);
+    const assumeTipRate = ref(30);
+    const assumeAvgTip = ref(3);
+    const assumeRefCents = ref(20);
+
+    // Payouts
+    const payoutNextAmount = ref(0);
+    const payoutNextLabel = ref('Available to withdraw');
+    const payoutPct = ref(20);
+
+    window._THANKYOU_DASH = Object.assign(window._THANKYOU_DASH || {}, {
+      payoutNextAmount,
+    });
+
+    // AI
+    const aiScripts = ref([
+      "X post: 'Shoutout to everyday helpers. If I’ve helped you, here’s a $2 thank-you link—tiny support, big momentum.'",
+      "SMS to regular: 'Grateful for you. If I’ve made your day lately, this link is how folks tip me now. No pressure, just love.'",
+      "IG caption: 'Kindness that circulates. Tap my thank-you link—every $2 keeps this going.'"
+    ]);
+    const affiliates = ref([
+      { title: "Instant QR Table Cards", pitch: "Order 10 for your counter—scan → tip. 15% cash-back via your link."},
+      { title: "Creator Banking", pitch: "No-fee payouts on Fridays; $10 referral for you + $10 for them."}
+    ]);
+
+    // ===== DERIVED =====
+    const shareUrl = computed(()=> `${THANK_HOST}/thank/${slug.value}`);
+
+    watch(shareUrl, (val)=>{
+      const preview = document.getElementById('sharePreview');
+      if (preview) preview.innerText = val;
+    }, { immediate: true });
+    const perMinute = computed(()=> Math.max(earningsWeek.value,0) / (7*24*60));
+    const perMinuteDisplay = computed(()=> perMinute.value.toFixed(2));
+    const todayDisplay = computed(()=> earningsToday.value.toFixed(2));
+    const weekPaceDisplay = computed(()=> Math.max(earningsWeek.value,0).toFixed(2));
+    const weekPct = computed(()=> Math.min(100, Math.round((earningsWeek.value/100)*100)));
+    const monthlyPotential = computed(()=>{
+      const tipsPerDay = sharesPerDay.value * (assumeTipRate.value/100);
+      const tipRev = tipsPerDay * assumeAvgTip.value * 30;
+      const refRev = sharesPerDay.value * (assumeRefCents.value/100) * 30;
+      return tipRev + refRev;
+    });
+    const bridgePct = computed(() => {
+      if (!monthlyPotential.value || monthlyPotential.value <= 0) return 0;
+      const pct = (earningsWeek.value / monthlyPotential.value) * 100;
+      return Math.max(0, Math.min(120, Math.round(pct)));
+    });
+
+    // ===== ACTIONS =====
+    const goToCreate = () => {
+      window.location.href = '/your-impact/create';
+    };
+
+    function eventColor(type){ return { tip:'bg-[var(--acc)]', share:'bg-[#15c39a]', payout:'bg-[#ffcc00]' }[type] || 'bg-white/20'; }
+
+    async function copyLink(e){ createRipple(e); const ok = await copyToClipboard(shareUrl.value); events.value.unshift({label:'Link copied', value:shareUrl.value, type:'share'}); toast(ok?'Copied!':'Link ready'); }
+    function downloadQR(e){ createRipple(e); alert('Demo: Beautiful QR would generate for ' + shareUrl.value); }
+    async function share(kind){ const text = `Tiny thank-you link for little kindnesses: ${shareUrl.value}`; if(kind==='sms'){ window.open(`sms:?&body=${encodeURIComponent(text)}`,'_blank'); } if(kind==='x'){ window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}`,'_blank'); } events.value.unshift({label:'Shared invitation', value:kind.toUpperCase(), type:'share'}); }
+    async function copyDM(e){ createRipple(e); await copyToClipboard(`If I’ve helped you lately, here’s a $2 thank-you: ${shareUrl.value}`); toast('DM copied'); }
+    function sharePrimary(e){ copyLink(e || new Event('click')); }
+    async function copyOneLine(e){ await copyDM(e || new Event('click')); }
+    function genScripts(){ aiScripts.value = shuffle(aiScripts.value); toast('New scripts ready'); }
+    function genAffiliates(){ affiliates.value = shuffle(affiliates.value); toast('Updated picks'); }
+    const tasks = ref([
+      { title:'Pin your link', meta:'Bio / profile / menu', cta:'Auto-copy', done:false, act:()=>copyLink(new Event('click')) },
+      { title:'Post one story', meta:'Use AI script #1', cta:'Open Co-Pilot', done:false, act:()=>openCopilot.value=true },
+      { title:'DM three regulars', meta:'Paste 1-liner', cta:'Copy DM', done:false, act:()=>copyDM(new Event('click')) },
+    ]);
+    function maybeCelebrate(){ if (tasks.value.every(t=>t.done)) { showBurst.value = true; setTimeout(()=> showBurst.value=false, 1200); } }
+
+    function toast(msg){ const div = document.createElement('div'); div.textContent = msg; div.className = 'fixed bottom-5 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full text-xs bg-white/10 backdrop-blur border border-white/10'; document.body.appendChild(div); setTimeout(()=> div.remove(), 1500); }
+    function createRipple(event){ const button = event?.currentTarget || document.activeElement; if(!button) return; const circle=document.createElement('span'); const diameter=Math.max(button.clientWidth,button.clientHeight); const radius=diameter/2; circle.style.width=circle.style.height=`${diameter}px`; const rect=button.getBoundingClientRect(); circle.style.left=`${(event?.clientX||rect.left+radius)-rect.left-radius}px`; circle.style.top =`${(event?.clientY||rect.top +radius)-rect.top -radius}px`; circle.classList.add('ripple-effect'); const old = button.getElementsByClassName('ripple-effect')[0]; if(old) old.remove(); button.style.position='relative'; button.appendChild(circle); }
+
+    function openPublic(e){ createRipple(e); window.open(shareUrl.value, '_blank', 'noopener,noreferrer'); }
+
+    async function sendMagic(){
+      if (!supabase) return alert('Supabase not configured');
+      auth.value.sending = true;
+      const redirectTo = new URL(window.location.href);
+      redirectTo.searchParams.set('from', 'magic');
+      const { error } = await supabase.auth.signInWithOtp({ email: auth.value.email, options: { emailRedirectTo: redirectTo.toString() } });
+      auth.value.sending = false;
+      if (error) return alert(error.message);
+      alert('Check your inbox for the sign-in link.');
+    }
+
+    function goLogin(){
+      const url = new URL(LOGIN_PATH, window.location.origin);
+      url.searchParams.set('redirect', window.location.pathname);
+      window.location.href = url.toString();
+    }
+
+    async function fetchBalance(currentSession) {
+      if (!supabase) return;
+
+      try {
+        // 1) Get a Supabase access token
+        const activeSession = currentSession || auth.value?.session || null;
+        let token = activeSession?.access_token;
+
+        if (!token) {
+          const { data } = await supabase.auth.getSession();
+          token = data?.session?.access_token || '';
+        }
+
+        if (!token) {
+          console.warn('No Supabase session token available for fetchBalance');
+          payoutNextAmount.value = 0;
+          payoutNextLabel.value = 'Please log in again';
+          return;
+        }
+
+        // 2) Call the balance endpoint with Authorization: Bearer
+        const res = await fetch('/api/creator/balance', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        if (res.status === 401) {
+          console.warn('Not authenticated when fetching balance');
+          payoutNextAmount.value = 0;
+          payoutNextLabel.value = 'Please log in again';
+          return;
+        }
+
+        const payload = await res.json().catch(() => ({}));
+
+        if (!res.ok || !payload?.ok) {
+          console.warn('Failed to fetch creator balance', payload);
+          payoutNextAmount.value = 0;
+          payoutNextLabel.value = 'Balance unavailable';
+          return;
+        }
+
+        // 3) Update UI with real balance
+        const cents = Number(payload.available_cents) || 0;
+        const dollars = cents / 100;
+
+        payoutNextAmount.value = Math.max(0, dollars);
+        payoutNextLabel.value = 'Available to withdraw';
+        payoutPct.value = 100; // placeholder for progress bar
+      } catch (err) {
+        console.error('fetchBalance unexpected error', err);
+        payoutNextAmount.value = 0;
+        payoutNextLabel.value = 'Balance unavailable';
+      }
+    }
+
+    // ===== DATA LOAD (requires auth) =====
+    async function hydrateFromDb() {
+      try {
+        if (!supabase) {
+          console.warn('Supabase client is not configured in hydrateFromDb');
+          return;
+        }
+
+        // 1) Get current authenticated user
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError) {
+          console.error('Error getting user:', userError);
+          return;
+        }
+
+        if (!user) {
+          console.warn('No authenticated user found in hydrateFromDb');
+          return;
+        }
+
+        // 2) Load profile (display_name, slug, avatar_url)
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('display_name, slug, avatar_url')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error('Error loading profile:', profileError);
+          // fallback slug from email or user id
+          slug.value = slug.valueFromEmail() || user.id.slice(0, 8);
+        } else if (profile) {
+          displayName.value = profile.display_name || displayName.value;
+          slug.value =
+            profile.slug || slug.valueFromEmail() || user.id.slice(0, 8);
+          avatarUrl.value = profile.avatar_url || avatarUrl.value;
+        } else {
+          // no profile row; still derive a slug
+          slug.value = slug.valueFromEmail() || user.id.slice(0, 8);
+        }
+
+        // 3) Load dashboard totals via RPC
+        const { data: totals, error: totalsError } = await supabase.rpc(
+          'dashboard_totals'
+        );
+
+        // dashboard_totals returns an array; pick the first row if present
+        const totalsRow =
+          totals && Array.isArray(totals) && totals.length > 0
+            ? totals[0]
+            : null;
+        const hasTotalsRow = !!totalsRow;
+
+        if (totalsError) {
+          console.error('Error loading dashboard_totals:', totalsError);
+          earningsToday.value = 0;
+          earningsWeek.value = 0;
+          kpi.value.tips = 0;
+          kpi.value.referrals = 0;
+          kpi.value.approved = 0;
+        } else if (hasTotalsRow) {
+          earningsToday.value = totalsRow.today || 0;
+          earningsWeek.value = totalsRow.week || 0;
+          kpi.value.tips = totalsRow.tips || 0;
+          kpi.value.referrals = totalsRow.referrals || 0;
+          kpi.value.approved = totalsRow.approved || 0;
+        } else {
+          // no totals rows yet
+          earningsToday.value = 0;
+          earningsWeek.value = 0;
+          kpi.value.tips = 0;
+          kpi.value.referrals = 0;
+          kpi.value.approved = 0;
+        }
+
+        // 3a) Seed conversion + sliders from real data
+        const tipsCount = totalsRow?.tips ?? 0;
+        const referralsCount = totalsRow?.referrals ?? 0;
+        const approvedDollars = Number(totalsRow?.approved ?? 0);
+        const paidDollars = Number(totalsRow?.paid ?? 0);
+
+        // Conversion card: visits -> thank-yous
+        if (referralsCount > 0) {
+          const convFraction = tipsCount / referralsCount;
+          convRate.value = Math.max(0, Math.min(1, convFraction));
+        } else {
+          convRate.value = 0.28;
+        }
+
+        // Average tip sliders follow recent performance
+        if (tipsCount > 0) {
+          const allDollars = approvedDollars + paidDollars;
+          const avgTip = allDollars / tipsCount;
+
+          if (avgTip > 0) {
+            assumeAvgTip.value = Number(
+              Math.min(500, Math.max(0.5, avgTip)).toFixed(2)
+            );
+          }
+
+          const tipRatePct = convRate.value * 100 || 30;
+          assumeTipRate.value = Math.max(
+            5,
+            Math.min(80, Math.round(tipRatePct))
+          );
+        }
+
+        if (referralsCount > 0) {
+          const estSharesPerDay = Math.max(
+            1,
+            Math.round(referralsCount / 30)
+          );
+          sharesPerDay.value = estSharesPerDay;
+        } else if (tipsCount > 0) {
+          const estSharesPerDay = Math.max(1, Math.round(tipsCount / 5));
+          sharesPerDay.value = estSharesPerDay;
+        }
+
+        // 4) Load recent events (gratitude ledger)
+        const { data: ev, error: eventsError } = await supabase
+          .from('events')
+          .select('label, value, type')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(20);
+
+        if (eventsError) {
+          console.error('Error loading events:', eventsError);
+          events.value = [];
+        } else {
+          events.value = ev || [];
+        }
+
+        // 5) Compute payout info from totalsRow
+        const paid =
+          hasTotalsRow && typeof totalsRow.paid === 'number'
+            ? totalsRow.paid
+            : 0;
+
+        payoutNextAmount.value = Math.max(kpi.value.approved - paid, 0);
+        payoutNextLabel.value = 'Available to withdraw';
+        payoutPct.value = Math.min(
+          100,
+          Math.round((payoutNextAmount.value / 100) * 100)
+        );
+
+        await fetchBalance(auth.value.session);
+
+        console.log('hydrateFromDb complete');
+      } catch (err) {
+        console.error('Unexpected error in hydrateFromDb:', err);
+      }
+    }
+
+    // little helper on ref
+    slug.valueFromEmail = () => {
+      const email = auth.value?.session?.user?.email || '';
+      return email ? email.split('@')[0].replace(/[^a-z0-9-_]/gi,'-').toLowerCase() : '';
+    }
+
+    function introWow(){
+      const target = 23.40; let t=0;
+      const step = ()=>{ t+=0.02; const v = target*(1-Math.exp(-3*t));
+        earningsWeek.value = Math.min(target, +v.toFixed(2));
+        payoutNextAmount.value = Math.max(earningsWeek.value*0.5, 0);
+        payoutPct.value = Math.min(100, Math.round((earningsWeek.value/50)*100));
+        if(earningsWeek.value < target) requestAnimationFrame(step);
+      }; step();
+      setTimeout(()=>earningsToday.value = +(target/7).toFixed(2), 600);
+    }
+
+    watch(slug, promotePrettyUrl);
+
+    onMounted(async () => {
+      promotePrettyUrl(slug.value);
+      fetchBalance();
+
+      if (!supabase) {
+        // No Supabase configured: keep the demo/overlay behavior.
+        introWow && introWow();
+        // Minute tick (visual compounding)
+        setInterval(() => { earningsWeek.value += perMinute.value; }, 60000);
+        return;
+      }
+
+      auth.value.loading = true;
+
+      // 0) If we just arrived from Supabase (OAuth / magic link),
+      // apply session from URL tokens (hash or query) once.
+      await applySessionFromUrl();
+
+      // 1) Initial read
+      let { data: { session } } = await supabase.auth.getSession();
+
+      // 2) Force a refresh (handles fresh returns from OAuth)
+      if (!session) {
+        try {
+          const { data } = await supabase.auth.refreshSession();
+          session = data?.session || null;
+        } catch (_) {}
+      }
+
+      // 3) Short poll (max ~2.5s) to allow session to settle after redirect
+      if (!session) {
+        const deadline = Date.now() + 2500;
+        while (!session && Date.now() < deadline) {
+          await new Promise(r => setTimeout(r, 250));
+          const res = await supabase.auth.getSession();
+          session = res?.data?.session || null;
+        }
+      }
+
+      auth.value.session = session;
+      auth.value.loading = false;
+
+      // 4) Subscribe so future refreshes/magic links hydrate automatically
+      supabase.auth.onAuthStateChange(async (_event, s) => {
+        auth.value.session = s;
+        if (s) await hydrateFromDb();
+      });
+
+      // 5) Final decision
+      if (auth.value.session) {
+        // Auth OK → render dashboard
+        await hydrateFromDb();
+      } else {
+        // Still no session → DO NOT auto-redirect (prevents loops).
+        // The built-in gate will show, and "Open full login" already routes to /auth/google.
+        // If you want a button-less auto-forward, we can add a delayed redirect later.
+      }
+
+      // existing visuals/timers
+      setInterval(() => { earningsWeek.value += perMinute.value; }, 60000);
+    });
+
+    return {
+      // auth
+      auth, sendMagic, goLogin,
+      // profile & state
+      displayName, avatarUrl, slug, kpi, events,
+      earningsToday, earningsWeek, convRate,
+      perMinuteDisplay, todayDisplay, weekPaceDisplay, weekPct,
+      sharesPerDay, assumeTipRate, assumeAvgTip, assumeRefCents, monthlyPotential,
+      bridgePct,
+      payoutNextAmount, payoutNextLabel, payoutPct,
+      aiScripts, affiliates, openCopilot, tasks, showBurst,
+      // actions
+      shareUrl, eventColor, copyLink, downloadQR, share, copyDM, sharePrimary, copyOneLine, genScripts, genAffiliates, maybeCelebrate, openPublic, goToCreate
+    };
+  }
+});
+window.app = app;
+</script>
+<script>
+  app.mount('#app');
+</script>
+
+<script>
+  window.addEventListener('DOMContentLoaded', function () {
+    const sourceBtn = document.getElementById('sourceButton');
+    const overlay = document.getElementById('sourceOverlay');
+    const iframe = document.getElementById('sourceFrame');
+    const overlayClose = document.getElementById('sourceOverlayClose');
+
+    // If elements aren’t present, quietly bail out
+    if (!sourceBtn || !overlay || !iframe) return;
+
+    function getNextPayoutAmountDollars() {
+      try {
+        const payoutRef = window._THANKYOU_DASH?.payoutNextAmount;
+        const dollars = payoutRef ? Number(payoutRef.value) : 0;
+
+        return Number.isFinite(dollars) ? Math.max(0, dollars) : 0;
+      } catch (e) {
+        console.warn('Could not read next payout amount', e);
+        return 0;
+      }
+    }
+
+    function openSourceOverlay() {
+      const amount = getNextPayoutAmountDollars();
+      const params = new URLSearchParams({
+        amount: amount.toFixed(2),
+      });
+
+      iframe.src = '/source?' + params.toString();
+
+      // Show overlay
+      overlay.classList.remove('hidden');
+      overlay.setAttribute('aria-hidden', 'false');
+
+      // Body scroll lock (better focus)
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeSourceOverlay() {
+      overlay.classList.add('hidden');
+      overlay.setAttribute('aria-hidden', 'true');
+
+      // Clear iframe to avoid stale content / extra network
+      iframe.src = '';
+
+      // Restore scroll
+      document.body.style.overflow = '';
+    }
+
+    function updateSourceTooltip() {
+      if (!sourceBtn) return;
+
+      const baseAmount = getNextPayoutAmountDollars();
+      const safeAmount = Number.isFinite(baseAmount)
+        ? Math.max(0, baseAmount)
+        : 0;
+
+      const instantAmount = safeAmount * 0.97; // same 3% fee as /source
+
+      const lines = [
+        `This week’s earnings ready to replenish: $${safeAmount.toFixed(2)}`,
+        `Standard payout: $${safeAmount.toFixed(2)} (no extra fee)`,
+        `Instant payout: $${instantAmount.toFixed(2)} (3% instant fee)`
+      ];
+
+      // Native browser tooltip (works everywhere)
+      sourceBtn.title = lines.join('\n');
+    }
+
+    // Open overlay when user clicks the “Source” button
+    sourceBtn.addEventListener('click', openSourceOverlay);
+
+    // Close when clicking the close button
+    if (overlayClose) {
+      overlayClose.addEventListener('click', closeSourceOverlay);
+    }
+
+    // Close when clicking outside the iframe but inside overlay
+    overlay.addEventListener('click', function (event) {
+      if (event.target === overlay) {
+        closeSourceOverlay();
+      }
+    });
+
+    // Close on ESC key for better UX
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && !overlay.classList.contains('hidden')) {
+        closeSourceOverlay();
+      }
+    });
+
+    // Initialize tooltip with current payout math
+    updateSourceTooltip();
+  });
+</script>
+<!-- Replenish / Source overlay -->
+<div
+  id="sourceOverlay"
+  class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden"
+>
+  <div class="w-full max-w-xl mx-auto h-[95vh] pt-6">
+    <div
+      class="relative h-full glass rounded-2xl border border-slate-700/70 bg-slate-950/95 overflow-hidden"
+    >
+      <div
+        class="flex items-start justify-between px-4 pt-3 pb-2 border-b border-slate-800/70"
+      >
+        <div>
+          <div class="text-[11px] uppercase tracking-[0.16em] text-slate-400">
+            Transparency
+          </div>
+          <div class="text-sm text-slate-200">How your source is calculated</div>
+        </div>
+        <button
+          type="button"
+          id="sourceOverlayClose"
+          class="text-xs text-slate-400 hover:text-white"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- The iframe that loads /source -->
+      <iframe
+        id="sourceFrame"
+        src=""
+        class="w-full h-[calc(95vh-3.25rem)] border-0 bg-slate-950"
+        style="box-shadow: 0 24px 80px rgba(15,23,42,0.9);"
+      ></iframe>
+
+      <div
+        class="px-4 py-2 text-[10px] text-slate-500 flex items-center justify-between border-t border-slate-800/70"
+      >
+        <span
+          >Click outside or press <span class="font-semibold text-slate-300">Esc</span>
+          to close.</span
+        >
+        <span class="uppercase tracking-[0.16em] text-slate-500">Replenish</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Lightweight React mount for Replenish modal (near page root) -->
+<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel" data-presets="react">
+  const { useEffect, useMemo, useState } = React;
+
+  const ReplenishModal = ({ isOpen, onClose, shareLink }) => {
+    const [stripeStatus, setStripeStatus] = useState(null);
+    const [balance, setBalance] = useState(null);
+    const [flowState, setFlowState] = useState('loading');
+    const [errorMessage, setErrorMessage] = useState(null);
+    const [payoutAmountCents, setPayoutAmountCents] = useState(null);
+
+    useEffect(() => {
+      if (!isOpen) return;
+
+      let cancelled = false;
+      setFlowState('loading');
+      setErrorMessage(null);
+
+      async function fetchData() {
+        try {
+          const [statusRes, balanceRes] = await Promise.all([
+            fetch('/api/creator/stripe/status'),
+            fetch('/api/creator/balance'),
+          ]);
+
+          const statusJson = await statusRes.json();
+          const balanceJson = await balanceRes.json();
+
+          if (cancelled) return;
+
+          setStripeStatus(statusJson);
+          setBalance(balanceJson);
+        } catch (err) {
+          console.error('Error loading replenish data', err);
+          if (!cancelled) {
+            setErrorMessage('Something went wrong while loading your payouts.');
+            setFlowState('payoutError');
+          }
+        }
+      }
+
+      fetchData();
+
+      return () => {
+        cancelled = true;
+      };
+    }, [isOpen]);
+
+    const derivedState = useMemo(() => {
+      if (!stripeStatus || !balance) return 'loading';
+      if (!stripeStatus.connected) return 'notConnected';
+      if (!stripeStatus.details_submitted || !stripeStatus.payouts_enabled)
+        return 'needsSetup';
+      if (!balance.ok || balance.available_cents <= 0) return 'noFunds';
+      return 'ready';
+    }, [stripeStatus, balance]);
+
+    useEffect(() => {
+      if (flowState === 'payoutInProgress' || flowState === 'payoutSuccess') {
+        return;
+      }
+      if (derivedState === 'ready') {
+        if (balance && balance.available_cents > 0) {
+          setPayoutAmountCents(balance.available_cents);
+        }
+      }
+      setFlowState(derivedState);
+    }, [derivedState, balance, flowState]);
+
+    const amountDollars =
+      payoutAmountCents != null ? (payoutAmountCents / 100).toFixed(2) : '0.00';
+
+    async function handleStripeConnect() {
+      try {
+        setFlowState('loading');
+        setErrorMessage(null);
+
+        const res = await fetch('/api/creator/stripe/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        const json = await res.json();
+
+        if (!res.ok || !json.url) {
+          console.error('Stripe connect error', json);
+          setErrorMessage('Could not start Stripe setup. Please try again.');
+          setFlowState(derivedState);
+          return;
+        }
+
+        window.location.href = json.url;
+      } catch (err) {
+        console.error('Stripe connect error', err);
+        setErrorMessage('Could not start Stripe setup. Please try again.');
+        setFlowState(derivedState);
+      }
+    }
+
+    async function handleShareLink() {
+      if (!shareLink) {
+        console.info('Share link pressed but no shareLink provided');
+        onClose();
+        return;
+      }
+
+      try {
+        if (typeof navigator !== 'undefined' && navigator.share) {
+          await navigator.share({
+            title: 'Support me on Haylo',
+            text: 'Send me a little gratitude here 💌',
+            url: shareLink,
+          });
+        } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+          await navigator.clipboard.writeText(shareLink);
+          setErrorMessage('Link copied to clipboard. Share it with your friends!');
+        } else {
+          setErrorMessage('Here is your link. Copy and share it:\n' + shareLink);
+        }
+      } catch (err) {
+        console.error('Share link error', err);
+        setErrorMessage('Could not open share dialog. Try copying the link.');
+      }
+    }
+
+    async function handlePayout() {
+      try {
+        setFlowState('payoutInProgress');
+        setErrorMessage(null);
+
+        const res = await fetch('/api/creator/payout/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ speed: 'standard' }),
+        });
+
+        const json = await res.json();
+
+        if (!res.ok || !json.ok) {
+          const errJson = json;
+          console.warn('Payout error', errJson);
+
+          const msg =
+            errJson.message ||
+            'We could not start your payout. Please try again in a moment.';
+
+          setErrorMessage(msg);
+          setFlowState('payoutError');
+          return;
+        }
+
+        setPayoutAmountCents(json.payout.amount_cents);
+        setFlowState('payoutSuccess');
+      } catch (err) {
+        console.error('Payout start error', err);
+        setErrorMessage(
+          'We could not start your payout. Please try again in a moment.'
+        );
+        setFlowState('payoutError');
+      }
+    }
+
+    if (!isOpen) return null;
+
+    function renderPrimaryAction() {
+      switch (flowState) {
+        case 'notConnected':
+        case 'needsSetup':
+          return (
+            <button
+              onClick={handleStripeConnect}
+              className="w-full rounded-xl bg-amber-500 px-4 py-3 font-semibold text-slate-950 shadow hover:bg-amber-400 transition"
+            >
+              Connect Stripe
+            </button>
+          );
+        case 'noFunds':
+          return (
+            <button
+              onClick={handleShareLink}
+              className="w-full rounded-xl border border-slate-700 px-4 py-3 font-semibold text-slate-100 hover:border-slate-500 transition"
+            >
+              Share your link
+            </button>
+          );
+        case 'ready':
+          return (
+            <button
+              onClick={handlePayout}
+              className="w-full rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-slate-950 shadow hover:bg-emerald-400 transition"
+            >
+              Send to your bank
+            </button>
+          );
+        case 'payoutInProgress':
+          return (
+            <button
+              disabled
+              className="w-full rounded-xl bg-slate-700 px-4 py-3 font-semibold text-slate-300"
+            >
+              Sending...
+            </button>
+          );
+        case 'payoutSuccess':
+          return (
+            <button
+              onClick={onClose}
+              className="w-full rounded-xl border border-emerald-400/70 px-4 py-3 font-semibold text-emerald-100 hover:border-emerald-300 transition"
+            >
+              Close
+            </button>
+          );
+        case 'payoutError':
+          return (
+            <button
+              onClick={() => setFlowState(derivedState)}
+              className="w-full rounded-xl bg-amber-500 px-4 py-3 font-semibold text-slate-950 shadow hover:bg-amber-400 transition"
+            >
+              Try again
+            </button>
+          );
+        default:
+          return (
+            <button
+              disabled
+              className="w-full rounded-xl bg-slate-700 px-4 py-3 font-semibold text-slate-300"
+            >
+              Loading...
+            </button>
+          );
+      }
+    }
+
+    function renderStateDescription() {
+      switch (flowState) {
+        case 'loading':
+          return 'Checking your payouts...';
+        case 'notConnected':
+          return 'Connect your Stripe account to start receiving payouts.';
+        case 'needsSetup':
+          return 'Stripe needs a few more details before we can send payouts.';
+        case 'noFunds':
+          return 'No funds yet. Share your link to receive your first tips!';
+        case 'ready':
+          return 'Ready to transfer your available balance to your bank.';
+        case 'payoutInProgress':
+          return 'Starting your payout...';
+        case 'payoutSuccess':
+          return 'Payout started! Funds will arrive based on your payout speed.';
+        case 'payoutError':
+          return 'We hit a snag while starting your payout.';
+        default:
+          return '';
+      }
+    }
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+        <div className="relative max-w-md w-full rounded-2xl bg-slate-950/90 text-slate-50 shadow-xl border border-slate-800 p-6">
+          <button
+            onClick={onClose}
+            className="absolute right-3 top-3 text-slate-400 hover:text-slate-200 text-sm"
+          >
+            ✕
+          </button>
+
+          <div className="mb-4 text-xs tracking-[0.18em] text-slate-400 uppercase">
+            Transparency
+          </div>
+          <h2 className="text-lg font-semibold mb-2">How your source is calculated</h2>
+
+          <div className="mt-4 rounded-2xl bg-gradient-to-br from-slate-800/70 to-slate-900/70 p-5 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-slate-200 font-semibold">
+                {renderStateDescription()}
+              </div>
+              {balance && (
+                <div className="rounded-full bg-slate-900/80 px-3 py-1 text-xs text-slate-300 border border-slate-700">
+                  Available: {balance.available_cents / 100} {balance.currency}
+                </div>
+              )}
+            </div>
+
+            {flowState === 'payoutSuccess' && (
+              <div className="rounded-xl border border-emerald-400/50 bg-emerald-400/10 p-3 text-sm text-emerald-100">
+                We started a payout of ${amountDollars}. It may take a few days to arrive.
+              </div>
+            )}
+
+            {flowState === 'payoutError' && errorMessage && (
+              <div className="rounded-xl border border-amber-400/50 bg-amber-400/10 p-3 text-sm text-amber-100">
+                {errorMessage}
+              </div>
+            )}
+
+            {flowState === 'noFunds' && shareLink && (
+              <div className="rounded-xl border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-200">
+                Share your Haylo link to start collecting funds: {shareLink}
+              </div>
+            )}
+
+            {flowState === 'ready' && payoutAmountCents != null && (
+              <div className="rounded-xl border border-slate-700 bg-slate-900/70 p-3 text-sm text-slate-200">
+                You have ${amountDollars} available to send to your bank.
+              </div>
+            )}
+
+            {flowState === 'loading' && (
+              <div className="text-sm text-slate-400">Loading payout info...</div>
+            )}
+
+            {renderPrimaryAction()}
+
+            {errorMessage && flowState !== 'payoutError' && (
+              <div className="text-xs text-amber-200/80">{errorMessage}</div>
+            )}
+          </div>
+
+          <div className="mt-6 grid grid-cols-2 gap-3 text-xs text-slate-400">
+            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+              <div className="text-slate-300 font-semibold mb-1">Stripe</div>
+              <div>
+                {stripeStatus?.connected ? 'Connected' : 'Not connected'}.{' '}
+                {stripeStatus?.details_submitted ? 'Details submitted.' : ''}{' '}
+                {stripeStatus?.payouts_enabled ? 'Payouts on.' : 'Payouts off.'}
+              </div>
+            </div>
+            <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+              <div className="text-slate-300 font-semibold mb-1">Balance</div>
+              <div>
+                {balance
+                  ? `${(balance.available_cents / 100).toFixed(2)} ${balance.currency}`
+                  : 'Loading...'}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const YourImpactReplenish = () => {
+    const [isReplenishOpen, setIsReplenishOpen] = useState(false);
+
+    return (
+      <>
+        <div className="flex justify-end mb-4">
+          <button
+            className="rounded-xl bg-slate-800/80 border border-slate-700 px-4 py-2 text-sm font-semibold text-white hover:border-amber-400/70 transition"
+            onClick={() => setIsReplenishOpen(true)}
+          >
+            Replenish · Send to your bank
+          </button>
+        </div>
+
+        <ReplenishModal
+          isOpen={isReplenishOpen}
+          onClose={() => setIsReplenishOpen(false)}
+          shareLink="https://haylofriend.com/friend/your-handle"
+        />
+      </>
+    );
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const mountNode = document.getElementById('replenish-modal-root');
+    if (mountNode && ReactDOM.createRoot) {
+      const root = ReactDOM.createRoot(mountNode);
+      root.render(<YourImpactReplenish />);
+    }
+  });
+</script>
+<style>
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-3px); }
+}
+.animate-float-slow {
+  animation: float-slow 8s ease-in-out infinite;
+}
+</style>
+<script>
+/* Gratitude Bloom island — pure DOM, no framework hooks. Safe: no auth touched, no app refs. */
+(function(){
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+  const el = $('#gbloom-card'); if (!el) return;
+
+  let who='', amount=5, custom=null, split=20, anon=true, note='';
+
+  // glow like other CTAs
+  const applyGlow = (root) => $$
+    ('[data-cta-glow]', root)
+    .forEach(x => x.classList.add('animate-pulse-glow'));
+  applyGlow(el);
+
+  // wiring
+  const whoI   = $('#gbloom-who', el);
+  const whoLbl = $('#gbloom-who-label', el);
+  const clrBtn = $('#gbloom-clear', el);
+  const customI= $('#gbloom-custom', el);
+  const splitI = $('#gbloom-split', el);
+  const splitL = $('#gbloom-split-label', el);
+  const tipPct = $('#gbloom-tip-pct', el);
+  const bloomPct = $('#gbloom-bloom-pct', el);
+  const tipPart = $('#gbloom-tip-part', el);
+  const bloomPart = $('#gbloom-bloom-part', el);
+  const sendBtn = $('#gbloom-send', el);
+  const toast   = $('#gbloom-toast', el);
+
+  function chosenAmount(){
+    const c = Number(customI.value || 0);
+    return Number.isFinite(c) && c>0 ? c : amount;
+  }
+  function recompute(){
+    const a = chosenAmount();
+    const tip  = a * (100 - split)/100;
+    const pool = a * split/100;
+    whoLbl.textContent = who || 'recipient';
+    splitL.textContent = String(split);
+    tipPct.textContent = String(100 - split);
+    bloomPct.textContent = String(split);
+    tipPart.textContent = tip.toFixed(2);
+    bloomPart.textContent = pool.toFixed(2);
+  }
+
+  // suggestions
+  $$('.pill[data-gbloom-suggest]', el).forEach(btn=>{
+    btn.addEventListener('click', ()=>{ who = btn.getAttribute('data-gbloom-suggest') || ''; whoI.value = who; recompute(); });
+  });
+
+  const presetButtons = $$('.gbloom-amt', el);
+  const markPreset = (target) => {
+    presetButtons.forEach(b => {
+      const isActive = Number(b.getAttribute('data-amt')||NaN) === target;
+      b.classList.toggle('border-[var(--acc)]', isActive);
+      b.classList.toggle('bg-white/10', isActive);
+    });
+  };
+
+  // amount presets
+  presetButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      amount = Number(btn.getAttribute('data-amt')||5) || 5;
+      markPreset(amount);
+      customI.value = '';
+      recompute();
+    });
+  });
+
+  // inputs
+  whoI.addEventListener('input', ()=>{ who = whoI.value.trim(); recompute(); });
+  clrBtn.addEventListener('click', ()=>{ who = ''; whoI.value=''; recompute(); });
+  customI.addEventListener('input', ()=>{
+    markPreset(null);
+    recompute();
+  });
+  splitI.addEventListener('input', ()=>{ split = Number(splitI.value||20); recompute(); });
+  $('#gbloom-anon', el).addEventListener('change', e=>{ anon = !!e.target.checked; });
+  $('#gbloom-note', el).addEventListener('input', e=>{ note = (e.target.value||'').trim(); });
+
+  // CTA
+  sendBtn.addEventListener('click', (e)=>{
+    e.preventDefault();
+    if (!who.trim() || chosenAmount()<=0) return;
+
+    // micro ripple feedback
+    try {
+      const s=document.createElement('span');
+      s.style.cssText='position:absolute;width:220px;height:220px;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(77,163,255,.30),transparent 60%);animation:gbRipple .8s ease-out forwards;pointer-events:none;';
+      sendBtn.appendChild(s); setTimeout(()=>s.remove(),800);
+    } catch {}
+
+    // toast
+    toast.classList.remove('hidden');
+    setTimeout(()=>toast.classList.add('hidden'), 2200);
+
+    // analytics hook (no backend calls; non-breaking)
+    window.dispatchEvent(new CustomEvent('gbloom:sent', {
+      detail:{ to: who.trim(), amount: chosenAmount(), split, anon, note }
+    }));
+
+    // reset some fields
+    amount=5; customI.value=''; split=20; splitI.value='20'; anon=true; $('#gbloom-anon', el).checked=true; note=''; $('#gbloom-note', el).value='';
+    markPreset(5);
+    recompute();
+  });
+
+  // initial UI
+  // mark default $5 button active
+  markPreset(5);
+  recompute();
+})();
+</script>
+<style>
+@keyframes gbRipple {
+  from { opacity:.5; transform:translate(-50%,-50%) scale(.6); }
+  to   { opacity:0;  transform:translate(-50%,-50%) scale(1.2); }
+}
+</style>
+
+<script>
+/* Move the existing “Today’s gap” mini-card into the new slot next to the Ledger. */
+(function () {
+  var src  = document.getElementById('todays-gap-card');
+  var slot = document.getElementById('gap-spotlight-slot');
+  if (!src || !slot) return;
+
+  // Move the whole mini-card (keeps its content/logic intact)
+  slot.appendChild(src);
+
+  // Spotlight styles (float + soft glow)
+  src.id = 'todays-gap-spotlight';
+  src.classList.add('gap-spotlight', 'gap-glow');
+
+  // If the Bridge panel had spacing adjusted by removing this card, no-op is fine.
+})();
+</script>
+
+<style>
+/* Gentle float to draw attention without being noisy */
+.gap-spotlight {
+  position: sticky;        /* sticks while scrolling the ledger */
+  top: 1rem;
+  z-index: 1;
+  animation: gapFloat 6s ease-in-out infinite;
+  will-change: transform, box-shadow;
+}
+
+/* Soft breathing glow matching your accent */
+.gap-glow {
+  box-shadow: 0 0 0 0 rgba(77,163,255,.0);
+  animation: gapFloat 6s ease-in-out infinite, gapPulse 2.8s ease-in-out infinite;
+}
+
+@keyframes gapFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+
+@keyframes gapPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(77,163,255,.00); }
+  50%  { box-shadow: 0 0 24px 2px rgba(77,163,255,.25); }
+  100% { box-shadow: 0 0 0 0 rgba(77,163,255,.00); }
+}
+
+/* Respect small screens: no float/sticky on mobile to avoid layout squeeze */
+@media (max-width: 1023px) {
+  .gap-spotlight { position: static; top: auto; }
+}
+</style>
+
+<script>
+/* Layout-only move: place Ledger + Today’s gap as a bottom row. No auth or app logic touched. */
+(function () {
+  var ledger = document.getElementById('gratitude-ledger-card');
+  var gap    = document.getElementById('todays-gap-card');
+  var anchor = document.getElementById('ledger-bottom-row-anchor');
+  if (!ledger || !gap || !anchor) return;
+
+  // Build a responsive row: Ledger spans 2 cols, Gap spans 1
+  var row = document.createElement('section');
+  row.id = 'ledger-bottom-row';
+  row.className = 'mt-8 grid gap-6 lg:grid-cols-3 items-start';
+
+  // Wrap Ledger to force span-2 without altering its internal markup
+  var ledgerWrap = document.createElement('div');
+  ledgerWrap.className = 'lg:col-span-2';
+  ledgerWrap.appendChild(ledger);
+
+  // Wrap Gap to allow a tiny left nudge + remove any previous sticky class
+  gap.classList.remove('gap-spotlight'); // in case we previously made it sticky
+  var gapWrap = document.createElement('div');
+  gapWrap.className = 'lg:col-span-1';
+  // add a gentle alignment nudge on desktop
+  gap.classList.add('gap-align-nudge', 'gap-glow'); // keep glow if you had it
+
+  // Assemble
+  gapWrap.appendChild(gap);
+  row.appendChild(ledgerWrap);
+  row.appendChild(gapWrap);
+
+  // Place at the bottom
+  anchor.replaceWith(row);
+})();
+</script>
+
+<style>
+/* Subtle left alignment nudge so Today’s gap lines up with the top right column */
+@media (min-width: 1024px) {
+  #todays-gap-card.gap-align-nudge { transform: translateX(-6px); }
+}
+
+/* (Optional) Keep the soft breathing glow if you liked it earlier */
+@keyframes gapPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(77,163,255,.00); }
+  50%  { box-shadow: 0 0 24px 2px rgba(77,163,255,.25); }
+  100% { box-shadow: 0 0 0 0 rgba(77,163,255,.00); }
+}
+#todays-gap-card.gap-glow { animation: gapPulse 2.8s ease-in-out infinite; will-change: box-shadow; }
+</style>
+</body>
+</html>
