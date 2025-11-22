@@ -427,6 +427,90 @@
         </div>
       </div>
     </div>
+
+    <!-- ===== Gratitude Bloom (standalone island — no auth / app changes) ===== -->
+    <div id="gbloom-card" class="glass rounded-2xl p-5 flex flex-col gap-4">
+      <div>
+        <div class="text-[11px] uppercase tracking-wide text-white/60">Gratitude</div>
+        <h3 class="text-2xl font-semibold mt-1">Tip & Bloom</h3>
+        <p class="mt-1 text-sm text-white/70">Turn today’s thanks into tomorrow’s good.</p>
+      </div>
+
+      <!-- Recipient -->
+      <div>
+        <label class="text-xs text-white/60">Who made your day?</label>
+        <div class="mt-1 flex gap-2">
+          <input id="gbloom-who" type="text" inputmode="text"
+                 placeholder="@handle, email, or name"
+                 class="w-full rounded-xl bg-black/30 border border-white/10 px-3 py-2 text-sm outline-none focus:border-[var(--acc)]/60">
+          <button id="gbloom-clear"
+                  class="px-3 py-2 rounded-xl border border-white/10 text-xs text-white/70 hover:bg-white/5">Clear</button>
+        </div>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button class="pill text-[11px] hover:bg-white/10" data-gbloom-suggest="@barista">@barista</button>
+          <button class="pill text-[11px] hover:bg-white/10" data-gbloom-suggest="@teacher">@teacher</button>
+          <button class="pill text-[11px] hover:bg-white/10" data-gbloom-suggest="@teammate">@teammate</button>
+          <button class="pill text-[11px] hover:bg-white/10" data-gbloom-suggest="mom@example.com">mom@example.com</button>
+        </div>
+      </div>
+
+      <!-- Amount presets -->
+      <div>
+        <label class="text-xs text-white/60">Tip amount</label>
+        <div class="mt-2 grid grid-cols-4 gap-2">
+          <button class="gbloom-amt rounded-xl border px-3 py-2 text-sm border-white/10 bg-black/20 hover:bg-white/5" data-amt="2">$ 2</button>
+          <button class="gbloom-amt rounded-xl border px-3 py-2 text-sm border-white/10 bg-black/20 hover:bg-white/5" data-amt="5">$ 5</button>
+          <button class="gbloom-amt rounded-xl border px-3 py-2 text-sm border-white/10 bg-black/20 hover:bg-white/5" data-amt="10">$ 10</button>
+          <button class="gbloom-amt rounded-xl border px-3 py-2 text-sm border-white/10 bg-black/20 hover:bg-white/5" data-amt="20">$ 20</button>
+          <div class="col-span-2 relative">
+            <input id="gbloom-custom" type="number" min="1" step="1" placeholder="Custom"
+                   class="w-full rounded-xl bg-black/30 border border-white/10 px-3 py-2 text-sm outline-none focus:border-[var(--acc)]/60">
+            <span class="absolute right-3 top-2 text-white/40 text-xs">USD</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bloom split -->
+      <div>
+        <div class="flex items-center justify-between">
+          <label class="text-xs text-white/60">Bloom split</label>
+          <div class="text-xs text-white/70"><span id="gbloom-split-label">20</span>% to Bloom</div>
+        </div>
+        <input id="gbloom-split" type="range" min="0" max="50" value="20" class="w-full mt-2">
+        <div class="mt-1 text-[11px] text-white/60">
+          Tip <span id="gbloom-tip-pct">80</span>% → recipient · Bloom <span id="gbloom-bloom-pct">20</span>% → pooled good
+        </div>
+      </div>
+
+      <!-- Privacy + note -->
+      <div class="grid grid-cols-1 gap-2">
+        <label class="inline-flex items-center gap-2 text-sm text-white/80">
+          <input id="gbloom-anon" type="checkbox" class="w-4 h-4 accent-[var(--acc)]" checked>
+          Send anonymously
+        </label>
+        <input id="gbloom-note" maxlength="120" placeholder="Add a kind word (optional)"
+               class="rounded-xl bg-black/30 border border-white/10 px-3 py-2 text-sm outline-none focus:border-[var(--acc)]/60">
+      </div>
+
+      <!-- CTA -->
+      <div class="flex flex-col gap-2">
+        <button id="gbloom-send"
+                data-cta-glow
+                class="relative overflow-hidden w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl glass text-sm font-medium transition-all hover:animate-pulse-glow">
+          <span class="w-1.5 h-1.5 rounded-full bg-[var(--acc)] animate-pulse"></span>
+          Tip & Bloom
+        </button>
+        <div class="text-[12px] text-white/60">
+          Ripple: $<span id="gbloom-tip-part">4.00</span> → <span id="gbloom-who-label">recipient</span>,
+          $<span id="gbloom-bloom-part">1.00</span> → Bloom
+        </div>
+      </div>
+
+      <!-- success toast -->
+      <div id="gbloom-toast" class="hidden rounded-xl border border-emerald-400/40 bg-emerald-400/10 p-3 text-sm text-emerald-100">
+        You made someone’s day. And tomorrow’s. 🌱
+      </div>
+    </div>
   </section>
 
   <!-- AI Co-Pilot (drawer) -->
@@ -1527,6 +1611,113 @@ window.app = app;
 }
 .animate-float-slow {
   animation: float-slow 8s ease-in-out infinite;
+}
+</style>
+<script>
+/* Gratitude Bloom island — pure DOM, no framework hooks. Safe: no auth touched, no app refs. */
+(function(){
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+  const el = $('#gbloom-card'); if (!el) return;
+
+  let who='', amount=5, custom=null, split=20, anon=true, note='';
+
+  // glow like other CTAs
+  const applyGlow = (root) => $$
+    ('[data-cta-glow]', root)
+    .forEach(x => x.classList.add('animate-pulse-glow'));
+  applyGlow(el);
+
+  // wiring
+  const whoI   = $('#gbloom-who', el);
+  const whoLbl = $('#gbloom-who-label', el);
+  const clrBtn = $('#gbloom-clear', el);
+  const customI= $('#gbloom-custom', el);
+  const splitI = $('#gbloom-split', el);
+  const splitL = $('#gbloom-split-label', el);
+  const tipPct = $('#gbloom-tip-pct', el);
+  const bloomPct = $('#gbloom-bloom-pct', el);
+  const tipPart = $('#gbloom-tip-part', el);
+  const bloomPart = $('#gbloom-bloom-part', el);
+  const sendBtn = $('#gbloom-send', el);
+  const toast   = $('#gbloom-toast', el);
+
+  function chosenAmount(){
+    const c = Number(customI.value || 0);
+    return Number.isFinite(c) && c>0 ? c : amount;
+  }
+  function recompute(){
+    const a = chosenAmount();
+    const tip  = a * (100 - split)/100;
+    const pool = a * split/100;
+    whoLbl.textContent = who || 'recipient';
+    splitL.textContent = String(split);
+    tipPct.textContent = String(100 - split);
+    bloomPct.textContent = String(split);
+    tipPart.textContent = tip.toFixed(2);
+    bloomPart.textContent = pool.toFixed(2);
+  }
+
+  // suggestions
+  $$('.pill[data-gbloom-suggest]', el).forEach(btn=>{
+    btn.addEventListener('click', ()=>{ who = btn.getAttribute('data-gbloom-suggest') || ''; whoI.value = who; recompute(); });
+  });
+
+  // amount presets
+  $$('.gbloom-amt', el).forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      amount = Number(btn.getAttribute('data-amt')||5) || 5;
+      $$('.gbloom-amt', el).forEach(b=>b.classList.remove('border-[var(--acc)]','bg-white/10'));
+      btn.classList.add('border-[var(--acc)]','bg-white/10');
+      customI.value = '';
+      recompute();
+    });
+  });
+
+  // inputs
+  whoI.addEventListener('input', ()=>{ who = whoI.value.trim(); recompute(); });
+  clrBtn.addEventListener('click', ()=>{ who = ''; whoI.value=''; recompute(); });
+  customI.addEventListener('input', ()=>{ recompute(); });
+  splitI.addEventListener('input', ()=>{ split = Number(splitI.value||20); recompute(); });
+  $('#gbloom-anon', el).addEventListener('change', e=>{ anon = !!e.target.checked; });
+  $('#gbloom-note', el).addEventListener('input', e=>{ note = (e.target.value||'').trim(); });
+
+  // CTA
+  sendBtn.addEventListener('click', (e)=>{
+    e.preventDefault();
+    if (!who.trim() || chosenAmount()<=0) return;
+
+    // micro ripple feedback
+    try {
+      const s=document.createElement('span');
+      s.style.cssText='position:absolute;width:220px;height:220px;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(77,163,255,.30),transparent 60%);animation:gbRipple .8s ease-out forwards;pointer-events:none;';
+      sendBtn.appendChild(s); setTimeout(()=>s.remove(),800);
+    } catch {}
+
+    // toast
+    toast.classList.remove('hidden');
+    setTimeout(()=>toast.classList.add('hidden'), 2200);
+
+    // analytics hook (no backend calls; non-breaking)
+    window.dispatchEvent(new CustomEvent('gbloom:sent', {
+      detail:{ to: who.trim(), amount: chosenAmount(), split, anon, note }
+    }));
+
+    // reset some fields
+    amount=5; customI.value=''; split=20; splitI.value='20'; anon=true; $('#gbloom-anon', el).checked=true; note=''; $('#gbloom-note', el).value='';
+    recompute();
+  });
+
+  // initial UI
+  // mark default $5 button active
+  const def = $('.gbloom-amt[data-amt="5"]', el); def && def.classList.add('border-[var(--acc)]','bg-white/10');
+  recompute();
+})();
+</script>
+<style>
+@keyframes gbRipple {
+  from { opacity:.5; transform:translate(-50%,-50%) scale(.6); }
+  to   { opacity:0;  transform:translate(-50%,-50%) scale(1.2); }
 }
 </style>
 </body>
