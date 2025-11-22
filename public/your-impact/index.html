@@ -170,8 +170,8 @@
   <section class="mt-8 grid lg:grid-cols-3 gap-6">
     <!-- Possibility -->
     <div class="glass rounded-2xl p-5">
-      <div class="text-xs uppercase text-white/60">Possibility</div>
-      <h3 class="text-2xl font-semibold mt-1">Project your upside</h3>
+        <div class="text-xs uppercase text-white/60">Possibility</div>
+        <h3 class="text-2xl font-semibold mt-1">See what’s possible</h3>
       <div class="mt-4 space-y-3">
         <div>
           <div class="flex justify-between text-xs text-white/60 mb-1"><span>Shares/day</span><span>{{ sharesPerDay }}</span></div>
@@ -240,15 +240,14 @@
           Co-Pilot: bridge the gap
         </h3>
         <p class="mt-2 text-sm text-white/70">
-          We read your reality and your possibility, then suggest the next tiny move that keeps
-          gratitude compounding.
+          We read your reality and your possibility, then suggest the next tiny move to close the gap.
         </p>
       </div>
 
       <!-- Gap meter: Reality → Possibility -->
       <div
         id="todays-gap-card"
-        class="rounded-xl border border-white/10 bg-black/40 p-3 cursor-pointer hover:bg-white/8 transition"
+        class="glass rounded-xl p-3 cursor-pointer hover:bg-white/10 transition"
         @click="goToCreate"
       >
         <div class="flex items-center justify-between text-[11px] text-white/60">
@@ -337,11 +336,8 @@
       <div
         class="
           glass rounded-2xl p-6
-          bg-gradient-to-b from-white/10 to-white/5
           border border-white/10
-          shadow-[0_15px_40px_-10px_rgba(0,0,0,0.6)]
-          backdrop-blur-xl
-          animate-float-slow
+          shadow-[0_18px_50px_rgba(0,0,0,0.7)]
           flex flex-col gap-5
         "
       >
