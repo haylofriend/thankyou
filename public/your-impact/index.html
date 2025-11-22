@@ -1663,12 +1663,20 @@ window.app = app;
     btn.addEventListener('click', ()=>{ who = btn.getAttribute('data-gbloom-suggest') || ''; whoI.value = who; recompute(); });
   });
 
+  const presetButtons = $$('.gbloom-amt', el);
+  const markPreset = (target) => {
+    presetButtons.forEach(b => {
+      const isActive = Number(b.getAttribute('data-amt')||NaN) === target;
+      b.classList.toggle('border-[var(--acc)]', isActive);
+      b.classList.toggle('bg-white/10', isActive);
+    });
+  };
+
   // amount presets
-  $$('.gbloom-amt', el).forEach(btn=>{
+  presetButtons.forEach(btn=>{
     btn.addEventListener('click', ()=>{
       amount = Number(btn.getAttribute('data-amt')||5) || 5;
-      $$('.gbloom-amt', el).forEach(b=>b.classList.remove('border-[var(--acc)]','bg-white/10'));
-      btn.classList.add('border-[var(--acc)]','bg-white/10');
+      markPreset(amount);
       customI.value = '';
       recompute();
     });
@@ -1677,7 +1685,10 @@ window.app = app;
   // inputs
   whoI.addEventListener('input', ()=>{ who = whoI.value.trim(); recompute(); });
   clrBtn.addEventListener('click', ()=>{ who = ''; whoI.value=''; recompute(); });
-  customI.addEventListener('input', ()=>{ recompute(); });
+  customI.addEventListener('input', ()=>{
+    markPreset(null);
+    recompute();
+  });
   splitI.addEventListener('input', ()=>{ split = Number(splitI.value||20); recompute(); });
   $('#gbloom-anon', el).addEventListener('change', e=>{ anon = !!e.target.checked; });
   $('#gbloom-note', el).addEventListener('input', e=>{ note = (e.target.value||'').trim(); });
@@ -1705,12 +1716,13 @@ window.app = app;
 
     // reset some fields
     amount=5; customI.value=''; split=20; splitI.value='20'; anon=true; $('#gbloom-anon', el).checked=true; note=''; $('#gbloom-note', el).value='';
+    markPreset(5);
     recompute();
   });
 
   // initial UI
   // mark default $5 button active
-  const def = $('.gbloom-amt[data-amt="5"]', el); def && def.classList.add('border-[var(--acc)]','bg-white/10');
+  markPreset(5);
   recompute();
 })();
 </script>
