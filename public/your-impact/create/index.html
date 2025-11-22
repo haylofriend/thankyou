@@ -138,6 +138,102 @@
     .inspect-enter-active{transition:opacity .15s ease,transform .2s cubic-bezier(.2,.8,.2,1);}
     .inspect-leave-to{opacity:0;transform:translateY(6px) scale(.98);}
     .inspect-leave-active{transition:opacity .12s ease,transform .15s ease;}
+
+    .ledger-item {
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.5rem;
+      border: 1px solid rgba(0,0,0,0.06);
+      margin-bottom: 0.5rem;
+    }
+
+    .ledger-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .ledger-row-top {
+      gap: 0.75rem;
+    }
+
+    .ledger-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      flex: 0 0 auto;
+    }
+
+    .ledger-description {
+      flex: 1 1 auto;
+      text-align: right;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin: 0;
+    }
+
+    .ledger-row-middle {
+      margin-top: 0.25rem;
+      font-size: 0.8rem;
+    }
+
+    .ledger-meta-left {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+
+    .ledger-tag {
+      padding: 0.1rem 0.4rem;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.12);
+      font-weight: 500;
+      text-transform: capitalize;
+    }
+
+    .ledger-pill {
+      padding: 0.1rem 0.35rem;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.03);
+    }
+
+    .ledger-metrics {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .ledger-metric {
+      display: inline-flex;
+      align-items: center;
+      border: none;
+      background: transparent;
+      padding: 0;
+      cursor: default;
+    }
+
+    .metric-number {
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    .metric-label {
+      opacity: 0;
+      width: 0;
+      margin-left: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      transition: opacity 0.15s ease, width 0.15s ease, margin-left 0.15s ease;
+      font-size: 0.75rem;
+      font-weight: 400;
+    }
+
+    .ledger-metric:hover .metric-label {
+      opacity: 1;
+      width: auto;
+      margin-left: 0.25rem;
+    }
   </style>
 
   <!-- Vue 3 -->
@@ -451,44 +547,50 @@
               class="breath haylo-card rounded-xl p-4 cursor-pointer"
               @click="openInspector($event, item)"
             >
-              <div class="flex items-start gap-3">
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2">
-                    <h4 class="font-medium truncate" :title="titleOf(item)">{{ titleOf(item) }}</h4>
-                    <span
-                      class="text-[10px] px-1.5 py-0.5 rounded-full border uppercase tracking-wide"
-                      :class="tagClass(item.type)"
-                    >
+              <div class="ledger-item">
+                <div class="ledger-row ledger-row-top">
+                  <h4 class="ledger-title">
+                    {{ titleOf(item) }}
+                  </h4>
+                  <p class="ledger-description">
+                    {{ notesOf(item) }}
+                  </p>
+                </div>
+
+                <div class="ledger-row ledger-row-middle">
+                  <div class="ledger-meta-left">
+                    <span class="ledger-tag">
                       {{ tagLabel(item.type) }}
                     </span>
-                  </div>
-                  <p class="mt-1 text-sm text-white/80 line-clamp-1">{{ notesOf(item) }}</p>
-                  <div class="mt-2 flex items-center gap-3 text-xs text白/60">
-                    <span class="px-1.5 py-0.5 rounded-full border border-[color:var(--hair)]">
+
+                    <span class="ledger-pill">
                       {{ statusOf(item) }}
                     </span>
-                    <span v-if="item.type==='service'">
+
+                    <span class="ledger-pill" v-if="item.cadence">
                       {{ item.cadence }} · ${{ (+item.price).toFixed(2) }}
                     </span>
-                    <span v-if="item.type==='good'">
+
+                    <span class="ledger-pill" v-if="item.qty">
                       ${{ (+item.price).toFixed(2) }} · Qty {{ item.qty || '—' }}
                     </span>
-                    <a
-                      v-if="item.type==='affiliate'"
-                      :href="item.url"
-                      @click.stop
-                      target="_blank"
-                      class="truncate max-w-[50%] text-[color:var(--acc)]"
-                    >
+
+                    <span class="ledger-pill" v-if="item.url">
                       {{ item.url }}
-                    </a>
+                    </span>
                   </div>
-                </div>
-                <div class="shrink-0 text-right text-xs text-white/60">
-                  <div>Clicks</div>
-                  <div class="text-green-400 text-sm font-semibold">+{{ clicksOf(item) }}</div>
-                  <div class="mt-1">Bought</div>
-                  <div class="text-green-400 text-sm font-semibold">+{{ buysOf(item) }}</div>
+
+                  <div class="ledger-metrics">
+                    <button class="ledger-metric" type="button">
+                      <span class="metric-number">+{{ clicksOf(item) }}</span>
+                      <span class="metric-label">Clicks</span>
+                    </button>
+
+                    <button class="ledger-metric" type="button">
+                      <span class="metric-number">+{{ buysOf(item) }}</span>
+                      <span class="metric-label">Bought</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </article>
