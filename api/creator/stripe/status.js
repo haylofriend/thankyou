@@ -20,23 +20,19 @@ module.exports = async function handler(req, res) {
     return json(res, 405, { error: 'Method not allowed' });
   }
 
-  if (!supabase) {
-    return json(res, 500, { error: 'Supabase not configured' });
-  }
-
   try {
-    // 1) Identify the current user
-    const user = await getUserFromAuthHeader(req);
+    // 1) Auth: make sure we have a user
+    const user = await getUserFromAuthHeader(req, supabase);
     if (!user) {
       return json(res, 401, { error: 'Unauthorized' });
     }
 
-    // 2) Look up their profile to find stripe_account_id
+    // 2) Look up the creator's profile + Stripe account id
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('id, stripe_account_id')
       .eq('id', user.id)
-      .maybeSingle();
+      .single();
 
     if (profileError) {
       console.error('creator/stripe/status profile error', profileError);
@@ -44,7 +40,7 @@ module.exports = async function handler(req, res) {
     }
 
     if (!profile || !profile.stripe_account_id) {
-      // No Stripe account on file yet
+      // Not connected yet
       return json(res, 200, {
         connected: false,
         payouts_enabled: false,
@@ -65,4 +61,3 @@ module.exports = async function handler(req, res) {
     return json(res, 500, { error: 'Failed to fetch Stripe status' });
   }
 };
-
