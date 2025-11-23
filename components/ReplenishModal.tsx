@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import authedFetch from '../lib/authedFetch';
+import startStripeConnectOnboarding from '../lib/startStripeConnectOnboarding';
 import { MagicShareButton } from '../components/MagicShareButton';
 
 type StripeStatus = {
@@ -143,21 +144,8 @@ export const ReplenishModal: React.FC<ReplenishModalProps> = ({
       setFlowState('loading');
       setErrorMessage(null);
 
-      const res = await authedFetch('/api/creator/stripe/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      const json = await res.json();
-
-      if (!res.ok || !json.url) {
-        console.error('Stripe connect error', json);
-        setErrorMessage('Could not start Stripe setup. Please try again.');
-        setFlowState(derivedState);
-        return;
-      }
-
-      window.location.href = json.url as string;
+      await startStripeConnectOnboarding();
+      setFlowState(derivedState);
     } catch (err) {
       console.error('Stripe connect error', err);
       setErrorMessage('Could not start Stripe setup. Please try again.');
