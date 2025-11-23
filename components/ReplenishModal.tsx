@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { MagicShareButton } from '../components/MagicShareButton';
 import authedFetch from '../lib/authedFetch';
+import { MagicShareButton } from '../components/MagicShareButton';
 
 type StripeStatus = {
   connected: boolean;
