@@ -330,43 +330,88 @@
     }
 
     function redirectToLogin() {
-      var currentPath = (typeof window !== "undefined" && window.location)
-        ? (window.location.pathname + (window.location.search || ""))
-        : normalized;
-      var redirect = encodeURIComponent(currentPath || "/your-impact");
-      var loginUrl = loginPath + "?redirect=" + redirect;
-      console.warn("[HayloAuth] redirectToLogin →", loginUrl);
+      var loginPath = getLoginPath();
 
-      var currentUrl = (typeof window !== "undefined" && window.location && window.location.href)
-        ? window.location.href
-        : "";
+      console.log('[HayloAuth] redirectToLogin', {
+        loginPath: loginPath,
+      });
+
+      // Figure out what we want to redirect *back* to after login.
+      var currentPath =
+        typeof window !== 'undefined' && window.location
+          ? window.location.pathname + (window.location.search || '')
+          : '';
+
+      var normalized = normalizeRedirect(currentPath, '/your-impact');
+
+      // If we’re already on the login path, don’t keep bouncing; just show logged-out view.
+      var currentUrl =
+        typeof window !== 'undefined' && window.location && window.location.href
+          ? window.location.href
+          : '';
 
       if (currentUrl && samePath(currentUrl, loginPath)) {
-        console.warn("[HayloAuth] Not redirecting: already on LOGIN_PATH, showing logged-out view instead.");
+        console.warn(
+          '[HayloAuth] Not redirecting: already on LOGIN_PATH, showing logged-out view instead.'
+        );
         hideOverlay();
         return;
       }
 
-      var LOOP_KEY = "hayloauth:lastRedirect";
+      // Simple loop protection: don’t redirect more than once every 3s.
+      var LOOP_KEY = 'hayloauth:lastRedirect';
       var now = Date.now();
       var last = 0;
+
       try {
-        last = parseInt(sessionStorage.getItem(LOOP_KEY) || "0", 10) || 0;
-      } catch (_) {
+        last = parseInt(sessionStorage.getItem(LOOP_KEY) || '0', 10) || 0;
+      } catch (_e) {
         last = 0;
       }
 
       if (now - last < 3000) {
-        console.warn("[HayloAuth] Possible redirect loop detected. Not redirecting again.");
+        console.warn(
+          '[HayloAuth] Possible redirect loop detected. Not redirecting again.'
+        );
         hideOverlay();
         return;
       }
 
       try {
         sessionStorage.setItem(LOOP_KEY, String(now));
-      } catch (_) {}
+      } catch (_e) {}
 
-      window.location.href = loginUrl;
+      showOverlay();
+
+      // Build the login URL in a way that preserves any existing query string
+      // on the configured login path (e.g. /auth/google?prompt=select_account),
+      // then *adds* or overwrites the "redirect" param.
+      var loginUrl;
+
+      try {
+        var origin =
+          (typeof currentOrigin === 'function' && currentOrigin()) ||
+          (typeof window !== 'undefined' &&
+            window.location &&
+            window.location.origin) ||
+          undefined;
+
+        var u = new URL(loginPath, origin);
+        u.searchParams.set('redirect', normalized);
+        loginUrl = u.toString();
+      } catch (_e) {
+        // Fallback string concat if URL construction fails for any reason.
+        var sep = loginPath.indexOf('?') === -1 ? '?' : '&';
+        loginUrl = loginPath + sep + 'redirect=' + encodeURIComponent(normalized);
+      }
+
+      try {
+        window.location.href = loginUrl;
+      } catch (_e) {
+        if (typeof window !== 'undefined' && window.location) {
+          window.location.assign(loginUrl);
+        }
+      }
     }
 
     showOverlay();
