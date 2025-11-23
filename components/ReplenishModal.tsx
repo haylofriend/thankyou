@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { MagicShareButton } from '../components/MagicShareButton';
-import authedFetch from '../lib/authedFetch';
+import { authedFetch } from '../lib/authedFetch';
 
 type StripeStatus = {
   connected: boolean;
@@ -84,7 +84,7 @@ export const ReplenishModal: React.FC<ReplenishModalProps> = ({
     async function fetchData() {
       try {
         const [statusRes, balanceRes] = await Promise.all([
-          authedFetch('/api/creator/stripe/status'),
+          fetch('/api/creator/stripe/status'),
           authedFetch('/api/creator/balance'),
         ]);
 

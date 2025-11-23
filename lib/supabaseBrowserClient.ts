@@ -18,5 +18,6 @@ export function getSupabaseBrowserClient(): SupabaseClient {
 }
 
 export const supabaseBrowserClient = getSupabaseBrowserClient();
+export const supabaseBrowser = supabaseBrowserClient;
 
 export default supabaseBrowserClient;
