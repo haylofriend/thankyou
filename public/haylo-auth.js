@@ -158,7 +158,30 @@
   }
 
   function getLoginPath() {
-    return canonicalLoginPath(W.LOGIN_PATH);
+    var envLogin = null;
+    try {
+      if (W.__ENV__ && typeof W.__ENV__.HF_LOGIN_PATH === "string") {
+        envLogin = W.__ENV__.HF_LOGIN_PATH;
+      }
+    } catch (_) {}
+
+    if (!envLogin) {
+      try {
+        if (typeof process !== "undefined" && process.env && process.env.NEXT_PUBLIC_HF_LOGIN_PATH) {
+          envLogin = process.env.NEXT_PUBLIC_HF_LOGIN_PATH;
+        }
+      } catch (_) {}
+    }
+
+    if (!envLogin && typeof W.HF_LOGIN_PATH === "string") {
+      envLogin = W.HF_LOGIN_PATH;
+    }
+
+    if (!envLogin && typeof W.LOGIN_PATH === "string") {
+      envLogin = W.LOGIN_PATH;
+    }
+
+    return canonicalLoginPath(envLogin || "/auth/google");
   }
 
   function normalizeRedirect(raw, fallbackPath) {
@@ -265,25 +288,62 @@
 
   async function gate(targetPath) {
     await loadEnv();
+    var loginPath = getLoginPath();
     var fallback = dash();
     var path = targetPath || (typeof location !== "undefined"
       ? (location.pathname + (location.search || "") + (location.hash || ""))
       : fallback);
     var normalized = normalizeRedirect(path, fallback);
-    var loginPath = getLoginPath();
     var ok = await loadSupabase();
 
+    function overlayEl() {
+      if (typeof document === "undefined") return null;
+      var el = document.querySelector("[data-hayloauth-overlay]");
+      if (el) return el;
+      el = document.getElementById("hayloauth-overlay");
+      if (el) return el;
+      var created = document.createElement("div");
+      created.id = "hayloauth-overlay";
+      created.dataset.hayloauthOverlay = "true";
+      created.style.position = "fixed";
+      created.style.inset = "0";
+      created.style.display = "none";
+      created.style.alignItems = "center";
+      created.style.justifyContent = "center";
+      created.style.background = "rgba(0,0,0,0.7)";
+      created.style.zIndex = "9999";
+      created.innerHTML = '<div style="padding:16px 20px;border-radius:14px;background:rgba(18,18,20,0.9);color:white;font-family:-apple-system,BlinkMacSystemFont,\"SF Pro Text\",\"Helvetica Neue\",Arial,sans-serif;">Checking sign-in…</div>';
+      try {
+        document.body.appendChild(created);
+      } catch (_) {}
+      return created;
+    }
+
+    function showOverlay() {
+      var el = overlayEl();
+      if (el) el.style.display = "flex";
+    }
+
+    function hideOverlay() {
+      var el = overlayEl();
+      if (el) el.style.display = "none";
+    }
+
     function redirectToLogin() {
-      console.log("[HayloAuth] redirectToLogin", {
-        loginPath,
-        normalized
-      });
+      var currentPath = (typeof window !== "undefined" && window.location)
+        ? (window.location.pathname + (window.location.search || ""))
+        : normalized;
+      var redirect = encodeURIComponent(currentPath || "/your-impact");
+      var loginUrl = loginPath + "?redirect=" + redirect;
+      console.warn("[HayloAuth] redirectToLogin →", loginUrl);
+
       var currentUrl = (typeof window !== "undefined" && window.location && window.location.href)
         ? window.location.href
         : "";
 
       if (currentUrl && samePath(currentUrl, loginPath)) {
         console.warn("[HayloAuth] Not redirecting: already on LOGIN_PATH, showing logged-out view instead.");
+        hideOverlay();
         return;
       }
 
@@ -298,6 +358,7 @@
 
       if (now - last < 3000) {
         console.warn("[HayloAuth] Possible redirect loop detected. Not redirecting again.");
+        hideOverlay();
         return;
       }
 
@@ -305,14 +366,10 @@
         sessionStorage.setItem(LOOP_KEY, String(now));
       } catch (_) {}
 
-      try {
-        var u = new URL(loginPath, currentOrigin());
-        u.searchParams.set("redirect", normalized);
-        location.replace(u.toString());
-      } catch (_) {
-        location.replace(loginPath + "?redirect=" + encodeURIComponent(normalized));
-      }
+      window.location.href = loginUrl;
     }
+
+    showOverlay();
 
     if (!ok) {
       // no Supabase client, send to login
@@ -323,18 +380,29 @@
     try {
       var supa = getClient();
       if (!supa) throw new Error("no supabase client");
+
+      console.log("[HayloAuth] Starting auth gate check");
       var result = await supa.auth.getSession();
-      var session = result && result.data && result.data.session || null;
-      if (!session || !session.user) {
+      if (result && result.error) {
+        console.error("[HayloAuth] getSession error", result.error);
         redirectToLogin();
         return;
       }
-      try {
-        sessionStorage.removeItem("hayloauth:lastRedirect");
-      } catch (_) {}
-      return session.user;
+
+      var session = result && result.data && result.data.session || null;
+      if (session && session.user) {
+        console.log("[HayloAuth] Session found", { userId: session.user.id });
+        try {
+          sessionStorage.removeItem("hayloauth:lastRedirect");
+        } catch (_) {}
+        hideOverlay();
+        return session.user;
+      }
+
+      console.warn("[HayloAuth] No session found; redirecting to login");
+      redirectToLogin();
     } catch (err) {
-      console.error("HayloAuth.gate error", err);
+      console.error("[HayloAuth] Unexpected auth gate error", err);
       redirectToLogin();
     }
   }
