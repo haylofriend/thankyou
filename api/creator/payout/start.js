@@ -1,140 +1,44 @@
 // api/creator/payout/start.js
 //
 // Kicks off a creator payout in a safe, Stripe-aware way.
-// Right now this endpoint:
+// This endpoint:
 //   1) Authenticates the creator via Supabase JWT (Authorization: Bearer ...)
 //   2) Checks they have a Stripe Connect account
 //   3) Verifies payouts are enabled on that account
-//   4) Reserves a payout row via Supabase
+//   4) Reserves a payout row via Supabase (RPC: creator_create_payout)
 //   5) Returns { ok: true, payout: {...} } so the UI can show the success state
 //
-// NOTE: We intentionally do NOT move money yet. Plug your own ledger logic
-// here later so you never trust client-provided amounts.
+// NOTE: We intentionally do NOT move money yet. That should be handled by your
+// own ledger/settlement logic.
 
-// ---------- Bootstrap shared deps defensively ----------
+const {
+  stripe,
+  supabase,
+  parseBody,
+  json,
+  authenticateRequest,
+} = require('../../_stripeShared');
 
-let bootstrapError = null;
-let stripe;
-let supabase;
-let parseBody;
-let json;
-let getUserFromAuthHeader;
-
-try {
-  ({
-    stripe,
-    supabase,
-    parseBody,
-    json,
-    getUserFromAuthHeader
-  } = require('../../_stripeShared'));
-} catch (err) {
-  bootstrapError = err;
-  // Log once per cold start so we can see why the function was failing.
-  console.error('[creator/payout/start] Failed to bootstrap shared deps', {
-    message: err && err.message,
-    stack: err && err.stack
-  });
-}
-
-// ---------- Supabase payout reservation error mapping ----------
-
+// Optional: map Supabase RPC errors into user-friendly messages.
 function mapPayoutReservationError(error) {
   if (!error) return null;
 
-  const { message, details, hint, code } = error;
-  const raw = { message, details, hint, code };
+  const code = error.code || '';
+  const message = error.message || '';
 
-  const combinedText = [message, details, hint]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-  const hintText = (hint || '').toLowerCase();
-  const codeText = (code || '').toUpperCase();
-
-  // 1) No funds after fees (instant payout)
-  if (
-    combinedText.includes('no_funds_after_fees') ||
-    hintText.includes('no_funds_after_fees') ||
-    codeText === 'CREATOR_PAYOUT_NO_FUNDS_AFTER_FEES' ||
-    codeText === 'NO_FUNDS_AFTER_FEES'
-  ) {
-    return {
-      status: 400,
-      publicErrorCode: 'NO_FUNDS_AFTER_FEES',
-      publicMessage:
-        'Instant payout fees would leave no balance to transfer. Try standard speed instead.',
-      raw
-    };
-  }
-
-  // 2) No funds at all
-  if (
-    combinedText.includes('no_funds') ||
-    hintText.includes('no_funds') ||
-    codeText === 'CREATOR_PAYOUT_NO_FUNDS' ||
-    codeText === 'NO_FUNDS' ||
-    hintText.includes('creator_payout_no_funds') ||
-    combinedText.includes('creator_payout_no_funds')
-  ) {
+  if (code === 'PAYOUT_NOTHING_AVAILABLE') {
     return {
       status: 400,
       publicErrorCode: 'NO_FUNDS',
-      publicMessage:
-        'You do not have any available funds to payout yet. Keep an eye on your dashboard.',
-      raw
+      publicMessage: 'There is nothing available to pay out yet.',
     };
   }
 
-  // 3) Below minimum payout threshold
-  if (
-    combinedText.includes('below_minimum') ||
-    hintText.includes('below_minimum') ||
-    codeText === 'CREATOR_PAYOUT_BELOW_MINIMUM' ||
-    codeText === 'BELOW_MINIMUM'
-  ) {
-    return {
-      status: 400,
-      publicErrorCode: 'BELOW_MINIMUM',
-      publicMessage:
-        'You need to reach the minimum payout amount before cashing out.',
-      raw
-    };
-  }
-
+  // You can extend this for more specific payout errors later.
   return null;
 }
 
-// ---------- Main handler ----------
-
 module.exports = async function handler(req, res) {
-  // If bootstrap failed (e.g. _stripeShared threw), never let the function crash.
-  if (bootstrapError) {
-    console.error(
-      '[creator/payout/start] Using fallback handler due to bootstrap error',
-      {
-        message: bootstrapError && bootstrapError.message
-      }
-    );
-
-    if (typeof json === 'function') {
-      return json(res, 500, {
-        error: 'PAYOUT_START_FAILED',
-        message:
-          'Something went wrong while starting your payout. Please try again.'
-      });
-    }
-
-    // Extra safety: if json helper is unavailable, fall back to raw res.
-    return res
-      .status(500)
-      .json({
-        error: 'PAYOUT_START_FAILED',
-        message:
-          'Something went wrong while starting your payout. Please try again.'
-      });
-  }
-
   if (req.method !== 'POST') {
     return json(res, 405, { error: 'Method not allowed' });
   }
@@ -147,13 +51,16 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    // 1) Who is asking?
-    const user = await getUserFromAuthHeader(req);
-    if (!user) {
-      return json(res, 401, { error: 'Unauthorized' });
+    // 1) Who is asking? Authenticate the creator.
+    const authResult = await authenticateRequest(req, res);
+    if (!authResult || !authResult.user) {
+      // authenticateRequest already sent the error response (401/500)
+      return;
     }
 
-    // 2) Read and normalize speed from body
+    const user = authResult.user;
+
+    // 2) Read and normalize payout speed from body
     const body = parseBody(req) || {};
     const rawSpeed = body.speed;
     const speed =
@@ -169,13 +76,13 @@ module.exports = async function handler(req, res) {
       .single();
 
     if (profileError) {
-      console.warn('payout/start profile error', profileError);
+      console.warn('creator/payout/start profile error', profileError);
     }
 
     if (!profile || !profile.stripe_account_id) {
       return json(res, 400, {
         error:
-          'Stripe payouts are not connected yet. Please set up your Stripe account first.'
+          'Stripe payouts are not connected yet. Please set up your Stripe account first.',
       });
     }
 
@@ -185,14 +92,14 @@ module.exports = async function handler(req, res) {
     if (!account.details_submitted) {
       return json(res, 400, {
         error:
-          'Your Stripe account is not fully verified yet. Please finish Stripe onboarding.'
+          'Your Stripe account is not fully verified yet. Please finish Stripe onboarding.',
       });
     }
 
     if (!account.payouts_enabled) {
       return json(res, 400, {
         error:
-          'Stripe has your account, but payouts are not enabled yet. Check your Stripe dashboard for next steps.'
+          'Stripe has your account, but payouts are not enabled yet. Check your Stripe dashboard for next steps.',
       });
     }
 
@@ -201,7 +108,7 @@ module.exports = async function handler(req, res) {
       'creator_create_payout',
       {
         in_creator_id: user.id,
-        in_speed: speed
+        in_speed: speed,
       }
     );
 
@@ -211,12 +118,17 @@ module.exports = async function handler(req, res) {
       if (mapped) {
         console.warn('[creator/payout/start] RPC mapped error', {
           publicErrorCode: mapped.publicErrorCode,
-          raw: mapped.raw
+          raw: {
+            code: reserveError.code,
+            message: reserveError.message,
+            details: reserveError.details,
+            hint: reserveError.hint,
+          },
         });
 
         return json(res, mapped.status, {
           error: mapped.publicErrorCode,
-          message: mapped.publicMessage
+          message: mapped.publicMessage,
         });
       }
 
@@ -224,50 +136,42 @@ module.exports = async function handler(req, res) {
         code: reserveError.code,
         message: reserveError.message,
         details: reserveError.details,
-        hint: reserveError.hint
+        hint: reserveError.hint,
       });
 
       return json(res, 500, {
         error: 'PAYOUT_START_FAILED',
         message:
-          'Something went wrong while starting your payout. Please try again.'
+          'Something went wrong while starting your payout. Please try again.',
       });
     }
 
-    const reservation = Array.isArray(reserveRows) ? reserveRows[0] : reserveRows;
+    const payoutRow = Array.isArray(reserveRows) && reserveRows.length
+      ? reserveRows[0]
+      : reserveRows;
 
-    if (!reservation || !reservation.payout_id) {
-      console.error('creator_create_payout returned no rows', reserveRows);
+    if (!payoutRow) {
+      console.error('[creator/payout/start] RPC returned no payout row', {
+        reserveRows,
+      });
       return json(res, 500, { error: 'Failed to reserve payout' });
     }
 
-    // 6) At this point we know:
-    //  - user is authenticated
-    //  - user has a connected Stripe Express account
-    //  - payouts are enabled
-    //  - a payout row was reserved in Supabase (race-safe)
-
     return json(res, 200, {
       ok: true,
-      speed,
       payout: {
-        id: reservation.payout_id,
-        amount_cents: reservation.amount_cents,
-        currency: reservation.currency,
-        type: reservation.payout_type
-      }
+        id: payoutRow.id,
+        amount_cents: payoutRow.amount_cents,
+        currency: payoutRow.currency || 'usd',
+        type: payoutRow.type || speed,
+      },
     });
   } catch (err) {
-    console.error('[creator/payout/start] Unhandled server error', {
-      error: err,
-      message: err && err.message,
-      stack: err && err.stack
-    });
-
+    console.error('[creator/payout/start] Unexpected error', err);
     return json(res, 500, {
       error: 'PAYOUT_START_FAILED',
       message:
-        'Something went wrong while starting your payout. Please try again.'
+        'Something went wrong while starting your payout. Please try again.',
     });
   }
 };
