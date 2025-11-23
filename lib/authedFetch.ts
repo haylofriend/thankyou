@@ -1,14 +1,18 @@
-import supabaseBrowserClient from './supabaseBrowserClient';
+import { supabaseBrowser } from './supabaseBrowserClient';
 
 export type AuthedFetchInput = Parameters<typeof fetch>[0];
 export type AuthedFetchInit = Parameters<typeof fetch>[1];
 
 export async function authedFetch(
   input: AuthedFetchInput,
-  init: AuthedFetchInit = {}
+  init: AuthedFetchInit = {},
 ): Promise<Response> {
-  const { data } = await supabaseBrowserClient.auth.getSession();
-  const token = data?.session?.access_token || '';
+  let token = '';
+
+  if (supabaseBrowser) {
+    const { data } = await supabaseBrowser.auth.getSession();
+    token = data?.session?.access_token || '';
+  }
 
   const headers = new Headers(init.headers || {});
 
