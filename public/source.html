@@ -576,6 +576,20 @@
         }
       }
 
+      async function authedFetch(input, init = {}) {
+        const headers = new Headers((init && init.headers) || {});
+        const authHeaders = await getAuthHeaders();
+
+        Object.entries(authHeaders || {}).forEach(([key, value]) => {
+          headers.set(key, value);
+        });
+
+        return fetch(input, {
+          ...init,
+          headers
+        });
+      }
+
       function formatAmount(v) {
         return '$' + v.toFixed(2);
       }
@@ -638,13 +652,10 @@
 
           try {
             // Attach Supabase JWT so the API knows which creator this is
-            const authHeaders = await getAuthHeaders();
-
-            const res = await fetch('/api/creator/payout/start', {
+            const res = await authedFetch('/api/creator/payout/start', {
               method: 'POST',
               headers: {
-                'Content-Type': 'application/json',
-                ...authHeaders
+                'Content-Type': 'application/json'
               },
               credentials: 'include', // keep cookies for anything else you need
               body: JSON.stringify({

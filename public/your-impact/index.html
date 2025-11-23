@@ -750,6 +750,33 @@ const supabase = (SUPABASE_URL && SUPABASE_KEY && window.supabase)
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
   : null;
 
+async function authedFetch(input, init = {}) {
+  const supabaseClient = supabase;
+
+  if (!supabaseClient) {
+    console.warn('[authedFetch] Supabase client unavailable; sending unauthenticated request');
+    return fetch(input, init);
+  }
+
+  const { data, error } = await supabaseClient.auth.getSession();
+
+  if (error) {
+    console.error('[authedFetch] getSession error', error);
+  }
+
+  const token = (data && data.session && data.session.access_token) || '';
+
+  const headers = new Headers((init && init.headers) || {});
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  return fetch(input, {
+    ...init,
+    headers,
+  });
+}
+
 // ===== UTIL =====
 async function copyToClipboard(text) {
   try {
@@ -1073,11 +1100,10 @@ const app = createApp({
         }
 
         // 2) Call the balance endpoint with Authorization: Bearer
-        const res = await fetch('/api/creator/balance', {
+        const res = await authedFetch('/api/creator/balance', {
           method: 'GET',
           headers: {
-            'Accept': 'application/json',
-            Authorization: `Bearer ${token}`
+            Accept: 'application/json'
           }
         });
 
@@ -1547,8 +1573,8 @@ window.app = app;
       async function fetchData() {
         try {
           const [statusRes, balanceRes] = await Promise.all([
-            fetch('/api/creator/stripe/status'),
-            fetch('/api/creator/balance'),
+            authedFetch('/api/creator/stripe/status'),
+            authedFetch('/api/creator/balance'),
           ]);
 
           const statusJson = await statusRes.json();
@@ -1603,7 +1629,7 @@ window.app = app;
         setFlowState('loading');
         setErrorMessage(null);
 
-        const res = await fetch('/api/creator/stripe/connect', {
+        const res = await authedFetch('/api/creator/stripe/connect', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
         });
@@ -1656,7 +1682,7 @@ window.app = app;
         setFlowState('payoutInProgress');
         setErrorMessage(null);
 
-        const res = await fetch('/api/creator/payout/start', {
+        const res = await authedFetch('/api/creator/payout/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ speed: 'standard' }),
