@@ -7,7 +7,7 @@
     { "source": "/create", "destination": "/get-started", "permanent": true }
   ],
   "rewrites": [
-    { "source": "/env.js", "destination": "/api/env.js" },
+    { "source": "/env.js", "destination": "/api/env" },
     { "source": "/login", "destination": "/get-started" },
     { "source": "/", "destination": "/index.html" },
     { "source": "/get-started", "destination": "/get-started.html" },
