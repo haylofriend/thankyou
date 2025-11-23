@@ -777,6 +777,27 @@ async function authedFetch(input, init = {}) {
   });
 }
 
+async function startStripeConnectOnboarding() {
+  try {
+    const res = await authedFetch('/api/creator/stripe/connect', {
+      method: 'POST',
+    });
+
+    const json = await res.json();
+
+    if (json && json.url) {
+      window.location.href = json.url;
+      return;
+    }
+
+    console.error('Stripe connect error', json);
+  } catch (err) {
+    console.error('Stripe connect error', err);
+  }
+
+  alert('Could not start Stripe setup. Please try again in a moment.');
+}
+
 // ===== UTIL =====
 async function copyToClipboard(text) {
   try {
@@ -1408,12 +1429,9 @@ window.app = app;
 <script>
   window.addEventListener('DOMContentLoaded', function () {
     const sourceBtn = document.getElementById('sourceButton');
-    const overlay = document.getElementById('sourceOverlay');
-    const iframe = document.getElementById('sourceFrame');
-    const overlayClose = document.getElementById('sourceOverlayClose');
 
-    // If elements aren’t present, quietly bail out
-    if (!sourceBtn || !overlay || !iframe) return;
+    // If element isn’t present, quietly bail out
+    if (!sourceBtn) return;
 
     function getNextPayoutAmountDollars() {
       try {
@@ -1425,33 +1443,6 @@ window.app = app;
         console.warn('Could not read next payout amount', e);
         return 0;
       }
-    }
-
-    function openSourceOverlay() {
-      const amount = getNextPayoutAmountDollars();
-      const params = new URLSearchParams({
-        amount: amount.toFixed(2),
-      });
-
-      iframe.src = '/source?' + params.toString();
-
-      // Show overlay
-      overlay.classList.remove('hidden');
-      overlay.setAttribute('aria-hidden', 'false');
-
-      // Body scroll lock (better focus)
-      document.body.style.overflow = 'hidden';
-    }
-
-    function closeSourceOverlay() {
-      overlay.classList.add('hidden');
-      overlay.setAttribute('aria-hidden', 'true');
-
-      // Clear iframe to avoid stale content / extra network
-      iframe.src = '';
-
-      // Restore scroll
-      document.body.style.overflow = '';
     }
 
     function updateSourceTooltip() {
@@ -1474,27 +1465,26 @@ window.app = app;
       sourceBtn.title = lines.join('\n');
     }
 
-    // Open overlay when user clicks the “Source” button
-    sourceBtn.addEventListener('click', openSourceOverlay);
+    let isStartingStripe = false;
 
-    // Close when clicking the close button
-    if (overlayClose) {
-      overlayClose.addEventListener('click', closeSourceOverlay);
+    async function handleSourceClick(event) {
+      if (isStartingStripe) return;
+      isStartingStripe = true;
+
+      sourceBtn.setAttribute('disabled', 'true');
+      sourceBtn.classList.add('opacity-70', 'cursor-not-allowed');
+
+      try {
+        await startStripeConnectOnboarding();
+      } finally {
+        isStartingStripe = false;
+        sourceBtn.removeAttribute('disabled');
+        sourceBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+      }
     }
 
-    // Close when clicking outside the iframe but inside overlay
-    overlay.addEventListener('click', function (event) {
-      if (event.target === overlay) {
-        closeSourceOverlay();
-      }
-    });
-
-    // Close on ESC key for better UX
-    document.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape' && !overlay.classList.contains('hidden')) {
-        closeSourceOverlay();
-      }
-    });
+    // Start Stripe onboarding when user clicks the “Source” button
+    sourceBtn.addEventListener('click', handleSourceClick);
 
     // Initialize tooltip with current payout math
     updateSourceTooltip();
