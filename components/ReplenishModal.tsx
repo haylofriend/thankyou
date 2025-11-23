@@ -84,7 +84,7 @@ export const ReplenishModal: React.FC<ReplenishModalProps> = ({
     async function fetchData() {
       try {
         const [statusRes, balanceRes] = await Promise.all([
-          fetch('/api/creator/stripe/status'),
+          authedFetch('/api/creator/stripe/status'),
           authedFetch('/api/creator/balance'),
         ]);
 
@@ -143,7 +143,7 @@ export const ReplenishModal: React.FC<ReplenishModalProps> = ({
       setFlowState('loading');
       setErrorMessage(null);
 
-      const res = await fetch('/api/creator/stripe/connect', {
+      const res = await authedFetch('/api/creator/stripe/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -207,7 +207,7 @@ export const ReplenishModal: React.FC<ReplenishModalProps> = ({
       setFlowState('payoutInProgress');
       setErrorMessage(null);
 
-      const res = await fetch('/api/creator/payout/start', {
+      const res = await authedFetch('/api/creator/payout/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ speed: 'standard' }),
